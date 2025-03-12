@@ -50,36 +50,29 @@ items = {
     "Strong Glue": 0x66
 }
 
-// Check that the inventory contains a specific item
+// Check that the inventory contains Strong Glue
 // item_name: str, should map to items dict
-function inventory_contains(item_name) {
-
-    inventory_slots = [
-        byte(0x09923c),
-        byte(0x099240),
-        byte(0x099244),
-        byte(0x099248),
-        byte(0x09924c),
-        byte(0x099250),
-        byte(0x099254),
-        byte(0x099258),
-        byte(0x09925c),
-        byte(0x099260),
-        byte(0x099264),
-        byte(0x099268),
-        byte(0x09926c),
-        byte(0x099270),
-        byte(0x099274),
-        byte(0x099278),
-        byte(0x09927c),
-        byte(0x099280),
-        byte(0x099284),
-        byte(0x099288)
-    ]
-    
-    item_id = items[item_name]
-
-    return array_contains(inventory_slots, item_id)
+function inventory_contains_glue() {
+    return byte(0x09923c) == 0x66 ||
+        byte(0x099240) == 0x66 ||
+        byte(0x099244) == 0x66 ||
+        byte(0x099248) == 0x66 ||
+        byte(0x09924c) == 0x66 ||
+        byte(0x099250) == 0x66 ||
+        byte(0x099254) == 0x66 ||
+        byte(0x099258) == 0x66 ||
+        byte(0x09925c) == 0x66 ||
+        byte(0x099260) == 0x66 ||
+        byte(0x099264) == 0x66 ||
+        byte(0x099268) == 0x66 ||
+        byte(0x09926c) == 0x66 ||
+        byte(0x099270) == 0x66 ||
+        byte(0x099274) == 0x66 ||
+        byte(0x099278) == 0x66 ||
+        byte(0x09927c) == 0x66 ||
+        byte(0x099280) == 0x66 ||
+        byte(0x099284) == 0x66 ||
+        byte(0x099288) == 0x66
 }
 
 
@@ -185,7 +178,7 @@ function worm_unlocked() => byte(0x99312) == 0x00 && byte(0x99358) == 0x00 && by
 // check that player's gotten at least one fun can and that they've got strong glue in inventory
 // NOTE: strong glue cannot be sold, meaning that if it's gone and they have a ducken they cheated it out
 // TODO make strong glue check work
-function ducken_unlocked() => byte(0x99322) == 0x00 && byte(0x993a6) == 0x01 && inventory_contains("Strong Glue")
+function ducken_unlocked() => byte(0x99322) == 0x00 && byte(0x993a6) == 0x01 && inventory_contains_glue()
 // check that player has seen Bighand
 function jill_unlocked() => byte(0x099344) == 0x00 && byte(0x09921d) == 0x01 && byte(0x9939e) == 0x01 
 

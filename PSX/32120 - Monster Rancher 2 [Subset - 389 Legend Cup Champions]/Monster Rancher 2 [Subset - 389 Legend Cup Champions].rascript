@@ -185,7 +185,7 @@ function worm_unlocked() => byte(0x99312) == 0x00 && byte(0x99358) == 0x00 && by
 // check that player's gotten at least one fun can and that they've got strong glue in inventory
 // NOTE: strong glue cannot be sold, meaning that if it's gone and they have a ducken they cheated it out
 // TODO make strong glue check work
-function ducken_unlocked() => byte(0x99322) == 0x00 && byte(0x993a6) == 0x01
+function ducken_unlocked() => byte(0x99322) == 0x00 && byte(0x993a6) == 0x01 && inventory_contains("Strong Glue")
 // check that player has seen Bighand
 function jill_unlocked() => byte(0x099344) == 0x00 && byte(0x09921d) == 0x01 && byte(0x9939e) == 0x01 
 
@@ -259,154 +259,154 @@ function prereqs_met() => prereq_tournaments_won() && correct_date() && (current
 achievement(
     title = "Spoiled but Not Powerless",
     description = "Win the Legend Cup with a Pixie (Pixie/Pixie).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Pixie") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "High Pride",
     description = "Win the Legend Cup with a Daina (Pixie/Dragon).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Dragon") && prereqs_met() && dragon_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Unico vs. The World",
     description = "Win the Legend Cup with a Unico (Pixie/Centaur).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Centaur") && prereqs_met() && centaur_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "A Little Tease",
     description = "Win the Legend Cup with a Jilt (Pixie/Wracky).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Wracky") && prereqs_met() && wracky_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Strong-Willed",
     description = "Win the Legend Cup with a Granity (Pixie/Golem).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Golem") && prereqs_met() && golem_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Welcome to the Jungle",
     description = "Win the Legend Cup with a Dixie (Pixie/Zuum).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Zuum") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Brave Yet Delicate",
     description = "Win the Legend Cup with a Janne (Pixie/Durahan).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Durahan") && prereqs_met() && durahan_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Poster Girl",
     description = "Win the Legend Cup with a Mint (Pixie/Tiger).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Tiger") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Constellation of Legends",
     description = "Win the Legend Cup with a Lepus (Pixie/Hare).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Hare") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Today There Is No Mercy",
     description = "Win the Legend Cup with an Angel (Pixie/Gali).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Gali") && prereqs_met() && gali_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Second Musical Now in the Works",
     description = "Win the Legend Cup with a Kitten (Pixie/Kato).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Kato") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Sloppy, but Efficient",
     description = "Win the Legend Cup with a Jinnee (Pixie/Bajarl).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Bajarl") && prereqs_met() && bajarl_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "This Is Our Future",
     description = "Win the Legend Cup with a Futurity (Pixie/Metalner).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Metalner") && prereqs_met() && metalner_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Dr. Maccots Greatest Discovery",
     description = "Win the Legend Cup with a Vanity (Pixie/Suezo).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Suezo") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Northern Legend",
     description = "Win the Legend Cup with a Snowy (Pixie/Jill).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Jill") && prereqs_met() && jill_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Little Witch",
     description = "Win the Legend Cup with a Lilim (Pixie/Joker).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Joker") && prereqs_met() && joker_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Nagisa Skin",
     description = "Win the Legend Cup with a Nagisa (Pixie/Jell).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Jell") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Forest Dweller",
     description = "Win the Legend Cup with a Dryad (Pixie/Mock).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Mock") && prereqs_met() && mock_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
-    title = "Glutton for Victory",
+    title = "Serene Celebrations Are in Order",
     description = "Win the Legend Cup with a Serenity (Pixie/Plant).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Plant") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Shield No Longer Needed",
     description = "Win the Legend Cup with a Silhouette (Pixie/Monol).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Monol") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Beauty Is in the Eye of the Beholder",
     description = "Win the Legend Cup with a Night Flyer (Pixie/Worm).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Worm") && prereqs_met() && worm_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Vampiric Tendencies",
     description = "Win the Legend Cup with an Allure (Pixie/Naga).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Naga") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
@@ -437,98 +437,98 @@ achievement(
 achievement(
     title = "Uncontested Strength",
     description = "Win the Legend Cup with a Tiamat (Dragon/Pixie).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Dragon") && is_secondary_breed("Pixie") && prereqs_met() && dragon_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "One of the Few",
     description = "Win the Legend Cup with a Dragon (Dragon/Dragon).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Dragon") && is_secondary_breed("Dragon") && prereqs_met() && dragon_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Foreign Legend",
     description = "Win the Legend Cup with a Corkasus (Dragon/Beaclon).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Dragon") && is_secondary_breed("Beaclon") && prereqs_met() && dragon_unlocked() && beaclon_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Mix All The Tech!",
     description = "Win the Legend Cup with a Tecno Dragon (Dragon/Henger).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Dragon") && is_secondary_breed("Henger") && prereqs_met() && dragon_unlocked() && henger_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Destructive Power On Display",
     description = "Win the Legend Cup with a Stone Dragon (Dragon/Golem).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Dragon") && is_secondary_breed("Golem") && prereqs_met() && dragon_unlocked() && golem_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Relic of a Bygone Era",
     description = "Win the Legend Cup with an Armor Dragon (Dragon/Durahan).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Dragon") && is_secondary_breed("Durahan") && prereqs_met() && dragon_unlocked() && durahan_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Lakeside Ruler",
     description = "Win the Legend Cup with a Crab Dragon (Dragon/Arrow Head).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Dragon") && is_secondary_breed("Arrow Head") && prereqs_met() && dragon_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "It's Gonna Hide the Cup",
     description = "Win the Legend Cup with a Hound Dragon (Dragon/Tiger).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Dragon") && is_secondary_breed("Tiger") && prereqs_met() && dragon_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Like Holography",
     description = "Win the Legend Cup with a Gariel (Dragon/Gali).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Dragon") && is_secondary_breed("Gali") && prereqs_met() && dragon_unlocked() && gali_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Oil Pot King",
     description = "Win the Legend Cup with an Oscerot (Dragon/Kato).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Dragon") && is_secondary_breed("Kato") && prereqs_met() && dragon_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Thankfully, Nobody Brought Bombs",
     description = "Win the Legend Cup with a Dodongo (Dragon/Bajarl).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Dragon") && is_secondary_breed("Kato") && prereqs_met() && dragon_unlocked() && bajarl_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Mysterious Futuristic Power",
     description = "Win the Legend Cup with a Gidras (Dragon/Metalner).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Dragon") && is_secondary_breed("Kato") && prereqs_met() && dragon_unlocked() && metalner_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Back with a Vengeance",
     description = "Win the Legend Cup with a Death Dragon (Dragon/Joker).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Dragon") && is_secondary_breed("Kato") && prereqs_met() && dragon_unlocked() && joker_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Apocalypse Bringer",
     description = "Win the Legend Cup with a Ragnaroks (Dragon/Monol).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Dragon") && is_secondary_breed("Kato") && prereqs_met() && dragon_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
@@ -544,63 +544,63 @@ achievement(
 achievement(
     title = "Fast & Ferious",
     description = "Win the Legend Cup with a Ferious (Centaur/Pixie).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Centaur") && is_secondary_breed("Pixie") && prereqs_met() && centaur_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Brave and Just",
     description = "Win the Legend Cup with a Dragoon (Centaur/Dragon).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Centaur") && is_secondary_breed("Dragon") && prereqs_met() && centaur_unlocked() && dragon_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "They've Got it All",
     description = "Win the Legend Cup with a Centaur (Centaur/Centaur).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Centaur") && is_secondary_breed("Centaur") && prereqs_met() && centaur_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Who Gave the Moai a Spear?",
     description = "Win the Legend Cup with a Trojan (Centaur/Golem).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Centaur") && is_secondary_breed("Golem") && prereqs_met() && centaur_unlocked() && golem_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Two Souls Means Two Legends",
     description = "Win the Legend Cup with a Chariot (Centaur/Durahan).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Centaur") && is_secondary_breed("Durahan") && prereqs_met() && centaur_unlocked() && durahan_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Semi-Aquatic Fighter",
     description = "Win the Legend Cup with an Antares (Centaur/Arrow Head).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Centaur") && is_secondary_breed("Arrow Head") && prereqs_met() && centaur_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Lonely Warrior",
     description = "WWin the Legend Cup with a Celious (Centaur/Tiger).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Centaur") && is_secondary_breed("Tiger") && prereqs_met() && centaur_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Free Spirited",
     description = "Win the Legend Cup with a Bazoo (Centaur/Bajarl).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Centaur") && is_secondary_breed("Bajarl") && prereqs_met() && centaur_unlocked() && bajarl_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "No Love for the Creator",
     description = "Win the Legend Cup with a Reaper (Centaur/Joker).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Centaur") && is_secondary_breed("Joker") && prereqs_met() && centaur_unlocked() && joker_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
@@ -623,21 +623,21 @@ achievement(
 achievement(
     title = "Loud and Proud",
     description = "Win the Legend Cup with a PeachTreeBug (ColorPandora/Pixie).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("ColorPandora") && is_secondary_breed("Pixie") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Victory, Love and Effort Prevail",
     description = "Win the Legend Cup with a ColorPandora (ColorPandora/ColorPandora).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("ColorPandora") && is_secondary_breed("ColorPandora") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Perfectly Camouflauged",
     description = "Win the Legend Cup with a Liquid Cube (ColorPandora/Jell).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("ColorPandora") && is_secondary_breed("Jell") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
@@ -660,63 +660,63 @@ achievement(
 achievement(
     title = "Death's Dance",
     description = "Win the Legend Cup with a Bethelgeus (Beaclon/Dragon).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Beaclon") && is_secondary_breed("Dragon") && beaclon_unlocked() && dragon_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Brute Forced It",
     description = "Win the Legend Cup with a Beaclon (Beaclon/Beaclon).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Beaclon") && is_secondary_breed("Beaclon") && beaclon_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Pre-Henger Prototype",
     description = "Win the Legend Cup with a Melcarba (Beaclon/Henger).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Beaclon") && is_secondary_breed("Henger") && beaclon_unlocked() && henger_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Rock On, Rocklon",
     description = "Win the Legend Cup with a Rocklon (Beaclon/Golem).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Beaclon") && is_secondary_breed("Golem") && beaclon_unlocked() && golem_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Captaining an Army of One",
     description = "Win the Legend Cup with a Centurion (Beaclon/Durahan).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Beaclon") && is_secondary_breed("Durahan") && beaclon_unlocked() && durahan_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Minimal Effort Expenditure",
     description = "Win the Legend Cup with a Sloth Beetle (Beaclon/Tiger).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Beaclon") && is_secondary_breed("Tiger") && beaclon_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Top Tier Transit",
     description = "Win the Legend Cup with a KautRoarKaut (Beaclon/Bajarl).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Beaclon") && is_secondary_breed("Bajarl") && beaclon_unlocked() && bajarl_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Fights Like Jagger",
     description = "Win the Legend Cup with a Jaggernaut (Beaclon/Joker).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Beaclon") && is_secondary_breed("Joker") && beaclon_unlocked() && joker_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Tightly Wound",
     description = "Win the Legend Cup with a Ducklon (Beaclon/Ducken).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Beaclon") && is_secondary_breed("Ducken") && beaclon_unlocked() && ducken_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
@@ -732,56 +732,56 @@ achievement(
 achievement(
     title = "Phantom Robotics",
     description = "Win the Legend Cup with a Garlant (Henger/Dragon).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Henger") && is_secondary_breed("Dragon") && henger_unlocked() && dragon_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Fresh Start, Fresh Legend",
     description = "Win the Legend Cup with a Henger (Henger/Henger).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Henger") && is_secondary_breed("Henger") && henger_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Rocky Soul",
     description = "Win the Legend Cup with a Gaia (Henger/Golem).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Henger") && is_secondary_breed("Golem") && henger_unlocked() && golem_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "The Alpha and the Omega",
     description = "Win the Legend Cup with an Omega (Henger/Zuum).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Henger") && is_secondary_breed("Zuum") && henger_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Airborne Speedster",
     description = "Win the Legend Cup with a Heuy (Henger/Metalner).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Henger") && is_secondary_breed("Metalner") && henger_unlocked() && metalner_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Evil Predispositions",
     description = "Win the Legend Cup with an End Bringer (Henger/Joker).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Henger") && is_secondary_breed("Joker") && henger_unlocked() && joker_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "The First Henger",
     description = "Win the Legend Cup with an Automaton (Henger/Mock).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Henger") && is_secondary_breed("Mock") && henger_unlocked() && mock_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Full Night Cover",
     description = "Win the Legend Cup with a Black Henger (Henger/Monol).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Henger") && is_secondary_breed("Monol") && henger_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
@@ -797,70 +797,70 @@ achievement(
 achievement(
     title = "Baby-Doll Eyes Did Work",
     description = "Win the Legend Cup with a Baby Doll (Wracky/Pixie).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Wracky") && is_secondary_breed("Pixie") && wracky_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Prime Collector Material",
     description = "Win the Legend Cup with a Draco Doll (Wracky/Dragon).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Wracky") && is_secondary_breed("Dragon") && wracky_unlocked() && dragon_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Buzz Lighthenger",
     description = "Win the Legend Cup with a Henger Doll (Wracky/Henger).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Wracky") && is_secondary_breed("Henger") && wracky_unlocked() && henger_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Charles Becoming a Household Name",
     description = "Win the Legend Cup with a Wracky (Wracky/Wracky).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Wracky") && is_secondary_breed("Wracky") && wracky_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "A Little Too Authentic",
     description = "Win the Legend Cup with a Pebbly (Wracky/Golem).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Wracky") && is_secondary_breed("Golem") && wracky_unlocked() && golem_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Small Knight, Significant Value",
     description = "Win the Legend Cup with a Petit Knight (Wracky/Durahan).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Wracky") && is_secondary_breed("Durahan") && wracky_unlocked() && durahan_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Popularity is Strangely Skyrocketing",
     description = "Win the Legend Cup with a Bakky (Wracky/Bajarl).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Wracky") && is_secondary_breed("Bajarl") && wracky_unlocked() && bajarl_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "A Child's Favorite",
     description = "Win the Legend Cup with a Metal Glay (Wracky/Metalner).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Wracky") && is_secondary_breed("Metalner") && wracky_unlocked() && metalner_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Do Not Trust the Clown Doll",
     description = "Win the Legend Cup with a Tricker (Wracky/Joker).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Wracky") && is_secondary_breed("Joker") && wracky_unlocked() && joker_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "It's Not Cheap, It's Cost Effective",
     description = "Win the Legend Cup with a Mocky (Wracky/Mock).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Wracky") && is_secondary_breed("Mock") && wracky_unlocked() && mock_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
@@ -876,154 +876,168 @@ achievement(
 achievement(
     title = "Pacifist at Heart",
     description = "Win the Legend Cup with a Pink Golem (Golem/Pixie).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Pixie") && golem_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Grounded in Reality",
     description = "Win the Legend Cup with a Tyrant (Golem/Dragon).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Dragon") && golem_unlocked() && dragon_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Horn's Just For Show",
     description = "Win the Legend Cup with a Strong Horn (Golem/Beaclon).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Beaclon") && golem_unlocked() && beaclon_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Ancient War Weapon",
     description = "Win the Legend Cup with a Gobi (Golem/Henger).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Henger") && golem_unlocked() && henger_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Tell Me I Looked Cool Out There",
     description = "Win the Legend Cup with a Mariomax (Golem/Wracky).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Wracky") && golem_unlocked() && wracky_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "One Punch to Rule Them All",
     description = "Win the Legend Cup with a Golem (Golem/Golem).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Golem") && golem_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Desirable Scales",
     description = "Win the Legend Cup with a Scaled Golem (Golem/Zuum).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Zuum") && golem_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+)
+
+achievement(
+    title = "Sentient Armor",
+    description = "Win the Legend Cup with a Battle Rocks (Golem/Durahan).",
+    points = 10,
+    trigger = is_primary_breed("Golem") && is_secondary_breed("Durahan") && golem_unlocked() && durahan_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+)
+
+achievement(
+    title = "A Body Built for Anything",
+    description = "Win the Legend Cup with a Dagon (Golem/Arrow Head).",
+    points = 10,
+    trigger = is_primary_breed("Golem") && is_secondary_breed("Durahan") && golem_unlocked() && durahan_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Nevermeltice",
     description = "Win the Legend Cup with a Big Blue (Golem/Tiger).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Tiger") && golem_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Turning Point in Our History",
     description = "Win the Legend Cup with a Moaigon (Golem/Hare).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Hare") && golem_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Sedentary Sleepyhead",
     description = "Win the Legend Cup with a Sleepyhead (Golem/Baku).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Baku") && golem_unlocked() && baku_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Noble's Best Friend",
     description = "Win the Legend Cup with an Amenhotep (Golem/Gali).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Gali") && golem_unlocked() && gali_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "In A Weight Class of its Own",
     description = "Win the Legend Cup with a Pressure (Golem/Zilla).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Zilla") && golem_unlocked() && zilla_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Operating on Pure Magic",
     description = "Win the Legend Cup with a Dao (Golem/Bajarl).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Bajarl") && golem_unlocked() && bajarl_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Starbound",
     description = "Win the Legend Cup with an Astro (Golem/Metalner).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Metalner") && golem_unlocked() && metalner_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Celebrating with Curry Rice",
     description = "Win the Legend Cup with a Titan (Golem/Suezo).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Suezo") && golem_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "I'm the Joker Now",
     description = "Win the Legend Cup with an Angolmor (Golem/Joker).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Joker") && golem_unlocked() && joker_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "This Sea God's Better on Land",
     description = "Win the Legend Cup with a Poseidon (Golem/Jell).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Jell") && golem_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Straight Faced Champion",
     description = "Win the Legend Cup with a Wood Golem (Golem/Mock).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Mock") && golem_unlocked() && mock_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "God of Nature",
     description = "Win the Legend Cup with an Ecologuardia (Golem/Plant).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Plant") && golem_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Big Brother is Watching",
     description = "Win the Legend Cup with a Black Golem (Golem/Monol).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Monol") && golem_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Bearer of Ancient Scriptures",
     description = "Win the Legend Cup with a Magna (Golem/Worm).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Worm") && golem_unlocked() && worm_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Pure Offense",
     description = "Win the Legend Cup with a Marble Guy (Golem/Naga).",
-    points = 5,
+    points = 10,
     trigger = is_primary_breed("Golem") && is_secondary_breed("Naga") && golem_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 

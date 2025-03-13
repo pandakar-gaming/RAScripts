@@ -75,9 +75,11 @@ function inventory_contains_glue() {
         byte(0x099288) == 0x66
 }
 
+function primary_breed() => byte(0x97a18)
+function secondary_breed() => byte(0x97a1c)
 
-function is_primary_breed(breed_name) => byte(0x97a18) == breeds[breed_name]
-function is_secondary_breed(breed_name) => byte(0x97a1c) == breeds[breed_name]
+function is_primary_breed(breed_name) => primary_breed() == breeds[breed_name]
+function is_secondary_breed(breed_name) => secondary_breed() == breeds[breed_name]
 
 // Given the name of the unique monster, determine whether our current monster is that monster.
 // Rare breeds have some sub-breed identifier from 0x26 to 0x2b
@@ -86,49 +88,228 @@ function is_secondary_breed(breed_name) => byte(0x97a1c) == breeds[breed_name]
 function rare_breed_matches(breed_name) {
 
     if (breed_name == "Poison") {
-        return is_primary_breed("Pixie") && byte(0x97a1c) == 0x2c // I don't know what this is yet
+        return is_primary_breed("Pixie") && secondary_breed() == 0x26
     }
     
     if (breed_name == "Kasumi") {
-        return is_primary_breed("Pixie") && byte(0x97a1c) == 0x27
+        return is_primary_breed("Pixie") && secondary_breed() == 0x27
     }
     
     if (breed_name == "Mia") {
-        return is_primary_breed("Pixie") && byte(0x97a1c) == 0x2c // I don't know what this is yet
+        return is_primary_breed("Pixie") && secondary_breed() == 0x28
     }
 
     if (breed_name == "Moo") {
-        return is_primary_breed("Dragon") && byte(0x97a1c) == 0x2c // I don't know what this is yet
+        return is_primary_breed("Dragon") && secondary_breed() == 0x26
     }
     
     if (breed_name == "Trotter") {
-        return is_primary_breed("Centaur") && byte(0x97a1c) == 0x2c // I don't know what this is yet
+        return is_primary_breed("Centaur") && secondary_breed() == 0x26
     }    
     
     if (breed_name == "Blue Thunder") {
-        return is_primary_breed("Centaur") && byte(0x97a1c) == 0x2c // I don't know what this is yet
+        return is_primary_breed("Centaur") && secondary_breed() == 0x27
     }    
     
     if (breed_name == "Dice") {
-        return is_primary_breed("ColorPandora") && byte(0x97a1c) == 0x2c // I don't know what this is yet
+        return is_primary_breed("ColorPandora") && secondary_breed() == 0x26
     }
     
     if (breed_name == "Tram") {
-        return is_primary_breed("ColorPandora") && byte(0x97a1c) == 0x2c // I don't know what this is yet
+        return is_primary_breed("ColorPandora") && secondary_breed() == 0x27
     }
     
     if (breed_name == "Eggplantern") {
-        return is_primary_breed("Beaclon") && byte(0x97a1c) == 0x2c // I don't know what this is yet
+        return is_primary_breed("Beaclon") && secondary_breed() == 0x26
     }
     
     if (breed_name == "Skeleton") {
-        return is_primary_breed("Henger") && byte(0x97a1c) == 0x2c // I don't know what this is yet
-    }    
-    
-    if (breed_name == "ForwardGolem") {
-        return is_primary_breed("Golem") && byte(0x97a1c) == 0x2c // I don't know what this is yet
+        return is_primary_breed("Henger") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Satan Clause") {
+        return is_primary_breed("Wracky") && secondary_breed() == 0x26
     }
     
+    if (breed_name == "ForwardGolem") {
+        return is_primary_breed("Golem") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "ZebraSaurian") {
+        return is_primary_breed("Zuum") && secondary_breed() == 0x26
+    }
+    
+    if (breed_name == "Shogun") {
+        return is_primary_breed("Durahan") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Ruby Knight") {
+        return is_primary_breed("Durahan") && secondary_breed() == 0x27
+    }
+
+    if (breed_name == "Kokushi Muso") {
+        return is_primary_breed("Durahan") && secondary_breed() == 0x28
+    }
+
+    if (breed_name == "Sumopion") {
+        return is_primary_breed("Arrow Head") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "White Hound") {
+        return is_primary_breed("Tiger") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Frog Hopper") {
+        return is_primary_breed("Hopper") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "KungFuHare") {
+        return is_primary_breed("Hare") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "ShiShi") {
+        return is_primary_breed("Baku") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Happy Mask") {
+        return is_primary_breed("Gali") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Ninja Kato") {
+        return is_primary_breed("Kato") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Deluxe Liner") {
+        return is_primary_breed("Zilla") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Boxer Bajarl") {
+        return is_primary_breed("Bajarl") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Magic Bajarl") {
+        return is_primary_breed("Bajarl") && secondary_breed() == 0x27
+    }
+
+    if (breed_name == "Ultrarl") {
+        return is_primary_breed("Bajarl") && secondary_breed() == 0x28
+    }
+    
+    if (breed_name == "Swimmer") {
+        return is_primary_breed("Mew") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Cinder Bird") {
+        return is_primary_breed("Phoenix") && secondary_breed() == 0x26
+    }
+    
+    if (breed_name == "Chef") {
+        return is_primary_breed("Ghost") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Chinois") {
+        return is_primary_breed("Metalner") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Gold Suezo") {
+        return is_primary_breed("Suezo") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Silver Suezo") {
+        return is_primary_breed("Suezo") && secondary_breed() == 0x27
+    }
+
+    if (breed_name == "Bronze Suezo") {
+        return is_primary_breed("Suezo") && secondary_breed() == 0x28
+    }
+
+    if (breed_name == "Birdie") {
+        return is_primary_breed("Suezo") && secondary_breed() == 0x29
+    }
+
+    if (breed_name == "Pithecan") {
+        return is_primary_breed("Jill") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Caloriena") {
+        return is_primary_breed("Mocchi") && secondary_breed() == 0x27
+    }
+
+    if (breed_name == "Mocchini") {
+        return is_primary_breed("Mocchi") && secondary_breed() == 0x29
+    }
+
+    if (breed_name == "Bloodshed") {
+        return is_primary_breed("Joker") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "GabooSoldier") {
+        return is_primary_breed("Gaboo") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Metal Jell") {
+        return is_primary_breed("Jell") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Mermaid") {
+        return is_primary_breed("Undine") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Dribbler") {
+        return is_primary_breed("Niton") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Radial Niton") {
+        return is_primary_breed("Niton") && secondary_breed() == 0x27
+    }
+
+    if (breed_name == "Disc Niton") {
+        return is_primary_breed("Niton") && secondary_breed() == 0x28
+    }
+
+    if (breed_name == "White Birch") {
+        return is_primary_breed("Mock") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Pole Mock") {
+        return is_primary_breed("Mock") && secondary_breed() == 0x27
+    }
+
+    if (breed_name == "Watermelony") {
+        return is_primary_breed("Ducken") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Cawken") {
+        return is_primary_breed("Ducken") && secondary_breed() == 0x27
+    }
+
+    if (breed_name == "Raggae Plant") {
+        return is_primary_breed("Plant") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Galaxy") {
+        return is_primary_breed("Monol") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Dominos") {
+        return is_primary_breed("Monol") && secondary_breed() == 0x27
+    }
+
+    if (breed_name == "Scribble") {
+        return is_primary_breed("Monol") && secondary_breed() == 0x28
+    }
+
+    if (breed_name == "Gold Dust") {
+        return is_primary_breed("Ape") && secondary_breed() == 0x26
+    }
+    
+    if (breed_name == "Express Worm") {
+        return is_primary_breed("Worm") && secondary_breed() == 0x26
+    }
+
+    if (breed_name == "Time Noise") {
+        return is_primary_breed("Naga") && secondary_breed() == 0x26
+    }
 }
 
 // All of the unlock checks are to verify that the player can legitimately raise the monster

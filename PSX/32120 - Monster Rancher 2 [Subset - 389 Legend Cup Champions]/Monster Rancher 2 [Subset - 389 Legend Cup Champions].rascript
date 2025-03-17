@@ -557,7 +557,7 @@ achievement(
 )
 
 achievement(
-    title = "Serene Celebrations Are in Order",
+    title = "Time to Soak Some Rays",
     description = "Win the Legend Cup with a Serenity (Pixie/Plant).",
     points = 10,
     trigger = is_primary_breed("Pixie") && is_secondary_breed("Plant") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
@@ -1519,7 +1519,7 @@ achievement(
     title = "We've Come A Long Way",
     description = "Win the Legend Cup with a Sumopion (Arrow Head/???).",
     points = 10,
-    trigger = is_primary_breed("Arrow Head") && rare_breed_matches("Sumopion") && mock_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Arrow Head") && rare_breed_matches("Sumopion") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 // ==== Tiger ====
@@ -2021,7 +2021,7 @@ achievement(
     title = "Rikimaru's Ancestor",
     description = "Win the Legend Cup with a Ninja Kato (Kato/???).",
     points = 10,
-    trigger = is_primary_breed("Kato") && rare_breed_matches("Ninja Kato") && joker_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Kato") && rare_breed_matches("Ninja Kato") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 // ==== Zilla ====
@@ -2081,21 +2081,21 @@ achievement(
     title = "King of the Ring",
     description = "Win the Legend Cup with a Boxer Bajarl (Bajarl/???).",
     points = 10,
-    trigger = is_primary_breed("Bajarl") && rare_breed_matches("Boxer Bajarl") && bajarl_unlocked() && joker_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Bajarl") && rare_breed_matches("Boxer Bajarl") && bajarl_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "No Further Need to Hide in the Pot",
     description = "Win the Legend Cup with a Magic Bajarl (Bajarl/???).",
     points = 10,
-    trigger = is_primary_breed("Bajarl") && rare_breed_matches("Magic Bajarl") && bajarl_unlocked() && joker_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Bajarl") && rare_breed_matches("Magic Bajarl") && bajarl_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Hero of Justice",
     description = "Win the Legend Cup with an Ultrarl (Bajarl/???).",
     points = 10,
-    trigger = is_primary_breed("Bajarl") && rare_breed_matches("Ultrarl") && bajarl_unlocked() && joker_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Bajarl") && rare_breed_matches("Ultrarl") && bajarl_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 // ==== Mew ====
@@ -2201,7 +2201,7 @@ achievement(
     title = "Agent C's Claim to Fame",
     description = "Win the Legend Cup with a Chinois (Metalner/???).",
     points = 10,
-    trigger = is_primary_breed("Metalner") && rare_breed_matches("Chinois") && ghost_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Metalner") && rare_breed_matches("Chinois") && metalner_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 // ==== Suezo ====
@@ -2291,7 +2291,7 @@ achievement(
 )
 
 achievement(
-    title = "2 And 3 Make Number One",
+    title = "That's Gold, Jerry!",
     description = "Win the Legend Cup with a Gold Suezo (Suezo/???).",
     points = 10,
     trigger = is_primary_breed("Suezo") && rare_breed_matches("Gold Suezo") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
@@ -2373,7 +2373,7 @@ achievement(
     title = "Yabba Dabba Doo!",
     description = "Win the Legend Cup with a Pithecan (Jill/???).",
     points = 10,
-    trigger = is_primary_breed("Jill") && rare_breed_matches("Pithecan") && jill_unlocked() && joker_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Jill") && rare_breed_matches("Pithecan") && jill_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 // ==== Mocchi ====

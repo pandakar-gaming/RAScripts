@@ -759,7 +759,7 @@ achievement(
 
 achievement(
     title = "Lonely Warrior",
-    description = "WWin the Legend Cup with a Celious (Centaur/Tiger).",
+    description = "Win the Legend Cup with a Celious (Centaur/Tiger).",
     points = 10,
     trigger = is_primary_breed("Centaur") && is_secondary_breed("Tiger") && prereqs_met() && centaur_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
@@ -1705,7 +1705,7 @@ achievement(
     title = "Deep Cover Hopper",
     description = "Win the Legend Cup with a Frog Hopper (Hopper/???).",
     points = 10,
-    trigger = is_primary_breed("Hopper") && rare_breed_matches("Frog Hopper") && mock_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Hopper") && rare_breed_matches("Frog Hopper") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 // ==== Hare ====
@@ -2055,7 +2055,7 @@ achievement(
 )
 
 achievement(
-    title = "Perpetually Fearing Gooji",
+    title = "Perpetually in Fear of Gooji",
     description = "Win the Legend Cup with a Deluxe Liner (Zilla/???).",
     points = 10,
     trigger = is_primary_breed("Zilla") && rare_breed_matches("Deluxe Liner") && zilla_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
@@ -2270,7 +2270,7 @@ achievement(
 )
 
 achievement(
-    title = "Insomniac Monster",
+    title = "Insomniacs Rise Up",
     description = "Win the Legend Cup with a Red Eye (Suezo/Monol).",
     points = 10,
     trigger = is_primary_breed("Suezo") && is_secondary_breed("Monol") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
@@ -2978,7 +2978,7 @@ achievement(
 )
 
 achievement(
-    title = "Now THIS Is... Pod Racing?",
+    title = "The Rise of Darth Monol",
     description = "Win the Legend Cup with a Galaxy (Monol/???).",
     points = 10,
     trigger = is_primary_breed("Monol") && rare_breed_matches("Galaxy") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01

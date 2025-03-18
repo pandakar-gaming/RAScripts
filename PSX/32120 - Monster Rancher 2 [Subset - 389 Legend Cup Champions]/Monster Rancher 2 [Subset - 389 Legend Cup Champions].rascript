@@ -420,10 +420,6 @@ monster_breeds = {
     0x2b: "???"
 }
 
-
-// TODO add check for if card is flagged
-// cards run from 0x9908c -> 0x99223, byte each
-
 function prereq_tournaments_won() => m1_grand_prix_won() && winners_cup_won() && greatest_4_won() && world_monsters_cup_won()
 function correct_date() => current_month() == 0x04 && current_week() == 0x04
 function prereqs_met() => prereq_tournaments_won() && correct_date() && (current_tournament() == 0x4e || current_tournament() == 0x4f) 
@@ -589,21 +585,21 @@ achievement(
     title = "Power of the Red Pill",
     description = "Win the Legend Cup with a Poison (Pixie/???).",
     points = 10,
-    trigger = rare_breed_matches("Poison") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Pixie") && rare_breed_matches("Poison") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "The Pixie of Destiny",
     description = "Win the Legend Cup with a Kasumi (Pixie/???).",
     points = 10,
-    trigger = rare_breed_matches("Kasumi") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Pixie") && rare_breed_matches("Kasumi") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "The Woman in Mia",
     description = "Win the Legend Cup with a Mia (Pixie/???).",
     points = 10,
-    trigger = rare_breed_matches("Mia") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Pixie") && rare_breed_matches("Mia") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 // ==== Dragon ====
@@ -710,7 +706,7 @@ achievement(
     title = "Moo-low Gold",
     description = "Win the Legend Cup with a Moo (Dragon/???).",
     points = 10,
-    trigger = rare_breed_matches("Moo") && prereqs_met() && dragon_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Dragon") && rare_breed_matches("Moo") && prereqs_met() && dragon_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 // ==== Centaur ====
@@ -782,14 +778,14 @@ achievement(
     title = "Thoroughbred Runner",
     description = "Win the Legend Cup with a Trotter (Centaur/???).",
     points = 10,
-    trigger = rare_breed_matches("Trotter") && prereqs_met() && centaur_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Centaur") && rare_breed_matches("Trotter") && prereqs_met() && centaur_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Under the Table and Dreaming",
     description = "Win the Legend Cup with a Blue Thunder (Centaur/???).",
     points = 10,
-    trigger = rare_breed_matches("Blue Thunder") && prereqs_met() && centaur_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Centaur") && rare_breed_matches("Blue Thunder") && prereqs_met() && centaur_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 // ==== ColorPandora ====
@@ -819,14 +815,14 @@ achievement(
     title = "Devilish Dice",
     description = "Win the Legend Cup with a Dice (ColorPandora/???).",
     points = 10,
-    trigger = rare_breed_matches("Dice") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("ColorPandora") && rare_breed_matches("Dice") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Downtown Tram",
     description = "Win the Legend Cup with a Tram (ColorPandora/???).",
     points = 10,
-    trigger = rare_breed_matches("Tram") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("ColorPandora") && rare_breed_matches("Tram") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 // ==== Beaclon ====
@@ -898,7 +894,7 @@ achievement(
     title = "Food Waste Ain't For Legends",
     description = "Win the Legend Cup with an Eggplantern (Beaclon/???).",
     points = 10,
-    trigger = rare_breed_matches("Eggplantern") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Beaclon") && rare_breed_matches("Eggplantern") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 // ==== Henger ====
@@ -963,7 +959,7 @@ achievement(
     title = "Mechanical Animal",
     description = "Win the Legend Cup with a Skeleton (Henger/???).",
     points = 10,
-    trigger = rare_breed_matches("Skeleton") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Henger") && rare_breed_matches("Skeleton") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 // ==== Wracky ====
@@ -1042,7 +1038,7 @@ achievement(
     title = "All I Want for Christmas Is This Doll",
     description = "Win the Legend Cup with a Satan Clause (Wracky/???).",
     points = 10,
-    trigger = rare_breed_matches("Skeleton") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Wracky") && rare_breed_matches("Satan Clause") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 // ==== Golem ====
@@ -1219,7 +1215,7 @@ achievement(
     title = "Tecmo Bowl MVP",
     description = "Win the Legend Cup with a ForwardGolem (Golem/???).",
     points = 10,
-    trigger = rare_breed_matches("ForwardGolem") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Golem") && rare_breed_matches("ForwardGolem") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 // ==== Zuum ====
@@ -2649,7 +2645,7 @@ achievement(
     title = "Now She's Part of That World",
     description = "Win the Legend Cup with a Mermaid (Undine/???).",
     points = 10,
-    trigger = is_primary_breed("Jell") && rare_breed_matches("Mermaid") && undine_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Undine") && rare_breed_matches("Mermaid") && undine_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 // ==== Niton ====

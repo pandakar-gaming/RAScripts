@@ -353,7 +353,7 @@ function joker_unlocked() => byte(0x9934a) == 0x00 && byte(0x993a0) == 0x01
 function undine_unlocked() => byte(0x99356) == 0x00 && byte(0x993a3) == 0x01
 function niton_unlocked() => byte(0x99356) == 0x00 && byte(0x993a4) == 0x01
 // check that tree on ranch died
-function mock_unlocked() => byte(0x993ac) == 0x0b && byte(0x993a5) == 0x01
+function mock_unlocked() => byte(0x993a5) == 0x01
 // check that they've been to the shrine after going to IMa vs. FIMBA at least once
 function worm_unlocked() => byte(0x99312) == 0x00 && byte(0x99358) == 0x00 && byte(0x993aa) == 0x01
 // check that player's gotten at least one fun can and that they've got strong glue in inventory

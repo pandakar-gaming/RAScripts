@@ -358,7 +358,6 @@ function mock_unlocked() => byte(0x993a5) == 0x01
 function worm_unlocked() => byte(0x99312) == 0x00 && byte(0x99358) == 0x00 && byte(0x993aa) == 0x01
 // check that player's gotten at least one fun can and that they've got strong glue in inventory
 // NOTE: strong glue cannot be sold, meaning that if it's gone and they have a ducken they cheated it out
-// TODO make strong glue check work
 function ducken_unlocked() => byte(0x99322) == 0x00 && byte(0x993a6) == 0x01 && inventory_contains_glue()
 // check that player has seen Bighand
 function jill_unlocked() => byte(0x099344) == 0x00 && byte(0x09921d) == 0x01 && byte(0x9939e) == 0x01 

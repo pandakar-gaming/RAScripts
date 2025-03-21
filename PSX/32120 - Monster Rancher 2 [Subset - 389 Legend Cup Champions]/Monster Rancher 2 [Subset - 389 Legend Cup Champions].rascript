@@ -346,7 +346,7 @@ function phoenix_unlocked() => byte(0x9932c) == 0x00 && byte(0x9939a) == 0x01
 // check that pabs has yelled about the altar being a mess
 function ghost_unlocked() => byte(0x9933d) == 0x00 && byte(0x9939b) == 0x01
 // check that metalner has visited from afar
-function metalner_unlocked() => byte(0x09935e) == 0x00 && byte(0x09935f) == 0x00 && byte(0x099360) == 0x00 && byte(0x099367) == 0x00 && byte(0x9939c) == 0x01
+function metalner_unlocked() => byte(0x09935e) == 0x00 && byte(0x09935f) == 0x00 && byte(0x099360) == 0x00 && byte(0x9939c) == 0x01
 // check that pabs put on the mask
 function joker_unlocked() => byte(0x9934a) == 0x00 && byte(0x993a0) == 0x01
 // both undine and niton, check that the player's got a hot springs
@@ -362,10 +362,10 @@ function ducken_unlocked() => byte(0x99322) == 0x00 && byte(0x993a6) == 0x01 && 
 // check that player has seen Bighand
 function jill_unlocked() => byte(0x099344) == 0x00 && byte(0x09921d) == 0x01 && byte(0x9939e) == 0x01 
 
-function m1_grand_prix_won() => byte(0x97a80) == 0x01
-function greatest_4_won() => byte(0x97a84) == 0x01
-function world_monsters_cup_won() => byte(0x97a88) == 0x01
-function winners_cup_won() => byte(0x97a8c) == 0x01
+function m1_grand_prix_won() => dword(0x97a80) >= 0x01
+function greatest_4_won() => dword(0x97a84) >= 0x01
+function world_monsters_cup_won() => dword(0x97a88) >= 0x01
+function winners_cup_won() => dword(0x97a8c) >= 0x01
 function legend_cup() => byte(0x97a90)
 function current_week() => byte(0x99235)
 function current_month() => byte(0x99236)

@@ -677,28 +677,28 @@ achievement(
     title = "Thankfully, Nobody Brought Bombs",
     description = "Win the Legend Cup with a Dodongo (Dragon/Bajarl).",
     points = 10,
-    trigger = is_primary_breed("Dragon") && is_secondary_breed("Kato") && prereqs_met() && dragon_unlocked() && bajarl_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Dragon") && is_secondary_breed("Bajarl") && prereqs_met() && dragon_unlocked() && bajarl_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Mysterious Futuristic Power",
     description = "Win the Legend Cup with a Gidras (Dragon/Metalner).",
     points = 10,
-    trigger = is_primary_breed("Dragon") && is_secondary_breed("Kato") && prereqs_met() && dragon_unlocked() && metalner_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Dragon") && is_secondary_breed("Metalner") && prereqs_met() && dragon_unlocked() && metalner_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Back with a Vengeance",
     description = "Win the Legend Cup with a Death Dragon (Dragon/Joker).",
     points = 10,
-    trigger = is_primary_breed("Dragon") && is_secondary_breed("Kato") && prereqs_met() && dragon_unlocked() && joker_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Dragon") && is_secondary_breed("Joker") && prereqs_met() && dragon_unlocked() && joker_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
     title = "Apocalypse Bringer",
     description = "Win the Legend Cup with a Ragnaroks (Dragon/Monol).",
     points = 10,
-    trigger = is_primary_breed("Dragon") && is_secondary_breed("Kato") && prereqs_met() && dragon_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Dragon") && is_secondary_breed("Monol") && prereqs_met() && dragon_unlocked() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(

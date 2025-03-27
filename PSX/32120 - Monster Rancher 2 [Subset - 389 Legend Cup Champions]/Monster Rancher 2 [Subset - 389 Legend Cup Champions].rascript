@@ -1102,7 +1102,7 @@ achievement(
     title = "A Body Built for Anything",
     description = "Win the Legend Cup with a Dagon (Golem/Arrow Head).",
     points = 10,
-    trigger = is_primary_breed("Golem") && is_secondary_breed("Durahan") && golem_unlocked() && durahan_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Golem") && is_secondary_breed("Arrow Head") && golem_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
@@ -2275,7 +2275,7 @@ achievement(
     title = "Legends Multiply",
     description = "Win the Legend Cup with a Fly Eye (Suezo/Worm).",
     points = 10,
-    trigger = is_primary_breed("Suezo") && is_secondary_breed("Monol") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Suezo") && is_secondary_breed("Worm") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(
@@ -2463,7 +2463,7 @@ achievement(
     title = "Strength Beyond Measure",
     description = "Win the Legend Cup with a Tombstone (Joker/Golem).",
     points = 10,
-    trigger = is_primary_breed("Joker") && is_secondary_breed("Dragon") && joker_unlocked() && golem_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
+    trigger = is_primary_breed("Joker") && is_secondary_breed("Golem") && joker_unlocked() && golem_unlocked() && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
 
 achievement(

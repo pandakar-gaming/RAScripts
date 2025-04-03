@@ -1,4 +1,9 @@
-A proper explanation for the repo will go here one day. Later.
+This is a collection of scripts and other technical related things I've written while working on RetroAchievements sets. 
+Some of this is work that is used to make the achievement sets themselves, and some of it is helper scripts to better understand the game in question.
+
+# RAScripts
+
+Sectioned per console, then per set on the website. Numeric values link to a set on the site, i.e. a number like `32120` would be associated with https://retroachievements.org/game/32120.
 
 Note for myself (and others) looking to copy notes from one set to another: you could do this via regex. Way I've been doing this:
 

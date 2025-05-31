@@ -51,9 +51,7 @@ active_combat_mission_id = word(0x00284abe)
 // @param mission_name the String name of the mission that the player would see.
 // @param event_id temporary variable to avoid mapping the events by id.
 function on_mission(mission_name, event_id) {
-    return actively_in_event() 
-        && active_combat_mission_id == combat_missions_by_name[mission_name]
-        && most_recent_mission == event_id
+    return actively_in_event() && most_recent_mission == event_id
 }
 
 // Check if the team taking their turn is engaged in combat.
@@ -61,15 +59,8 @@ function active_unit_in_combat() {
     return bit0(combat_ptr + 0x1c) == 0
 }
 
-// Check if the team taking their turn is a friendly unit and is moving around.
-function friendly_unit_moving() {
-    return bit1(combat_ptr + 0x1c) == 0 && bit0(combat_ptr + 0x1c) == 1
-}
-
-// Check if the team taking their turn is a hostile unit and is moving around.
-function hostile_unit_moving() {
-    return bit1(combat_ptr + 0x1c) == 1 && bit0(combat_ptr + 0x1c) == 1
-}
+// See if the current unit is moving around while in combat.
+function unit_moving() => ptr_valid(full_combat_ptr) && bit0(combat_ptr + 0x1c) == 1
 
 // This is checking if the player *ever* entered a free battle, not if they're currently in one.
 // This is done by seeing if the player ever saw the tutorials for how Free Combat works.
@@ -101,6 +92,10 @@ function defender_left_unit_defeated() => ptr_valid(full_defender_team_ptr) && u
 // See if the unit on the right side of the defender's team was defeated in combat.
 function defender_right_unit_defeated() => ptr_valid(full_defender_team_ptr) && unit_defeated(defender_ptr + 0x160)
 
+// Haven't really found a good indicator otherwise for game overs, except for this pointer popping up
+// So if you're in combat and this is valid, player goofed
+function game_over() => ptr_valid(dword(0x001beac8))
+
 // Determine if the specific unit was just defeated.
 // A "unit" is either a team leader or a demon. 
 // Input: address of unit's current health. It is expected that the max health is directly 0x02 after and is the same size. 
@@ -108,6 +103,8 @@ function unit_defeated(addr_unit_current_health) {
     return prev(word(addr_unit_current_health)) <= word(addr_unit_current_health + 0x02) && word(addr_unit_current_health) == 0x00
 }
 
+// Check if a character is still alive according to plot flags.
+// Some characters can permanently die if you meet (or fail to meet) certain conditions.
 function character_alive(char_name) {
     // for whatever reason no characters exist from 0x00 -> 0x02
     char_index = chararacter_ids_by_name[char_name] - 0x03
@@ -115,6 +112,10 @@ function character_alive(char_name) {
     return bit1(0x00284dc2 + (0x10 * char_index)) == 0
 }
 
+// Check if the given team moved to the given tile on the active combat map.
+// @param team_offset a value from 0x00 to 0x0b indicating which team is moving around
+// @param x the expected x-coordinate
+// @param y the expected y-coordinate
 function team_moves_to_coord(team_offset, x, y) {
     cond = ptr_valid(full_combat_ptr)
     cond = cond && team_moves_to_x(team_offset, x)
@@ -122,20 +123,35 @@ function team_moves_to_coord(team_offset, x, y) {
     return cond
 }
 
+// Check if the given team moved to the given row on the active combat map.
+// @param team_offset a value from 0x00 to 0x0b indicating which team is moving around
+// @param x the expected x-coordinate
 function team_moves_to_x(team_offset, x) {
     cond = ptr_valid(full_team_array_ptr)
     cond = cond && prev(byte(team_array_ptr + (0x27c * team_offset) + 0x1f2)) != x && byte(team_array_ptr + (0x27c * team_offset) + 0x1f2) == x
     return cond
 }
 
+// Check if the given team moved to the given column on the active combat map.
+// @param team_offset a value from 0x00 to 0x0b indicating which team is moving around
+// @param y the expected y-coordinate
 function team_moves_to_y(team_offset, y) {
     cond = ptr_valid(full_team_array_ptr)
     cond = cond && prev(byte(team_array_ptr + (0x27c * team_offset) + 0x1f3)) != y && byte(team_array_ptr + (0x27c * team_offset) + 0x1f3) == y
     return cond
 }
 
-// macca + extra
+// Calculates offered Macca + Extra that the demon demands
 function true_auction_cost() => dword(full_auction_ptr + 0x1cc) + dword(full_auction_ptr + 0x1e4)
+
+// Stub for now until I have logic for this.
+function is_new_game_plus() => always_false()
+
+// The game offers a Suspend function. This is very similar to using a Save State.
+// This doesn't work for some of the achievements being coded, so we get to detect if someone actually hopped on a mission
+// using the menu or if they're loading from suspend.
+// DO NOT USE THIS FOR PROGRESSION. ONLY CHALLENGES.
+function loaded_from_suspend() => ptr_valid(full_combat_ptr) && byte(combat_ptr + 0x268) == 0x01
 
 // I would do by id/offset BUT THEY PUT GAPS IN BETWEEN SOME.
 // They also intermingle demons you can get and demons/enemies you can't get in the Compendium
@@ -377,6 +393,7 @@ monster_addr_by_name = {
 //    "Bifrons":       0x116,
 // so we just gotta rattle 'em off.
 enemy_id_by_name = {
+    "Hero":          0x00,
     "Ronaldo":       0x01,
     // I have to PRESUME that other human controllable characters you can fight go here.
     // i.e. this now goes from Io -> Anguished One, placing Anguished One at 0x0d
@@ -631,18 +648,17 @@ enemy_name_by_id = {
     0x00: "Hero", // That's what the game calls him!
     0x01: "Ronaldo",
     0x02: "Io",
-    // "Yamato":        0x03,
-    // "Fumi":          0x04,
+    0x03: "Yamato",
+    0x04: "Fumi",
     0x05: "Daichi",
-    // "Otome":         0x06,
-    // "Jungo":         0x07,
-    // "Makoto":        0x08,
-    // "Keita":         0x09,
+    0x06: "Otome",
+    0x07: "Jungo",
+    0x08: "Makoto",
     0x09: "Keita",
-    // "Airi":          0x0a,
+    0x0a: "Airi",
     0x0b: "Joe",
     0x0c: "Hinako",
-    // "Anguished One": 0x0d,
+    0x0d: "Anguished One",
     // End of presumed character IDs 
     // "Tonatiuh":      0x0e,
     // "Chernobog":     0x0f,
@@ -876,22 +892,23 @@ enemy_name_by_id = {
     0x164: "Vacant Woman" // Fumi in Demon-Hacked
 }
 
+// Check if the player has access to the demon compendium
 function compendium_added() => bit7(0x00284cb3) == 0x01 && byte(0x00284cb3) != 0xff
 // the compendium itself is in a static spot in memory
 start_of_compendium = 0x00285074
 // each entry is 32 bytes long
 end_of_compendium = 0x00287054
-function demon_registered(monster_name) {
-    // there's multiple indicators for a "valid" compendium entry in the game
-    // we're just using one of them. the other ones:
-    // entry + 0x04 == 0xff
-    // entry + 0x05 > 0 (this is what the game actually uses to toggle display of monster in compendium)
-    return byte(monster_addr_by_name[monster_name] + 0x04) / 0xff
+// There are multiple indicators for a valid compendium entry. Each demon has a 32-byte space they're statically stored in.
+// We're using the following indicator that is common to every demon: entry + 0x04 == 0xff.
+// @param demon_name the human readable name of the demon you want to check registry for
+function demon_registered(demon_name) {
+    return byte(monster_addr_by_name[demon_name] + 0x04) / 0xff
 }
 
-// I have listings of monster IDs/offsets from 0x0e ranging to 0x12b.
+// Check how many demons are currently registered in the player's compendium.
+// The game has internal listings of monster IDs/offsets from 0x0e ranging to 0x12b. 
 // That should add to 285 demons (299 - 14).
-// Online lists are saying there's only 222 demons in this version though
+// Online lists are saying there's only 222 demons in this version though. Still need to verify this.
 function num_registered_compendium() {
     return sum_of(monster_addr_by_name, demon_registered)
 }
@@ -930,19 +947,57 @@ function player_and_neutral_last_standing(num_starting_teams, neutral_party_id) 
 }
 
 // Check if any of the player-controlled teams are alive and only player-controlled teams.
+// As I write this, this is getting more convoluted for a basic "did you win" check.
+// TODO simplify this by checking post-combat things
 function player_team_last_standing(num_starting_teams) {
     // Player team indexed from 0, so if you run 4 teams your max ID seen should be 0x03
     max_player_id = num_starting_teams - 0x01
-    only_friendlies_present = ptr_valid(full_combat_ptr)
-    // first N slots should be player teams
-    for i in range(0, num_starting_teams) {
-        only_friendlies_present = only_friendlies_present && (byte(combat_ptr + 0x250 + i)) <= max_player_id
-    }
-
-    // Every slot after must be 0xff
+    // At least one player-controllable character should be alive
+    only_friendlies_present = ptr_valid(full_combat_ptr) && byte(combat_ptr + 0x250) <= max_player_id
+    // From the end of the team order array to where friendly teams could begin, we should see 0xff
     for i in range(num_starting_teams + 1, 11) {
         only_friendlies_present = only_friendlies_present && (byte(combat_ptr + 0x250 + i)) == 0xff
     }
+
+    // In the range of [1, num_starting_teams] we should see one of the following:
+    // the player team ID; OR
+    // it was a non-player team ID and flipped to 0xff (a player team died)
+    // this should at most be 3 more cases to handle so just do them manually
+
+    if (num_starting_teams == 0x02) {
+        only_friendlies_present = only_friendlies_present && 
+        (
+            // 1 death
+            (prev(byte(combat_ptr + 0x250 + 1)) <= 0x0b && byte(combat_ptr + 0x250 + 1) == 0xff)
+            // 0 death
+            || (byte(combat_ptr + 0x250 + 1) <= max_player_id)
+        )
+    }
+
+    if (num_starting_teams == 0x03) {
+        only_friendlies_present = only_friendlies_present &&
+        (
+            // 2 deaths
+
+            // 1 death
+            // no death
+        )
+
+    }
+
+    if (num_starting_teams == 0x04) {
+        // 3 deaths
+        // 2 deaths
+        // 1 death
+        // 0 deaths
+    }
+
+    for i in range(1, num_starting_teams) {
+        only_friendlies_present = only_friendlies_present 
+            && (((byte(combat_ptr + 0x250 + i)) <= max_player_id)
+                || (prev(byte(combat_ptr + 0x250 + i)) <= 0x0b && byte(combat_ptr + 0x250 + i) == 0xff))
+    }
+
 
     return only_friendlies_present
 }
@@ -1170,11 +1225,14 @@ chararacter_ids_by_name = {
     "Anguished One": 0x0f
 }
 
+// Check if a given character has their FATE stage maxed.
 // Characters are stored in an array that is sorted based on who's in party.
 // Protag always leads array and is fixed at 0x002844c2.
 // Other characters that aren't protag start array at 0x002844e4 and end array at 0x002846b8.
 // Fate stage is 0x21 into block.
 function char_fate_stage_maxed(char_name) {
+    // This should be a static size between array spots but for whatever reason this was falling apart when I tried to use math
+    // The solution? Never do math.
     array_positions = [
         0x002844e4,
         0x00284508,
@@ -1201,6 +1259,9 @@ function char_fate_stage_maxed(char_name) {
     return cond
 }
 
+// Locations by id.
+// This is the location you enter the event at; it's not the actual location your character might be at plot wise 
+// because sometimes characters move around to different spots mid event.
 location = {
     0x00: "??? 0x00",
     0x01: "??? 0x01",
@@ -1297,20 +1358,6 @@ combat_missions_by_name = {
     "Osaka Soul":       0x000c,
     "Never Say Die":    0x000d,
     "Demon-Hacked":     0x000e,
-}
-
-combat_missions_by_id = {
-    0x0002: "Death Clip",
-    0x0003: "Daichi's Crisis",
-    0x0004: "A Man Named Joe",
-    0x0005: "Daichi's Resolve",
-    0x0009: "Free Battle",
-    0x000a: "Free Battle",
-    0x000b: "App Abuser",
-    0x000c: "Osaka Soul",
-    0x000d: "Never Say Die",
-    0x000e: "Demon-Hacked",
-    0x0019: "Free Battle"
 }
 
 missions = {
@@ -1451,6 +1498,189 @@ day_of_week = {
     0x08: "Final Day"
 }
 
+// Rolling with this approach until something more consistent pops up.
+// The game seems to like to use the following addresses for flags for the *current* mission:
+// [0x00284b54, 0x00284b55, 0x00284b56, 0x00284b57, 0x00284b58].
+// As we only need a generic check for some missions, for a given mission we'll check if the associated flag flipped.
+function active_mission_completed(mission_name) {
+    if (mission_name == "Daichi's Crisis") {
+        return prev(bit2(0x00284b55)) == 0x00 && bit2(0x00284b55) == 0x01
+    }
+
+    if (mission_name == "A Man Named Joe") {
+        return prev(bit1(0x00284b56)) == 0x00 && bit1(0x00284b56) == 0x01
+    }
+}
+
+// Helper while we're still mapping out mails.
+// For every mailbox address we don't know about, tell us when it flips from 0xff to anything else.
+function mailbox_hunt_helper() {
+    starting_addr = 0x00284cb0
+    ending_addr = 0x00284d83
+
+    mapped_addrs = [
+        0x00284cb3,
+        0x00284cb4,
+        0x00284cb7,
+        0x00284ccb,
+        0x00284ccc,
+        0x00284cce,
+        0x00284ccf,
+        0x00284ce6,
+        0x00284ce7
+    ]
+
+    mails_to_check = day <= 0x08
+
+    for i in range(0x00284cb0, 0x00284d83) {
+        if (!array_contains(mapped_addrs, i)) {
+            mails_to_check = mails_to_check || (prev(byte(i)) == 0xff && byte(i) != 0xff)
+        } 
+    }
+    return mails_to_check
+}
+
+achievement(
+    title = "[FOR DEV]Mailbox Hunt",
+    description = "You got mail!",
+    points = 0,
+    trigger = day <= 0x08 && mailbox_hunt_helper()
+)
+
+achievement(
+    title = "[FOR DEV]Event Flag Hunt",
+    description = "Events have flags associated to say 'you did this.' This might be one of them!",
+    points = 0,
+    trigger = day <= 0x08 && (
+        // 0x00284ad8
+        (prev(bit1(0x00284ad8)) == 0x00 && bit1(0x00284ad8) == 0x01) ||
+        (prev(bit2(0x00284ad8)) == 0x00 && bit2(0x00284ad8) == 0x01) ||
+        (prev(bit3(0x00284ad8)) == 0x00 && bit3(0x00284ad8) == 0x01) ||
+        (prev(bit4(0x00284ad8)) == 0x00 && bit4(0x00284ad8) == 0x01) ||
+        (prev(bit5(0x00284ad8)) == 0x00 && bit5(0x00284ad8) == 0x01) ||
+        (prev(bit6(0x00284ad8)) == 0x00 && bit6(0x00284ad8) == 0x01) ||
+        (prev(bit7(0x00284ad8)) == 0x00 && bit7(0x00284ad8) == 0x01) ||
+        // 0x00284ad9
+        (prev(bit0(0x00284ad9)) == 0x00 && bit0(0x00284ad9) == 0x01) ||
+        (prev(bit1(0x00284ad9)) == 0x00 && bit1(0x00284ad9) == 0x01) ||
+        (prev(bit2(0x00284ad9)) == 0x00 && bit2(0x00284ad9) == 0x01) ||
+        (prev(bit3(0x00284ad9)) == 0x00 && bit3(0x00284ad9) == 0x01) ||
+        (prev(bit4(0x00284ad9)) == 0x00 && bit4(0x00284ad9) == 0x01) ||
+        (prev(bit7(0x00284ad9)) == 0x00 && bit7(0x00284ad9) == 0x01) ||
+        // 0x00284ada
+        (prev(bit0(0x00284ada)) == 0x00 && bit0(0x00284ada) == 0x01) ||
+        (prev(bit1(0x00284ada)) == 0x00 && bit1(0x00284ada) == 0x01) ||
+        (prev(bit2(0x00284ada)) == 0x00 && bit2(0x00284ada) == 0x01) ||
+        (prev(bit3(0x00284ada)) == 0x00 && bit3(0x00284ada) == 0x01) ||
+        (prev(bit4(0x00284ada)) == 0x00 && bit4(0x00284ada) == 0x01) ||
+        (prev(bit5(0x00284ada)) == 0x00 && bit5(0x00284ada) == 0x01) ||
+        (prev(bit6(0x00284ada)) == 0x00 && bit6(0x00284ada) == 0x01) ||
+        (prev(bit7(0x00284ada)) == 0x00 && bit7(0x00284ada) == 0x01) ||
+        // 0x00284adb
+        (prev(bit0(0x00284adb)) == 0x00 && bit0(0x00284adb) == 0x01) ||
+        (prev(bit1(0x00284adb)) == 0x00 && bit1(0x00284adb) == 0x01) ||
+        (prev(bit2(0x00284adb)) == 0x00 && bit2(0x00284adb) == 0x01) ||
+        (prev(bit5(0x00284adb)) == 0x00 && bit5(0x00284adb) == 0x01) ||
+        (prev(bit6(0x00284adb)) == 0x00 && bit6(0x00284adb) == 0x01) ||
+        (prev(bit7(0x00284adb)) == 0x00 && bit7(0x00284adb) == 0x01) ||
+        // 0x00284adc
+        (prev(bit0(0x00284adc)) == 0x00 && bit0(0x00284adc) == 0x01) ||
+        (prev(bit1(0x00284adc)) == 0x00 && bit1(0x00284adc) == 0x01) ||
+        (prev(bit2(0x00284adc)) == 0x00 && bit2(0x00284adc) == 0x01) ||
+        (prev(bit3(0x00284adc)) == 0x00 && bit3(0x00284adc) == 0x01) ||
+        (prev(bit4(0x00284adc)) == 0x00 && bit4(0x00284adc) == 0x01) ||
+        (prev(bit6(0x00284adc)) == 0x00 && bit6(0x00284adc) == 0x01) ||
+        // 0x00284add
+        (prev(bit0(0x00284add)) == 0x00 && bit0(0x00284add) == 0x01) ||
+        (prev(bit1(0x00284add)) == 0x00 && bit1(0x00284add) == 0x01) ||
+        (prev(bit2(0x00284add)) == 0x00 && bit2(0x00284add) == 0x01) ||
+        (prev(bit3(0x00284add)) == 0x00 && bit3(0x00284add) == 0x01) ||
+        (prev(bit4(0x00284add)) == 0x00 && bit4(0x00284add) == 0x01) ||
+        (prev(bit5(0x00284add)) == 0x00 && bit5(0x00284add) == 0x01) ||
+        (prev(bit6(0x00284add)) == 0x00 && bit6(0x00284add) == 0x01) ||
+        (prev(bit7(0x00284add)) == 0x00 && bit7(0x00284add) == 0x01) ||
+        // 0x00284ade
+        (prev(bit0(0x00284ade)) == 0x00 && bit0(0x00284ade) == 0x01) ||
+        (prev(bit1(0x00284ade)) == 0x00 && bit1(0x00284ade) == 0x01) ||
+        (prev(bit2(0x00284ade)) == 0x00 && bit2(0x00284ade) == 0x01) ||
+        (prev(bit3(0x00284ade)) == 0x00 && bit3(0x00284ade) == 0x01) ||
+        (prev(bit4(0x00284ade)) == 0x00 && bit4(0x00284ade) == 0x01) ||
+        (prev(bit5(0x00284ade)) == 0x00 && bit5(0x00284ade) == 0x01) ||
+        (prev(bit6(0x00284ade)) == 0x00 && bit6(0x00284ade) == 0x01) ||
+        // 0x00284adf
+        (prev(bit0(0x00284adf)) == 0x00 && bit0(0x00284adf) == 0x01) ||
+        (prev(bit1(0x00284adf)) == 0x00 && bit1(0x00284adf) == 0x01) ||
+        (prev(bit2(0x00284adf)) == 0x00 && bit2(0x00284adf) == 0x01) ||
+        (prev(bit3(0x00284adf)) == 0x00 && bit3(0x00284adf) == 0x01) ||
+        (prev(bit4(0x00284adf)) == 0x00 && bit4(0x00284adf) == 0x01) ||
+        (prev(bit5(0x00284adf)) == 0x00 && bit5(0x00284adf) == 0x01) ||
+        (prev(bit6(0x00284adf)) == 0x00 && bit6(0x00284adf) == 0x01) ||
+        (prev(bit7(0x00284adf)) == 0x00 && bit7(0x00284adf) == 0x01) ||
+        // 0x00284ae0
+        (prev(bit0(0x00284ae0)) == 0x00 && bit0(0x00284ae0) == 0x01) ||
+        (prev(bit1(0x00284ae0)) == 0x00 && bit1(0x00284ae0) == 0x01) ||
+        (prev(bit3(0x00284ae0)) == 0x00 && bit3(0x00284ae0) == 0x01) ||
+        (prev(bit4(0x00284ae0)) == 0x00 && bit4(0x00284ae0) == 0x01) ||
+        (prev(bit5(0x00284ae0)) == 0x00 && bit5(0x00284ae0) == 0x01) ||
+        (prev(bit6(0x00284ae0)) == 0x00 && bit6(0x00284ae0) == 0x01) ||
+        (prev(bit7(0x00284ae0)) == 0x00 && bit7(0x00284ae0) == 0x01) ||
+        // 0x00284ae1
+        (prev(bit0(0x00284ae1)) == 0x00 && bit0(0x00284ae1) == 0x01) ||
+        (prev(bit1(0x00284ae1)) == 0x00 && bit1(0x00284ae1) == 0x01) ||
+        (prev(bit2(0x00284ae1)) == 0x00 && bit2(0x00284ae1) == 0x01) ||
+        (prev(bit3(0x00284ae1)) == 0x00 && bit3(0x00284ae1) == 0x01) ||
+        (prev(bit4(0x00284ae1)) == 0x00 && bit4(0x00284ae1) == 0x01) ||
+        (prev(bit6(0x00284ae1)) == 0x00 && bit6(0x00284ae1) == 0x01) ||
+        (prev(bit7(0x00284ae1)) == 0x00 && bit7(0x00284ae1) == 0x01) ||
+        // 0x00284ae2
+        // 0x00284ae3
+        // 0x00284ae4
+        // 0x00284ae5
+        // 0x00284ae6
+        // 0x00284ae7
+        // 0x00284ae8
+        // 0x00284ae9
+        // 0x00284aea
+        (prev(bit0(0x00284aea)) == 0x00 && bit0(0x00284aea) == 0x01) ||
+        (prev(bit1(0x00284aea)) == 0x00 && bit1(0x00284aea) == 0x01) ||
+        (prev(bit2(0x00284aea)) == 0x00 && bit2(0x00284aea) == 0x01) ||
+        // 0x00284aeb
+        (prev(bit7(0x00284aeb)) == 0x00 && bit7(0x00284aeb) == 0x01) ||
+        // 0x00284aec
+        (prev(bit3(0x00284aec)) == 0x00 && bit3(0x00284aec) == 0x01) ||
+        (prev(bit4(0x00284aec)) == 0x00 && bit4(0x00284aec) == 0x01) ||
+        (prev(bit5(0x00284aec)) == 0x00 && bit5(0x00284aec) == 0x01) ||
+        // 0x00284aed is fully covered
+        // 0x00284aee is fully covered
+        // 0x00284aef
+        (prev(bit0(0x00284aef)) == 0x00 && bit0(0x00284aef) == 0x01) ||
+        (prev(bit2(0x00284aef)) == 0x00 && bit2(0x00284aef) == 0x01) ||
+        (prev(bit3(0x00284aef)) == 0x00 && bit3(0x00284aef) == 0x01) ||
+        (prev(bit4(0x00284aef)) == 0x00 && bit4(0x00284aef) == 0x01) ||
+        (prev(bit5(0x00284aef)) == 0x00 && bit5(0x00284aef) == 0x01) ||
+        (prev(bit6(0x00284aef)) == 0x00 && bit6(0x00284aef) == 0x01) ||
+        (prev(bit7(0x00284aef)) == 0x00 && bit7(0x00284aef) == 0x01) ||
+        // 0x00284af0
+        (prev(bit0(0x00284af0)) == 0x00 && bit0(0x00284af0) == 0x01) ||
+        (prev(bit1(0x00284af0)) == 0x00 && bit1(0x00284af0) == 0x01) ||
+        (prev(bit2(0x00284af0)) == 0x00 && bit2(0x00284af0) == 0x01) ||
+        (prev(bit3(0x00284af0)) == 0x00 && bit3(0x00284af0) == 0x01) ||
+        (prev(bit4(0x00284af0)) == 0x00 && bit4(0x00284af0) == 0x01) ||
+        (prev(bit5(0x00284af0)) == 0x00 && bit5(0x00284af0) == 0x01) ||
+        (prev(bit6(0x00284af0)) == 0x00 && bit6(0x00284af0) == 0x01) ||
+        (prev(bit7(0x00284af0)) == 0x00 && bit7(0x00284af0) == 0x01) ||
+        // it goes down to here :(
+        (prev(bit0(0x00284b12)) == 0x00 && bit0(0x00284b12) == 0x01) ||
+        (prev(bit1(0x00284b12)) == 0x00 && bit1(0x00284b12) == 0x01) ||
+        (prev(bit2(0x00284b12)) == 0x00 && bit2(0x00284b12) == 0x01) ||
+        (prev(bit3(0x00284b12)) == 0x00 && bit3(0x00284b12) == 0x01) ||
+        (prev(bit4(0x00284b12)) == 0x00 && bit4(0x00284b12) == 0x01) ||
+        (prev(bit5(0x00284b12)) == 0x00 && bit5(0x00284b12) == 0x01) ||
+        (prev(bit6(0x00284b12)) == 0x00 && bit6(0x00284b12) == 0x01) ||
+        (prev(bit7(0x00284b12)) == 0x00 && bit7(0x00284b12) == 0x01)
+    )
+)
+
 // *** Achievements ***
 
 // Progression
@@ -1466,13 +1696,9 @@ achievement(
     title = "She's Sealed Away for a Reason",
     description = "Avert the crisis shown in the second death clip on Sunday.",
     points = 1,
-    // Note that Makoto's unit is 0x0b
-    // but she actually disappears from the (stagnant) active turn order as the mission resolves
-    trigger = on_mission("Daichi's Crisis", 0x3f1) && player_team_last_standing(3),
+    trigger = on_mission("Daichi's Crisis", 0x3f1) && active_mission_completed("Daichi's Crisis"),
     type = "progression"
 )
-// Note to self: This is a lot of setup.
-// It requires that Daichi's Poltergeist is kept alive and that Makoto reduces Bai Suzhen's HP to 1 via Fatal Strike
 achievement(
     title = "Just Needed Moral Support",
     description = "Have Daichi's team land the killing blow on Bai Suzhen in Daichi's Crisis.",
@@ -1485,25 +1711,28 @@ achievement(
     type = "missable"
 )
 achievement(
-    title = "[NEEDS_TEST]Taking on Troublesome Contracts",
+    title = "Taking on Troublesome Contracts",
     description = "Help Joe resolve his outstanding contract.",
     points = 2,
-    // need a better "combat is done" indicator
-    // next thought: can check how many times a defeated leader is recorded
-    trigger = on_mission("A Man Named Joe", 0x3f3) && most_recent_mission == 0x3f3 && current_combat_event == 0x0004 && player_and_neutral_last_standing(3, 0x0b),
+    trigger = on_mission("A Man Named Joe", 0x3f3) && active_mission_completed("A Man Named Joe"),
     type = "progression"
 )
 achievement(
     title = "No Demon Left Behind",
-    description = "Get all allies to the escape area in Daichi's Worth without Dubhe killing any demons.",
+    description = "Get all allies to the escape area in Daichi's Worth without Dubhe killing any demons and without using the Suspend feature.",
     points = 5,
     trigger = never(most_recent_mission != 0x3f4)
         && ptr_valid(full_team_array_ptr)
+        && bit3(0x00284aec) == 0x01
         && trigger_when(prev(word(team_array_ptr + (0x27c * 0x04) + 0x0a)) == 0x114 && word(team_array_ptr + (0x27c * 0x04) + 0x0a) == 0x115)
         && never((attacker_leader_is("Dubhe (Whole)") && defender_left_unit_defeated())
         || (attacker_leader_is("Dubhe (Whole)") && defender_right_unit_defeated())
         || (defender_leader_is("Dubhe (Whole)") && attacker_left_unit_defeated())
-        || (defender_leader_is("Dubhe (Whole)") && attacker_right_unit_defeated())),
+        || (defender_leader_is("Dubhe (Whole)") && attacker_right_unit_defeated()))
+        // This may not be technically necessary, but it makes me feel better!
+        // I'm observing that the game does not use a separate pointer to access teams when the game loads from suspend in this mission
+        // which means that the validity check for the full_team_array_ptr is actually doing work
+        && disable_when(loaded_from_suspend(), until=most_recent_mission != 0x3f4),
     type = "missable"
 )
 achievement(
@@ -1516,7 +1745,8 @@ achievement(
 )
 achievement(
     title = "I Take My Volunteer Work Seriously",
-    description = "Defeat all human enemies in App Abuser before any have a chance to escape.",
+    // We don't actively need to check for the Suspend function here, the hits take care of that
+    description = "Without using the Suspend function, defeat all human enemies in App Abuser before any have a chance to escape.",
     points = 3,
     trigger = never(most_recent_mission != 0x7d4)
         && most_recent_mission == 0x7d4
@@ -1529,18 +1759,23 @@ achievement(
         && disable_when(team_moves_to_x(0x06, 0x0e), until=most_recent_mission != 0x7d4),
     type = "missable"
 )
+// Suspend allowed
 achievement(
     title = "[NEEDS_DEV]Busting the 'valgate Party",
     description = "Defeat the Vacant Woman in Demon-Hacked before a second wave of demons joins the fight.",
     points = 5,
     trigger = most_recent_mission == 0x7da
-        && defender_leader_is("Vacant Woman") && defender_leader_defeated()
-        // this is an odd mission, it leaves some gaps in teams assigned 
-        // and kind of forces a set of adds to spawn if you get too close to Fumi
-        // the goal here is to prevent any *further* adds after team_id = 0x0a
-        // there are some addresses indicated by "Flag Hunt" that seem to flip as an enemy gets spawned in
-        // you might be able to use that to determine what's going on here
-        && disable_when(adds_spawned(0x0a, 1), until=most_recent_mission != 0x7da),
+        && in_combat()
+        && trigger_when(defender_leader_is("Vacant Woman")) && trigger_when(defender_leader_defeated())
+        // I'm making the hot presumption that Fumi's team position is static
+        // There's 0 way this bites me in the ass. No way!
+        // In all seriousness the other summon is a special one that doesn't happen on "her" turn
+        // so we only have to check this occurs once.
+        && ptr_valid(full_team_array_ptr)
+        && disable_when(
+            once(prev(word(team_array_ptr + 0x162b)) == 0x0c && word(team_array_ptr + 0x162b) == 0x11),
+            until=most_recent_mission != 0x7da
+        ),
     type = "missable"
 )
 // simple achievement here, just recruit hinako
@@ -1559,17 +1794,16 @@ achievement(
     trigger = day == 0x09, // TODO needs battle team information
     type = "missable"
 )
-// badge should be picture of Waira at top of stairs that kills Keita
 achievement(
     title = "[NEEDS_DEV]Savior of the Angry",
     description = "Prevent the death foretold by Monday's death clip.",
     points = 3,
-    trigger = most_recent_mission == 0x7dc && character_alive("Keita") && prev(on_grid_map()) && !on_grid_map(),
+    trigger = bit1(0x00284aee) == 0x01 && most_recent_mission == 0x7dc && character_alive("Keita") && prev(in_combat()) && !in_combat(),
     type = "missable"
 )
 achievement(
     title = "[NEEDS_DEV]Treading Carefully",
-    description = "Defeat Merak without it ever using Circumpolarity.",
+    description = "In a single session, defeat Merak without it ever using Circumpolarity.",
     points = 3,
     trigger = day == 0x09,
     type = "missable"
@@ -1614,11 +1848,20 @@ achievement(
 // Man of Fury: Defeat Ronaldo before any supporter has a chance to escape. "Go for the Head"
 achievement(
     title = "[NEEDS_DEV]Brutal Efficiency",
-    description = "Defeat only Ronaldo in the Man of Fury mission without any allies dying.",
+    description = "Defeat only Ronaldo in the Man of Fury.",
     points = 10,
     // Loose high level idea here:
     // you detect when Ronaldo's HP hits 0, this is the trigger
     // you verify that the first N slots in the turn order are != 0xff. that's it
+    trigger = day == 0x09,
+    type = "missable"
+)
+achievement(
+    title = "[NEEDS_DEV]Efficient Multitasker",
+    // Make sure it's very clear that you can Suspend before it splits, but any Suspend after it splits 
+    // will result in not being to accomplish this challenge 
+    description = "In a single session, defeat Phecda within 5 turns of it splitting into two units.",
+    points = 5,
     trigger = day == 0x09,
     type = "missable"
 )
@@ -1630,6 +1873,7 @@ achievement(
     trigger = most_recent_mission == 0xbc4 
     // This will actually need a pair of clauses
     // There's multiple Phecda forms and you can defeat one or the other
+    // This will also need to make sure that regardless of session, both Phecdas are defeated
     // Phecda (Whole)
     // Phecda (Phys Immune)
     // Phecda (Magic Immune)
@@ -1686,11 +1930,9 @@ achievement(
     type = "progression"
 )
 
-// *** Avoidable Deaths ***
+// *** Avoidable Deaths to Cover ***
 // Otome
 // Makoto
-
-// Never Say Die: probably just a "meet Hinako" OR Complete "Never Say Die" with Hinako's team getting 0 team kills.
 // Girl in Pursuit: Prevent any rioters from escaping and win.
 // Boy in Combat: Nothing notable in mission probably just a "meet Jungo"
 // Saving Daichi OR Goodbye Jungo: Actually save Daichi by bringing him to a rescue point. Do what the mission says!!!
@@ -1711,7 +1953,7 @@ achievement(
     title = "[IN DEV]Uncool to Grind in Tokyo",
     description = "Complete Day 1 without ever entering any Free Battle on a New Game file.",
     points = 5,
-    trigger = !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x01) && day == 0x02,
+    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x01) && day == 0x02,
     type = "missable"
 )
 // day 2
@@ -1719,7 +1961,7 @@ achievement(
     title = "[IN DEV]Uncool to Grind in Osaka",
     description = "Complete Day 2 without ever entering any Free Battle on a New Game file.",
     points = 5,
-    trigger = !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x02) && day == 0x03,
+    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x02) && day == 0x03,
     type = "missable"
 )
 // day 3
@@ -1727,7 +1969,7 @@ achievement(
     title = "[IN DEV]Uncool to Grind in Nagoya",
     description = "Complete Day 3 without ever entering any Free Battle on a New Game file.",
     points = 10,
-    trigger = !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x03) && day == 0x04,
+    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x03) && day == 0x04,
     type = "missable"
 )
 // day 4
@@ -1735,7 +1977,7 @@ achievement(
     title = "[IN DEV] Survived Day 4",
     description = "Complete Day 4 without ever entering any Free Battle on a New Game file.",
     points = 10,
-    trigger = !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x04) && day == 0x05,
+    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x04) && day == 0x05,
     type = "missable"
 )
 // day 5
@@ -1743,7 +1985,7 @@ achievement(
     title = "[IN DEV] Survived Day 5",
     description = "Complete Day 5 without ever entering any Free Battle on a New Game file.",
     points = 10,
-    trigger = !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x05) && day == 0x06,
+    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x05) && day == 0x06,
     type = "missable"
 )
 // day 6
@@ -1751,7 +1993,7 @@ achievement(
     title = "[IN DEV] Survived Day 6",
     description = "Complete Day 6 without ever entering any Free Battle on a New Game file.",
     points = 10,
-    trigger = !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x06) && day == 0x07,
+    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x06) && day == 0x07,
     type = "missable"
 )
 // day 7
@@ -1759,7 +2001,7 @@ achievement(
     title = "[IN DEV]Wait, You Can Just... Grind?",
     description = "Complete any ending without ever entering any Free Battle on a New Game file.",
     points = 25,
-    trigger = !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x07) && day == 0x08,
+    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x07) && day == 0x08,
     type = "missable"
 )
 
@@ -2011,16 +2253,12 @@ rich_presence_conditional_display(in_combat() && active_unit_in_combat(), "{0} {
     rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
 )
 
-// TODO redo the below format
-
-rich_presence_conditional_display(on_grid_map() && friendly_unit_moving(), "{0} {1} | In Combat at {2} | Time on Turn={3} | Time on Mission={4}",
+rich_presence_conditional_display(on_grid_map() && friendly_unit_moving(), "{0} {1} | In Combat at {2} | Time on Mission={3}",
     rich_presence_lookup("Day", day, day_of_week),
     rich_presence_value("Time", in_game_clock, "SECS"),
     rich_presence_lookup("Location", current_location, location),
-    rich_presence_value("Time on Turn", current_time_in_mission / 30, "SECS"),
     rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
 )
-
 
 rich_presence_display("{0} {1} 💰 {2} | At {3} | IGT={4}",
     rich_presence_lookup("Day", day, day_of_week),

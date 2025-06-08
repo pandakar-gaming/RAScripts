@@ -49,14 +49,18 @@ active_combat_mission_id = word(0x00284abe)
 
 // This does not confirm what combat mission you're on, just that you're in one.
 // @param mission_name the String name of the mission that the player would see.
-// @param event_id temporary variable to avoid mapping the events by id.
-function on_mission(mission_name, event_id) {
-    return actively_in_event() && most_recent_mission == event_id
+function on_mission(mission_name) {
+    return actively_in_event() && most_recent_mission == event_id_by_name[mission_name]
 }
 
 // Check if the team taking their turn is engaged in combat.
 function active_unit_in_combat() {
     return bit0(combat_ptr + 0x1c) == 0
+}
+
+// Check what team is actively moving and whether it's a friendly unit.
+function expected_team_moving(expected_team_lead_index) {
+    return ptr_valid(full_combat_ptr) && byte(combat_ptr + 0x250) == expected_team_lead_index && unit_moving()
 }
 
 // See if the current unit is moving around while in combat.
@@ -92,6 +96,50 @@ function defender_left_unit_defeated() => ptr_valid(full_defender_team_ptr) && u
 // See if the unit on the right side of the defender's team was defeated in combat.
 function defender_right_unit_defeated() => ptr_valid(full_defender_team_ptr) && unit_defeated(defender_ptr + 0x160)
 
+// Should be valid when the count of 0xff in the turn order array goes down by one.
+function unit_respawns() {
+    cond = ptr_valid(full_combat_ptr)
+
+    running_total = prev((byte(combat_ptr + 0x250))) / 0xff
+    for i in range(1, 11) {
+        running_total = running_total + (prev((byte(combat_ptr + 0x250 + i))) / 0xff)
+    }
+
+    for i in range(0, 11) {
+        running_total = running_total - (byte(combat_ptr + 0x250 + i) / 0xff)
+    }
+
+    return cond && running_total == 0x01
+}
+
+// Check whether there are only allied teams standing in combat.
+// This specifically checks if all expected deployed allies are alive.
+function all_allied_teams_last_standing(num_starting_teams) {
+    // Player team indexed from 0 and game reserves first 4 indexes for player teams
+    // enemy ids have to start at 0x04 as a result
+    max_player_id = 0x03
+    // At least one player-controllable character should be alive
+    only_friendlies_present = ptr_valid(full_combat_ptr)
+    
+    // From the end of the team order array to where friendly teams could begin, we should see 0xff
+    for i in range(num_starting_teams + 1, 11) {
+        only_friendlies_present = only_friendlies_present && (byte(combat_ptr + 0x250 + i)) == 0xff
+    }
+
+    for i in range(0, num_starting_teams - 1) {
+        only_friendlies_present = only_friendlies_present && (byte(combat_ptr + 0x250 + i)) <= max_player_id
+    }
+
+
+    // finally, check that the slot past the last alive friendly team just died
+    only_friendlies_present = only_friendlies_present && (
+        prev((byte(combat_ptr + 0x250 + num_starting_teams))) > max_player_id &&
+        byte(combat_ptr + 0x250 + num_starting_teams) == 0xff
+    )
+
+    return only_friendlies_present
+}
+
 // Haven't really found a good indicator otherwise for game overs, except for this pointer popping up
 // So if you're in combat and this is valid, player goofed
 function game_over() => ptr_valid(dword(0x001beac8))
@@ -110,6 +158,12 @@ function character_alive(char_name) {
     char_index = chararacter_ids_by_name[char_name] - 0x03
 
     return bit1(0x00284dc2 + (0x10 * char_index)) == 0
+}
+
+function character_recruited(char_name) {
+    // for whatever reason no characters exist from 0x00 -> 0x02
+    char_index = chararacter_ids_by_name[char_name] - 0x03
+    return prev(bit2(0x00284dc2 + (0x10 * char_index))) == 0x01 && bit2(0x00284dc2 + (0x10 * char_index)) == 0x00
 }
 
 // Check if the given team moved to the given tile on the active combat map.
@@ -141,6 +195,71 @@ function team_moves_to_y(team_offset, y) {
     return cond
 }
 
+// Given the index of a team, ensure that the leader's HP is full.
+function team_leader_hp_full(team_offset) {
+    return ptr_valid(full_team_array_ptr) && word(team_array_ptr + (0x27c * team_offset) + 0x18) == word(team_array_ptr + (0x27c * team_offset) + 0x1a)
+}
+
+// Check if the given team is deployed in the current combat.
+// This specifically looks to see if the team leader is paired with a specific demon.
+// I think we have two options for this, can investigate both:
+// 1. Check combat pointer and teams;
+// 2. Check static array of demons and correlate with which leader is deployed.
+// If 2 is possible we should do that.
+// Protag always leads array and is fixed at 0x002844c2.
+//        0x002844e4,
+//        0x00284508,
+//        0x0028452c,
+
+function pairing_present(team_leader_name, demon_name) {
+    // Protagonist is special as they're always the first deployed team
+    if (team_leader_name == "Hero") {
+        return (left_demon(0x00) == enemy_id_by_name[demon_name] || right_demon(0x00) == enemy_id_by_name[demon_name])
+    } else {
+        return (
+            (team_leader(0x01) == chararacter_ids_by_name["Ronaldo"] && (left_demon(0x01) == enemy_id_by_name[demon_name] || right_demon(0x01) == enemy_id_by_name[demon_name])) ||
+            (team_leader(0x02) == chararacter_ids_by_name["Ronaldo"] && (left_demon(0x02) == enemy_id_by_name[demon_name] || right_demon(0x02) == enemy_id_by_name[demon_name])) ||
+            (team_leader(0x03) == chararacter_ids_by_name["Ronaldo"] && (left_demon(0x03) == enemy_id_by_name[demon_name] || right_demon(0x03) == enemy_id_by_name[demon_name]))
+        )
+    }
+}
+
+// Get the ID of the leader of the given combat team.
+function team_leader(team_offset) {
+    return word(0x002844e4 + (team_offset * 0x24))
+}
+
+// Get the ID of the demon deployed on the left-hand side of the input team.
+function left_demon(team_offset) {
+    return word(0x00284700 + 0x02 + (team_offset * 0x20))
+}
+
+// Get the ID of the demon deployed on the right-hand side of the input team.
+function right_demon(team_offset) {
+    return word(0x00284700 + 0x02 + (team_offset * 0x20) + 0x20)
+}
+
+// Check if the given team is deployed in the current combat.
+// This specifically looks to see if the team leader is using two specific demons.
+function team_present(team_leader_name, demon_one, demon_two) {
+    // Protagonist is special as they're always the first deployed team
+    if (team_leader_name == "Hero") {
+        return (
+            (left_demon(0x00) == enemy_id_by_name[demon_one] && right_demon(0x00) == enemy_id_by_name[demon_two]) || 
+            (left_demon(0x00) == enemy_id_by_name[demon_two] && right_demon(0x00) == enemy_id_by_name[demon_one])
+        )
+    } else {
+        return (
+            team_leader(0x01) == chararacter_ids_by_name["Ronaldo"] && (
+                (left_demon(0x01) == enemy_id_by_name[demon_one] && right_demon(0x01) == enemy_id_by_name[demon_two]) ||
+                (left_demon(0x01) == enemy_id_by_name[demon_two] && right_demon(0x01) == enemy_id_by_name[demon_one])
+            ) ||
+            (team_leader(0x02) == chararacter_ids_by_name["Ronaldo"] && (left_demon(0x02) == enemy_id_by_name[demon_name] || right_demon(0x02) == enemy_id_by_name[demon_name])) ||
+            (team_leader(0x03) == chararacter_ids_by_name["Ronaldo"] && (left_demon(0x03) == enemy_id_by_name[demon_name] || right_demon(0x03) == enemy_id_by_name[demon_name]))
+        )
+    }
+}
+
 // Calculates offered Macca + Extra that the demon demands
 function true_auction_cost() => dword(full_auction_ptr + 0x1cc) + dword(full_auction_ptr + 0x1e4)
 
@@ -162,227 +281,227 @@ function loaded_from_suspend() => ptr_valid(full_combat_ptr) && byte(combat_ptr 
 // - for achievements, helper functions to check by name
 // - which will then reference this map and apply same "did it get checked off" logic
 monster_addr_by_name = {
-    "Tonatiuh":      0x00285074,
-    "Chernobog":     0x00285094,
-    "Wu Kong":       0x002850b4,
-    "Susano-o":      0x002850d4,
-    "Kartikeya":     0x002850f4,
-    "Shiva":         0x00285114,
-    "Hathor":        0x00285134,
-    "Sarasvati":     0x00285154,
-    "Kikuri-Hime":   0x00285174,
-    "Brigid":        0x00285194,
-    "Scathach":      0x002851b4,
-    "Laksmi":        0x002851d4,
-    "Norn":          0x002851f4,
-    "Isis":          0x00285214,
-    "Amaterasu":     0x00285234,
-    "Mahakala":      0x00285254,
-    "Thor":          0x00285274,
-    "Arahabaki":     0x00285294,
-    "Odin":          0x002852b4,
-    "Yama":          0x002852d4,
-    "Lugh":          0x002852f4,
-    "Baal":          0x00285314,
-    "Asura":         0x00285334,
-    "Orcus":         0x00285354,
-    "Pazuzu":        0x00285374,
-    "Abaddon":       0x00285394,
-    "Tao Tie":       0x002853b4,
-    "Arioch":        0x002853d4,
-    "Tezcatlipoca":  0x002853f4,
-    "Nyarlathotep":  0x00285414,
-    "Makara":        0x00285434,
-    "Nozuchi":       0x00285454,
-    "Pendragon":     0x00285474,
-    "Gui Xian":      0x00285494,
-    "Quetzalcoatl":  0x002854b4,
-    "Seiryuu":       0x002854d4,
-    "Orochi":        0x002854f4,
-    "Ananta":        0x00285514,
-    "Hoyau Kamui":   0x00285534,
-    "Toubyou":       0x00285554,
-    "Bai Suzhen":    0x00285574,
-    "Basilisk":      0x00285594,
-    "Ym":            0x002855b4,
-    "Python":        0x002855d4,
-    "Culebre":       0x002855f4,
-    "Vritra":        0x00285614,
-    "Vasuki":        0x00285634,
-    "Angel":         0x00285674,
-    "Power":         0x00285694,
-    "Lailah":        0x002856b4,
-    "Aniel":         0x002856d4, 
-    "Kazfiel":       0x002856f4,
-    "Remiel":        0x00285714,
-    "Metatron":      0x00285734,
-    "Itsumade":      0x00285754,
-    "Moh Shuvuu":    0x00285774,
-    "Hamsa":         0x00285794,
-    "Suparna":       0x002857b4,
-    "Vidofnir":      0x002857d4,
-    "Badb Catha":    0x002857f4,
-    "Anzu":          0x00285814,
-    "Feng Huang":    0x00285834,
-    "Garuda":        0x00285854,
-    "Gagyson":       0x00285874,
-    "Abraxas":       0x00285894,
-    "Flauros":       0x002858b4,
-    "Nisroc":        0x002858d4,
-    "Orobas":        0x002858f4,
-    "Decarabia":     0x00285914,
-    "Nebiros":       0x00285934,
-    "Agares":        0x00285954,
-    "Murmur":        0x00285974,
-    "Heqet":         0x00285994,
-    "Kamapua'a":     0x002859b4,
-    "Shiisaa":       0x002859d4,
-    "Bai Ze":        0x002859f4,
-    "Baihu":         0x00285a14,
-    "Airavata":      0x00285a34,
-    "Ukano Mitama":  0x00285a54,
-    "Barong":        0x00285a74,
-    "Anubis":        0x00285a94,
-    "Kabuso":        0x00285ab4,
-    "Hairy Jack":    0x00285ad4,
-    "Nekomata":      0x00285af4,
-    "Cait Sith":     0x00285b14,
-    "Nue":           0x00285b34,
-    "Orthrus":       0x00285b54,
-    "Myrmecolion":   0x00285b74,
-    "Cerberus":      0x00285b94,
-    "Fenrir":        0x00285bb4,
-    "Hare of Inaba": 0x00285bd4,
-    "Waira":         0x00285bf4,
-    "Garm":          0x00285c14,
-    "Afanc":         0x00285c34,
-    "Mothman":       0x00285c54,
-    "Taown":         0x00285c74,
-    "Behemoth":      0x00285c94,
-    "Ammut":         0x00285cb4,
-    "Tam Lin":       0x00285cd4,
-    "Jambavan":      0x00285cf4,
-    "Tlaloc":        0x00285d14,
-    "Ictinike":      0x00285d34,
-    "Hanuman":       0x00285d54,
-    "Cu Chulainn":   0x00285d74,
-    "Kresnik":       0x00285d94,
-    "Ganesha":       0x00285db4,
-    "Heimdall":      0x00285dd4,
-    "Pixie":         0x00285df4,
-    "Knocker":       0x00285e14,
-    "Kijimunaa":     0x00285e34,
-    "Jack Frost":    0x00285e54,
-    "Pyro Jack":     0x00285e74,
-    "Silky":         0x00285e94,
-    "Lorelei":       0x00285eb4,
-    "Vivian":        0x00285ed4,
-    "Titania":       0x00285ef4,
-    "Oberon":        0x00285f14,
-    "King Frost":    0x00285f34,
-    "Moloch":        0x00285f54,
-    "Hecate":        0x00285f74,
-    "Tzitzmitl":     0x00285f94,
-    "Astaroth":      0x00285fb4,
-    "Mot":           0x00285fd4,
-    "Loki":          0x00285ff4,
-    "Lucifer":       0x00286014,
+    "Tonatiuh":       0x00285074,
+    "Chernobog":      0x00285094,
+    "Wu Kong":        0x002850b4,
+    "Susano-o":       0x002850d4,
+    "Kartikeya":      0x002850f4,
+    "Shiva":          0x00285114,
+    "Hathor":         0x00285134,
+    "Sarasvati":      0x00285154,
+    "Kikuri-Hime":    0x00285174,
+    "Brigid":         0x00285194,
+    "Scathach":       0x002851b4,
+    "Laksmi":         0x002851d4,
+    "Norn":           0x002851f4,
+    "Isis":           0x00285214,
+    "Amaterasu":      0x00285234,
+    "Mahakala":       0x00285254,
+    "Thor":           0x00285274,
+    "Arahabaki":      0x00285294,
+    "Odin":           0x002852b4,
+    "Yama":           0x002852d4,
+    "Lugh":           0x002852f4,
+    "Baal":           0x00285314,
+    "Asura":          0x00285334,
+    "Orcus":          0x00285354,
+    "Pazuzu":         0x00285374,
+    "Abaddon":        0x00285394,
+    "Tao Tie":        0x002853b4,
+    "Arioch":         0x002853d4,
+    "Tezcatlipoca":   0x002853f4,
+    "Nyarlathotep":   0x00285414,
+    "Makara":         0x00285434,
+    "Nozuchi":        0x00285454,
+    "Pendragon":      0x00285474,
+    "Gui Xian":       0x00285494,
+    "Quetzalcoatl":   0x002854b4,
+    "Seiryuu":        0x002854d4,
+    "Orochi":         0x002854f4,
+    "Ananta":         0x00285514,
+    "Hoyau Kamui":    0x00285534,
+    "Toubyou":        0x00285554,
+    "Bai Suzhen":     0x00285574,
+    "Basilisk":       0x00285594,
+    "Ym":             0x002855b4,
+    "Python":         0x002855d4,
+    "Culebre":        0x002855f4,
+    "Vritra":         0x00285614,
+    "Vasuki":         0x00285634,
+    "Angel":          0x00285674,
+    "Power":          0x00285694,
+    "Lailah":         0x002856b4,
+    "Aniel":          0x002856d4, 
+    "Kazfiel":        0x002856f4,
+    "Remiel":         0x00285714,
+    "Metatron":       0x00285734,
+    "Itsumade":       0x00285754,
+    "Moh Shuvuu":     0x00285774,
+    "Hamsa":          0x00285794,
+    "Suparna":        0x002857b4,
+    "Vidofnir":       0x002857d4,
+    "Badb Catha":     0x002857f4,
+    "Anzu":           0x00285814,
+    "Feng Huang":     0x00285834,
+    "Garuda":         0x00285854,
+    "Gagyson":        0x00285874,
+    "Abraxas":        0x00285894,
+    "Flauros":        0x002858b4,
+    "Nisroc":         0x002858d4,
+    "Orobas":         0x002858f4,
+    "Decarabia":      0x00285914,
+    "Nebiros":        0x00285934,
+    "Agares":         0x00285954,
+    "Murmur":         0x00285974,
+    "Heqet":          0x00285994,
+    "Kamapua'a":      0x002859b4,
+    "Shiisaa":        0x002859d4,
+    "Bai Ze":         0x002859f4,
+    "Baihu":          0x00285a14,
+    "Airavata":       0x00285a34,
+    "Ukano Mitama":   0x00285a54,
+    "Barong":         0x00285a74,
+    "Anubis":         0x00285a94,
+    "Kabuso":         0x00285ab4,
+    "Hairy Jack":     0x00285ad4,
+    "Nekomata":       0x00285af4,
+    "Cait Sith":      0x00285b14,
+    "Nue":            0x00285b34,
+    "Orthrus":        0x00285b54,
+    "Myrmecolion":    0x00285b74,
+    "Cerberus":       0x00285b94,
+    "Fenrir":         0x00285bb4,
+    "Hare of Inaba":  0x00285bd4,
+    "Waira":          0x00285bf4,
+    "Garm":           0x00285c14,
+    "Afanc":          0x00285c34,
+    "Mothman":        0x00285c54,
+    "Taown":          0x00285c74,
+    "Behemoth":       0x00285c94,
+    "Ammut":          0x00285cb4,
+    "Tam Lin":        0x00285cd4,
+    "Jambavan":       0x00285cf4,
+    "Tlaloc":         0x00285d14,
+    "Ictinike":       0x00285d34,
+    "Hanuman":        0x00285d54,
+    "Cu Chulainn":    0x00285d74,
+    "Kresnik":        0x00285d94,
+    "Ganesha":        0x00285db4,
+    "Heimdall":       0x00285dd4,
+    "Pixie":          0x00285df4,
+    "Knocker":        0x00285e14,
+    "Kijimunaa":      0x00285e34,
+    "Jack Frost":     0x00285e54,
+    "Pyro Jack":      0x00285e74,
+    "Silky":          0x00285e94,
+    "Lorelei":        0x00285eb4,
+    "Vivian":         0x00285ed4,
+    "Titania":        0x00285ef4,
+    "Oberon":         0x00285f14,
+    "King Frost":     0x00285f34,
+    "Moloch":         0x00285f54,
+    "Hecate":         0x00285f74,
+    "Tzitzmitl":      0x00285f94,
+    "Astaroth":       0x00285fb4,
+    "Mot":            0x00285fd4,
+    "Loki":           0x00285ff4,
+    "Lucifer":        0x00286014,
     "Ubelluris":      0x00286034,
     "Nalagiri":       0x00286054,
     "Hitokotonusi":   0x00286074,
     "Take-Mikazuchi": 0x00286094,
-    "Zouchouten":    0x002860b4,
-    "Jikokuten":     0x002860d4,
-    "Koumokuten":    0x002860f4,
-    "Bishamonten":   0x00286114,
-    "Zaou Gongen":   0x00286134,
-    "Kobold":        0x00286154,
-    "Bilwis":        0x00286174,
-    "Gozuki":        0x00286194,
-    "Mezuki":        0x002861b4,
-    "Ikusa":         0x002861d4,
-    "Lham Dearg":    0x002861f4,
-    "Berserker":     0x00286214,
-    "Yaksa":         0x00286234,
-    "Nata Taishi":   0x00286254,
-    "Oumitsunu":     0x00286274,
-    "Obariyon":      0x00286294,
-    "Ogre":          0x002862b4,
-    "Mokoi":         0x002862d4,
-    "Ogun":          0x002862f4,
-    "Wendigo":       0x00286314,
-    "Legion":        0x00286334,
-    "Rakshasa":      0x00286354,
-    "Girimehkala":   0x00286374,
-    "Grendel":       0x00286394,
-    "Black Frost":   0x002863b4,
-    "Kikimora":      0x002863d4,
-    "Lilim":         0x002863f4,
-    "Yuki Jyorou":   0x00286414,
-    "Leanan Sidhe":  0x00286434,
-    "Peri":          0x00286454,
-    "Hariti":        0x00286474,
-    "Rangda":        0x00286494,
-    "Kali":          0x002864b4,
-    "Lilith":        0x002864d4,
-    "Poltergeist":   0x002864f4,
-    "Agathion":      0x00286514,
-    "Tenong Cut":    0x00286534,
-    "Kumbhanda":     0x00286554,
-    "Loa":           0x00286574,
-    "Pisaca":        0x00286594,
-    "Kudlak":        0x002865b4,
-    "Purple Mirror": 0x002865d4,
-    "Billiken":      0x002865f4,
-    "Ghost Q":       0x00286614,
-    "Sage of Time":  0x00286634,
-    "Alice":         0x00286654,
-    "Trumpeter":     0x00286674,
-    "Neko Shogun":   0x00286694,
-    "Hagen":         0x002866b4,
-    "Jeanne d'Arc":  0x002866d4,
-    "Yoshitsune":    0x002866f4,
-    "Guan Yu":       0x00286714,
-    "Flaemis":       0x00286734,
-    "Aquans":        0x00286754,
-    "Aeros":         0x00286774,
-    "Erthys":        0x00286794,
-    "Ara Mitama":    0x002867b4,
-    "Nigi Mitama":   0x002867d4,
-    "Kusi Mitama":   0x002867f4,
-    "Saki Mitama":   0x00286814,
-    "Satan":         0x00286954,
-    "Beelzebub":     0x00286974,
-    "Belial":        0x00286994,
-    "Asp":           0x00286a74,
-    "Apis":          0x00286a94,
-    "Pabilsag":      0x00286ab4,
-    "Sleipnir":      0x00286ad4,
-    "Xiezhai":       0x00286af4,
-    "Kangiten":      0x00286b14,
-    "Baphomet":      0x00286b34,
-    "Anat":          0x00286b54,
-    "Pallas Athena": 0x00286b74,
-    "Mithra":        0x00286b94,
-    "Osiris":        0x00286bb4,
-    "Gucumatz":      0x00286bd4,
-    "Da Peng":       0x00286bf4,
-    "Ometeotl":      0x00286c14,
-    "Jarilo":        0x00286c34,
-    "Botis":         0x00286c54,
-    "Bifrons":       0x00286db4,
-    "Barbatos":      0x00286dd4,
-    "Dzelarhons":    0x00286df4,
-    "Kama":          0x00286e14,
-    "Parvati":       0x00286e34,
-    "Ixtab":         0x00286e54,
-    "Balor":         0x00286e74,
-    "Nergal":        0x00286e94,
-    "Inti":          0x00286eb4,
-    "Alilat":        0x00286ed4,
-    "Beiji-Weng":    0x00286ef4,
-    "Lord Nan Dou":  0x00286f14,
-    "Masakado":      0x00286f34
+    "Zouchouten":     0x002860b4,
+    "Jikokuten":      0x002860d4,
+    "Koumokuten":     0x002860f4,
+    "Bishamonten":    0x00286114,
+    "Zaou Gongen":    0x00286134,
+    "Kobold":         0x00286154,
+    "Bilwis":         0x00286174,
+    "Gozuki":         0x00286194,
+    "Mezuki":         0x002861b4,
+    "Ikusa":          0x002861d4,
+    "Lham Dearg":     0x002861f4,
+    "Berserker":      0x00286214,
+    "Yaksa":          0x00286234,
+    "Nata Taishi":    0x00286254,
+    "Oumitsunu":      0x00286274,
+    "Obariyon":       0x00286294,
+    "Ogre":           0x002862b4,
+    "Mokoi":          0x002862d4,
+    "Ogun":           0x002862f4,
+    "Wendigo":        0x00286314,
+    "Legion":         0x00286334,
+    "Rakshasa":       0x00286354,
+    "Girimehkala":    0x00286374,
+    "Grendel":        0x00286394,
+    "Black Frost":    0x002863b4,
+    "Kikimora":       0x002863d4,
+    "Lilim":          0x002863f4,
+    "Yuki Jyorou":    0x00286414,
+    "Leanan Sidhe":   0x00286434,
+    "Peri":           0x00286454,
+    "Hariti":         0x00286474,
+    "Rangda":         0x00286494,
+    "Kali":           0x002864b4,
+    "Lilith":         0x002864d4,
+    "Poltergeist":    0x002864f4,
+    "Agathion":       0x00286514,
+    "Tenong Cut":     0x00286534,
+    "Kumbhanda":      0x00286554,
+    "Loa":            0x00286574,
+    "Pisaca":         0x00286594,
+    "Kudlak":         0x002865b4,
+    "Purple Mirror":  0x002865d4,
+    "Billiken":       0x002865f4,
+    "Ghost Q":        0x00286614,
+    "Sage of Time":   0x00286634,
+    "Alice":          0x00286654,
+    "Trumpeter":      0x00286674,
+    "Neko Shogun":    0x00286694,
+    "Hagen":          0x002866b4,
+    "Jeanne d'Arc":   0x002866d4,
+    "Yoshitsune":     0x002866f4,
+    "Guan Yu":        0x00286714,
+    "Flaemis":        0x00286734,
+    "Aquans":         0x00286754,
+    "Aeros":          0x00286774,
+    "Erthys":         0x00286794,
+    "Ara Mitama":     0x002867b4,
+    "Nigi Mitama":    0x002867d4,
+    "Kusi Mitama":    0x002867f4,
+    "Saki Mitama":    0x00286814,
+    "Satan":          0x00286954,
+    "Beelzebub":      0x00286974,
+    "Belial":         0x00286994,
+    "Asp":            0x00286a74,
+    "Apis":           0x00286a94,
+    "Pabilsag":       0x00286ab4,
+    "Sleipnir":       0x00286ad4,
+    "Xiezhai":        0x00286af4,
+    "Kangiten":       0x00286b14,
+    "Baphomet":       0x00286b34,
+    "Anat":           0x00286b54,
+    "Pallas Athena":  0x00286b74,
+    "Mithra":         0x00286b94,
+    "Osiris":         0x00286bb4,
+    "Gucumatz":       0x00286bd4,
+    "Da Peng":        0x00286bf4,
+    "Ometeotl":       0x00286c14,
+    "Jarilo":         0x00286c34,
+    "Botis":          0x00286c54,
+    "Bifrons":        0x00286db4,
+    "Barbatos":       0x00286dd4,
+    "Dzelarhons":     0x00286df4,
+    "Kama":           0x00286e14,
+    "Parvati":        0x00286e34,
+    "Ixtab":          0x00286e54,
+    "Balor":          0x00286e74,
+    "Nergal":         0x00286e94,
+    "Inti":           0x00286eb4,
+    "Alilat":         0x00286ed4,
+    "Beiji-Weng":     0x00286ef4,
+    "Lord Nan Dou":   0x00286f14,
+    "Masakado":       0x00286f34
 }
 
 // I hate everything.
@@ -393,253 +512,255 @@ monster_addr_by_name = {
 //    "Bifrons":       0x116,
 // so we just gotta rattle 'em off.
 enemy_id_by_name = {
-    "Hero":          0x00,
-    "Ronaldo":       0x01,
+    "Hero":           0x00,
+    "Ronaldo":        0x01,
     // I have to PRESUME that other human controllable characters you can fight go here.
     // i.e. this now goes from Io -> Anguished One, placing Anguished One at 0x0d
-    "Io":            0x02,
-    "Yamato":        0x03,
-    "Fumi":          0x04,
-    "Daichi":        0x05,
-    "Otome":         0x06,
-    "Jungo":         0x07,
-    "Makoto":        0x08,
-    "Keita":         0x09,
-    "Airi":          0x0a,
-    "Joe":           0x0b,
-    "Hinako":        0x0c,
-    "Anguished One": 0x0d,
+    "Io":             0x02,
+    "Yamato":         0x03,
+    "Fumi":           0x04,
+    "Daichi":         0x05,
+    "Otome":          0x06,
+    "Jungo":          0x07,
+    "Makoto":         0x08,
+    "Keita":          0x09,
+    "Airi":           0x0a,
+    "Joe":            0x0b,
+    "Hinako":         0x0c,
+    "Anguished One":  0x0d,
     // End of presumed character IDs 
-    "Tonatiuh":      0x0e,
-    "Chernobog":     0x0f,
-    "Wu Kong":       0x10,
-    "Susano-o":      0x11,
-    "Kartikeya":     0x12,
-    "Shiva":         0x13,
-    "Hathor":        0x14,
-    "Sarasvati":     0x15,
-    "Kikuri-Hime":   0x16,
-    "Brigid":        0x17,
-    "Scathach":      0x18,
-    "Laksmi":        0x19,
-    "Norn":          0x1a,
-    "Isis":          0x1b,
-    "Amaterasu":     0x1c,
-    "Mahakala":      0x1d,
-    "Thor":          0x1e,
-    "Arahabaki":     0x1f,
-    "Odin":          0x20,
-    "Yama":          0x21,
-    "Lugh":          0x22,
-    "Baal":          0x23,
-    "Asura":         0x24,
-    "Orcus":         0x25,
-    "Pazuzu":        0x26,
-    "Abaddon":       0x27,
-    "Tao Tie":       0x28,
-    "Arioch":        0x29,
-    "Tezcatlipoca":  0x2a,
-    "Nyarlathotep":  0x2b,
-    "Makara":        0x2c,
-    "Nozuchi":       0x2d,
-    "Pendragon":     0x2e,
-    "Gui Xian":      0x2f,
-    "Quetzalcoatl":  0x30,
-    "Seiryuu":       0x31,
-    "Orochi":        0x32,
-    "Ananta":        0x33,
-    "Hoyau Kamui":   0x34,
-    "Toubyou":       0x35,
-    "Bai Suzhen":    0x36,
-    "Basilisk":      0x37,
-    "Ym":            0x38,
-    "Python":        0x39,
-    "Culebre":       0x3a,
-    "Vritra":        0x3b,
-    "Vasuki":        0x3c,
+    "Tonatiuh":       0x0e,
+    "Chernobog":      0x0f,
+    "Wu Kong":        0x10,
+    "Susano-o":       0x11,
+    "Kartikeya":      0x12,
+    "Shiva":          0x13,
+    "Hathor":         0x14,
+    "Sarasvati":      0x15,
+    "Kikuri-Hime":    0x16,
+    "Brigid":         0x17,
+    "Scathach":       0x18,
+    "Laksmi":         0x19,
+    "Norn":           0x1a,
+    "Isis":           0x1b,
+    "Amaterasu":      0x1c,
+    "Mahakala":       0x1d,
+    "Thor":           0x1e,
+    "Arahabaki":      0x1f,
+    "Odin":           0x20,
+    "Yama":           0x21,
+    "Lugh":           0x22,
+    "Baal":           0x23,
+    "Asura":          0x24,
+    "Orcus":          0x25,
+    "Pazuzu":         0x26,
+    "Abaddon":        0x27,
+    "Tao Tie":        0x28,
+    "Arioch":         0x29,
+    "Tezcatlipoca":   0x2a,
+    "Nyarlathotep":   0x2b,
+    "Makara":         0x2c,
+    "Nozuchi":        0x2d,
+    "Pendragon":      0x2e,
+    "Gui Xian":       0x2f,
+    "Quetzalcoatl":   0x30,
+    "Seiryuu":        0x31,
+    "Orochi":         0x32,
+    "Ananta":         0x33,
+    "Hoyau Kamui":    0x34,
+    "Toubyou":        0x35,
+    "Bai Suzhen":     0x36,
+    "Basilisk":       0x37,
+    "Ym":             0x38,
+    "Python":         0x39,
+    "Culebre":        0x3a,
+    "Vritra":         0x3b,
+    "Vasuki":         0x3c,
     // My notes indicate something called "Holy Ghost" is 0x3d, but I don't know if that's a real thing you can encounter
-    "Angel":         0x3e,
-    "Power":         0x3f,
-    "Lailah":        0x40,
-    "Aniel":         0x41, 
-    "Kazfiel":       0x42,
-    "Remiel":        0x43,
-    "Metatron":      0x44,
-    "Itsumade":      0x45,
-    "Moh Shuvuu":    0x46,
-    "Hamsa":         0x47,
-    "Suparna":       0x48,
-    "Vidofnir":      0x49,
-    "Badb Catha":    0x4a,
-    "Anzu":          0x4b,
-    "Feng Huang":    0x4c,
-    "Garuda":        0x4d,
-    "Gagyson":       0x4e,
-    "Abraxas":       0x4f,
-    "Flauros":       0x50,
-    "Nisroc":        0x51,
-    "Orobas":        0x52,
-    "Decarabia":     0x53,
-    "Nebiros":       0x54,
-    "Agares":        0x55,
-    "Murmur":        0x56,
-    "Heqet":         0x57,
-    "Kamapua'a":     0x58,
-    "Shiisaa":       0x59,
-    "Bai Ze":        0x5a,
-    "Baihu":         0x5b,
-    "Airavata":      0x5c,
-    "Ukano Mitama":  0x5d,
-    "Barong":        0x5e,
-    "Anubis":        0x5f,
-    "Kabuso":        0x60,
-    "Hairy Jack":    0x61,
-    "Nekomata":      0x62,
-    "Cait Sith":     0x63,
-    "Nue":           0x64,
-    "Orthrus":       0x65,
-    "Myrmecolion":   0x66,
-    "Cerberus":      0x67,
-    "Fenrir":        0x68,
-    "Hare of Inaba": 0x69,
-    "Waira":         0x6a,
-    "Garm":          0x6b,
-    "Afanc":         0x6c,
-    "Mothman":       0x6d,
-    "Taown":         0x6e,
-    "Behemoth":      0x6f,
-    "Ammut":         0x70,
-    "Tam Lin":       0x71,
-    "Jambavan":      0x72,
-    "Tlaloc":        0x73,
-    "Ictinike":      0x74,
-    "Hanuman":       0x75,
-    "Cu Chulainn":   0x76,
-    "Kresnik":       0x77,
-    "Ganesha":       0x78,
-    "Heimdall":      0x79,
-    "Pixie":         0x7a,
-    "Knocker":       0x7b,
-    "Kijimunaa":     0x7c,
-    "Jack Frost":    0x7d,
-    "Pyro Jack":     0x7e,
-    "Silky":         0x7f,
-    "Lorelei":       0x80,
-    "Vivian":        0x81,
-    "Titania":       0x82,
-    "Oberon":        0x83,
-    "King Frost":    0x84,
-    "Moloch":        0x85,
-    "Hecate":        0x86,
-    "Tzitzmitl":     0x87,
-    "Astaroth":      0x88,
-    "Mot":           0x89,
-    "Loki":          0x8a,
-    "Lucifer":       0x8b,
-    "Ubelluris":     0x8c,
+    "Angel":          0x3e,
+    "Power":          0x3f,
+    "Lailah":         0x40,
+    "Aniel":          0x41, 
+    "Kazfiel":        0x42,
+    "Remiel":         0x43,
+    "Metatron":       0x44,
+    "Itsumade":       0x45,
+    "Moh Shuvuu":     0x46,
+    "Hamsa":          0x47,
+    "Suparna":        0x48,
+    "Vidofnir":       0x49,
+    "Badb Catha":     0x4a,
+    "Anzu":           0x4b,
+    "Feng Huang":     0x4c,
+    "Garuda":         0x4d,
+    "Gagyson":        0x4e,
+    "Abraxas":        0x4f,
+    "Flauros":        0x50,
+    "Nisroc":         0x51,
+    "Orobas":         0x52,
+    "Decarabia":      0x53,
+    "Nebiros":        0x54,
+    "Agares":         0x55,
+    "Murmur":         0x56,
+    "Heqet":          0x57,
+    "Kamapua'a":      0x58,
+    "Shiisaa":        0x59,
+    "Bai Ze":         0x5a,
+    "Baihu":          0x5b,
+    "Airavata":       0x5c,
+    "Ukano Mitama":   0x5d,
+    "Barong":         0x5e,
+    "Anubis":         0x5f,
+    "Kabuso":         0x60,
+    "Hairy Jack":     0x61,
+    "Nekomata":       0x62,
+    "Cait Sith":      0x63,
+    "Nue":            0x64,
+    "Orthrus":        0x65,
+    "Myrmecolion":    0x66,
+    "Cerberus":       0x67,
+    "Fenrir":         0x68,
+    "Hare of Inaba":  0x69,
+    "Waira":          0x6a,
+    "Garm":           0x6b,
+    "Afanc":          0x6c,
+    "Mothman":        0x6d,
+    "Taown":          0x6e,
+    "Behemoth":       0x6f,
+    "Ammut":          0x70,
+    "Tam Lin":        0x71,
+    "Jambavan":       0x72,
+    "Tlaloc":         0x73,
+    "Ictinike":       0x74,
+    "Hanuman":        0x75,
+    "Cu Chulainn":    0x76,
+    "Kresnik":        0x77,
+    "Ganesha":        0x78,
+    "Heimdall":       0x79,
+    "Pixie":          0x7a,
+    "Knocker":        0x7b,
+    "Kijimunaa":      0x7c,
+    "Jack Frost":     0x7d,
+    "Pyro Jack":      0x7e,
+    "Silky":          0x7f,
+    "Lorelei":        0x80,
+    "Vivian":         0x81,
+    "Titania":        0x82,
+    "Oberon":         0x83,
+    "King Frost":     0x84,
+    "Moloch":         0x85,
+    "Hecate":         0x86,
+    "Tzitzmitl":      0x87,
+    "Astaroth":       0x88,
+    "Mot":            0x89,
+    "Loki":           0x8a,
+    "Lucifer":        0x8b,
+    "Ubelluris":      0x8c,
     "Nalagiri":       0x8d,
     "Hitokotonusi":   0x8e,
     "Take-Mikazuchi": 0x8f,
-    "Zouchouten":    0x90,
-    "Jikokuten":     0x91,
-    "Koumokuten":    0x92,
-    "Bishamonten":   0x93,
-    "Zaou Gongen":   0x94,
-    "Kobold":        0x95,
-    "Bilwis":        0x96,
-    "Gozuki":        0x97,
-    "Mezuki":        0x98,
-    "Ikusa":         0x99,
-    "Lham Dearg":    0x9a,
-    "Berserker":     0x9b,
-    "Yaksa":         0x9c,
-    "Nata Taishi":   0x9d,
-    "Oumitsunu":     0x9e,
-    "Obariyon":      0x9f,
-    "Ogre":          0xa0,
-    "Mokoi":         0xa1,
-    "Ogun":          0xa2,
-    "Wendigo":       0xa3,
-    "Legion":        0xa4,
-    "Rakshasa":      0xa5,
-    "Girimehkala":   0xa6,
-    "Grendel":       0xa7,
-    "Black Frost":   0xa8,
-    "Kikimora":      0xa9,
-    "Lilim":         0xaa,
-    "Yuki Jyorou":   0xab,
-    "Leanan Sidhe":  0xac,
-    "Peri":          0xad,
-    "Hariti":        0xae,
-    "Rangda":        0xaf,
-    "Kali":          0xb0,
-    "Lilith":        0xb1,
-    "Poltergeist":   0xb2,
-    "Agathion":      0xb3,
-    "Tenong Cut":    0xb4,
-    "Kumbhanda":     0xb5,
-    "Loa":           0xb6,
-    "Pisaca":        0xb7,
-    "Kudlak":        0xb8,
-    "Purple Mirror": 0xb9,
-    "Billiken":      0xba,
-    "Ghost Q":       0xbb,
-    "Sage of Time":  0xbc,
-    "Alice":         0xbd,
-    "Trumpeter":     0xbe,
-    "Neko Shogun":   0xbf,
-    "Hagen":         0xc0,
-    "Jeanne d'Arc":  0xc1,
-    "Yoshitsune":    0xc2,
-    "Guan Yu":       0xc3,
-    "Flaemis":       0xc4,
-    "Aquans":        0xc5,
-    "Aeros":         0xc6,
-    "Erthys":        0xc7,
-    "Ara Mitama":    0xc8,
-    "Nigi Mitama":   0xc9,
-    "Kusi Mitama":   0xca,
-    "Saki Mitama":   0xcb,
-    "Megrez":        0xcf,
-    "Satan":         0xd5,
-    "Beelzebub":     0xd6,
-    "Belial":        0xd7,
-    "Asp":           0xe0,
-    "Apis":          0xe1,
-    "Pabilsag":      0xe2,
-    "Sleipnir":      0xe3,
-    "Xiezhai":       0xe4,
-    "Kangiten":      0xe5,
-    "Baphomet":      0xe6,
-    "Anat":          0xe7,
-    "Pallas Athena": 0xe8,
-    "Mithra":        0xe9,
-    "Osiris":        0xea,
-    "Gucumatz":      0xeb,
-    "Da Peng":       0xec,
-    "Ometeotl":      0xed,
-    "Jarilo":        0xee,
-    "Botis":         0xf0,
-    "Salaryman":     0xf2,  // App Abuser Amrita/Phys Up/Hustle
-    "Punk":          0xf9,  // App Abuser Snipe/Mana Bonus/Hustle
-    "Young Man":     0x10c, // App Abuser Extra Cancel/Extra Bonus/Hustle
-    "Dubhe (Whole)": 0x114, // Dubhe that can reflect phys and null others
-    "Dubhe (Half)":  0x115, 
-    "Bifrons":       0x116,
-    "Barbatos":      0x117,
-    "Dzelarhons":    0x118,
-    "Kama":          0x119,
-    "Parvati":       0x11a,
-    "Ixtab":         0x11b,
-    "Balor":         0x11c,
-    "Nergal":        0x11d,
-    "Inti":          0x11e,
-    "Alilat":        0x11f,
-    "Beiji-Weng":    0x120,
-    "Lord Nan Dou":  0x121,
-    "Masakado":      0x122,
-    "Tall Woman":    0x134, // Makoto in Daichi's Crisis
-    "Vacant Woman":  0x164, // Fumi in Demon-Hacked
+    "Zouchouten":     0x90,
+    "Jikokuten":      0x91,
+    "Koumokuten":     0x92,
+    "Bishamonten":    0x93,
+    "Zaou Gongen":    0x94,
+    "Kobold":         0x95,
+    "Bilwis":         0x96,
+    "Gozuki":         0x97,
+    "Mezuki":         0x98,
+    "Ikusa":          0x99,
+    "Lham Dearg":     0x9a,
+    "Berserker":      0x9b,
+    "Yaksa":          0x9c,
+    "Nata Taishi":    0x9d,
+    "Oumitsunu":      0x9e,
+    "Obariyon":       0x9f,
+    "Ogre":           0xa0,
+    "Mokoi":          0xa1,
+    "Ogun":           0xa2,
+    "Wendigo":        0xa3,
+    "Legion":         0xa4,
+    "Rakshasa":       0xa5,
+    "Girimehkala":    0xa6,
+    "Grendel":        0xa7,
+    "Black Frost":    0xa8,
+    "Kikimora":       0xa9,
+    "Lilim":          0xaa,
+    "Yuki Jyorou":    0xab,
+    "Leanan Sidhe":   0xac,
+    "Peri":           0xad,
+    "Hariti":         0xae,
+    "Rangda":         0xaf,
+    "Kali":           0xb0,
+    "Lilith":         0xb1,
+    "Poltergeist":    0xb2,
+    "Agathion":       0xb3,
+    "Tenong Cut":     0xb4,
+    "Kumbhanda":      0xb5,
+    "Loa":            0xb6,
+    "Pisaca":         0xb7,
+    "Kudlak":         0xb8,
+    "Purple Mirror":  0xb9,
+    "Billiken":       0xba,
+    "Ghost Q":        0xbb,
+    "Sage of Time":   0xbc,
+    "Alice":          0xbd,
+    "Trumpeter":      0xbe,
+    "Neko Shogun":    0xbf,
+    "Hagen":          0xc0,
+    "Jeanne d'Arc":   0xc1,
+    "Yoshitsune":     0xc2,
+    "Guan Yu":        0xc3,
+    "Flaemis":        0xc4,
+    "Aquans":         0xc5,
+    "Aeros":          0xc6,
+    "Erthys":         0xc7,
+    "Ara Mitama":     0xc8,
+    "Nigi Mitama":    0xc9,
+    "Kusi Mitama":    0xca,
+    "Saki Mitama":    0xcb,
+    "Merak":          0xcd,
+    "Megrez":         0xcf,
+    "Satan":          0xd5,
+    "Beelzebub":      0xd6,
+    "Belial":         0xd7,
+    "Asp":            0xe0,
+    "Apis":           0xe1,
+    "Pabilsag":       0xe2,
+    "Sleipnir":       0xe3,
+    "Xiezhai":        0xe4,
+    "Kangiten":       0xe5,
+    "Baphomet":       0xe6,
+    "Anat":           0xe7,
+    "Pallas Athena":  0xe8,
+    "Mithra":         0xe9,
+    "Osiris":         0xea,
+    "Gucumatz":       0xeb,
+    "Da Peng":        0xec,
+    "Ometeotl":       0xed,
+    "Jarilo":         0xee,
+    "Botis":          0xf0,
+    "Salaryman":      0xf2,  // Specifically from App Abuser Amrita/Phys Up/Hustle
+    "Punk":           0xf9,  // Specifically from App Abuser Snipe/Mana Bonus/Hustle
+    "Young Man":      0x10c, // Specifically from App Abuser Extra Cancel/Extra Bonus/Hustle
+    "Dubhe (Whole)":  0x114, // Dubhe that can reflect phys and null others
+    "Dubhe (Half)":   0x115, 
+    "Bifrons":        0x116,
+    "Barbatos":       0x117,
+    "Dzelarhons":     0x118,
+    "Kama":           0x119,
+    "Parvati":        0x11a,
+    "Ixtab":          0x11b,
+    "Balor":          0x11c,
+    "Nergal":         0x11d,
+    "Inti":           0x11e,
+    "Alilat":         0x11f,
+    "Beiji-Weng":     0x120,
+    "Lord Nan Dou":   0x121,
+    "Masakado":       0x122,
+    "Tall Woman":     0x134, // Makoto in Daichi's Crisis
+    "Salaryman Carrying Food": 0x146, // in Girl in Pursuit. No, do not fix the indentation.
+    "Vacant Woman":   0x164, // Fumi in Demon-Hacked
 }
 
 // This map is strictly getting enemies that can lead teams. That's it.
@@ -717,7 +838,7 @@ enemy_name_by_id = {
     // "Metatron":      0x44,
     0x45: "Itsumade",
     // "Moh Shuvuu":    0x46,
-    // "Hamsa":         0x47,
+    0x47: "Hamsa",
     // "Suparna":       0x48,
     // "Vidofnir":      0x49,
     // "Badb Catha":    0x4a,
@@ -735,7 +856,7 @@ enemy_name_by_id = {
     // "Murmur":        0x56,
     // "Heqet":         0x57,
     // "Kamapua'a":     0x58,
-    // "Shiisaa":       0x59,
+    0x59: "Shiisaa",
     // "Bai Ze":        0x5a,
     // "Baihu":         0x5b,
     // "Airavata":      0x5c,
@@ -762,7 +883,7 @@ enemy_name_by_id = {
     // "Tam Lin":       0x71,
     // "Jambavan":      0x72,
     // "Tlaloc":        0x73,
-    // "Ictinike":      0x74,
+    0x74: "Ictinike",
     // "Hanuman":       0x75,
     // "Cu Chulainn":   0x76,
     // "Kresnik":       0x77,
@@ -771,8 +892,8 @@ enemy_name_by_id = {
     0x7a: "Pixie",
     0x7b: "Knocker",
     // "Kijimunaa":     0x7c,
-    // "Jack Frost":    0x7d,
-    // "Pyro Jack":     0x7e,
+    0x7d: "Jack Frost",
+    0x7e: "Pyro Jack",
     // "Silky":         0x7f,
     // "Lorelei":       0x80,
     // "Vivian":        0x81,
@@ -809,7 +930,7 @@ enemy_name_by_id = {
     // "Ogre":          0xa0,
     // "Mokoi":         0xa1,
     // "Ogun":          0xa2,
-    // "Wendigo":       0xa3,
+    0xa3: "Wendigo",
     // "Legion":        0xa4,
     // "Rakshasa":      0xa5,
     // "Girimehkala":   0xa6,
@@ -833,7 +954,7 @@ enemy_name_by_id = {
     // "Kudlak":        0xb8,
     // "Purple Mirror": 0xb9,
     // "Billiken":      0xba,
-    // "Ghost Q":       0xbb,
+    0xbb: "Ghost Q",
     // "Sage of Time":  0xbc,
     // "Alice":         0xbd,
     // "Trumpeter":     0xbe,
@@ -850,6 +971,7 @@ enemy_name_by_id = {
     // "Nigi Mitama":   0xc9,
     // "Kusi Mitama":   0xca,
     // "Saki Mitama":   0xcb,
+    0xcd: "Merak",
     // "Megrez":        0xcf,
     // "Satan":         0xd5,
     // "Beelzebub":     0xd6,
@@ -869,26 +991,35 @@ enemy_name_by_id = {
     // "Da Peng":       0xec,
     // "Ometeotl":      0xed,
     // "Jarilo":        0xee,
-    // "Botis":         0xf0,
+    0xf0: "Botis",
     0xf2: "Salaryman",
+    0xf3: "Salaryman",
+    0xf6: "Office Lady",
+    0xf7: "Office Lady",
+    0xf8: "Office Lady",
     0xf9: "Punk",
+    0xfc: "Yakuza",
+    0x10a: "Worker",
+    0x10b: "Student",
     0x10c: "Young Man",
     0x114: "Dubhe",
     0x115: "Dubhe",
-//     // "Bifrons":       0x116,
-//     // "Barbatos":      0x117,
-//     // "Dzelarhons":    0x118,
-//     // "Kama":          0x119,
-//     // "Parvati":       0x11a,
-//     // "Ixtab":         0x11b,
-//     // "Balor":         0x11c,
-//     // "Nergal":        0x11d,
-//     // "Inti":          0x11e,
-//     // "Alilat":        0x11f,
-//     // "Beiji-Weng":    0x120,
-//     // "Lord Nan Dou":  0x121,
-//     // "Masakado":      0x122,
+     // "Bifrons":       0x116,
+     // "Barbatos":      0x117,
+     // "Dzelarhons":    0x118,
+     // "Kama":          0x119,
+     // "Parvati":       0x11a,
+     // "Ixtab":         0x11b,
+     // "Balor":         0x11c,
+     // "Nergal":        0x11d,
+     // "Inti":          0x11e,
+     // "Alilat":        0x11f,
+     // "Beiji-Weng":    0x120,
+     // "Lord Nan Dou":  0x121,
+     // "Masakado":      0x122,
     0x134: "Tall Woman",  // Makoto in Daichi's Crisis
+    0x146: "Salaryman Carrying Food", // in Girl in Pursuit
+    0x161: "Fumi",        // in Hacker Revealed
     0x164: "Vacant Woman" // Fumi in Demon-Hacked
 }
 
@@ -906,9 +1037,10 @@ function demon_registered(demon_name) {
 }
 
 // Check how many demons are currently registered in the player's compendium.
-// The game has internal listings of monster IDs/offsets from 0x0e ranging to 0x12b. 
-// That should add to 285 demons (299 - 14).
-// Online lists are saying there's only 222 demons in this version though. Still need to verify this.
+// The game has internal listings of monster IDs/offsets from 0x0e ranging to 0x12b.
+// However, not every ID is used between those IDs and some IDs are for enemies that can't be acquired.
+// In this version of the game, there are 221 demons you can get total. 
+// https://aqiu384.github.io/megaten-fusion-tool/ds2/demons has details for all demons that you can get
 function num_registered_compendium() {
     return sum_of(monster_addr_by_name, demon_registered)
 }
@@ -918,101 +1050,9 @@ function elements_registered() {
     return demon_registered("Flaemis") + demon_registered("Aquans") + demon_registered("Aeros") + demon_registered("Erthys")
 }
 
-// this is inherently flawed, unless you want to use it for a "everyone must live" cheevo
-// need a better combat is done indicator.
-function player_and_neutral_last_standing(num_starting_teams, neutral_party_id) {
-    // Player team indexed from 0
-    max_player_id = num_starting_teams - 0x01
-    only_friendlies_present = ptr_valid(full_combat_ptr)
+// There are 4 demons with the Mitama race, but 5 have it in their name.
+function mitamas_registered() {
 
-    friendlies_ids = [neutral_party_id]
-
-    for i in range(0, num_starting_teams) {
-        array_push(friendlies_ids, i)
-    }
-
-    // first N slots should be player teams + the neutral party
-    for i in range(0, num_starting_teams) {
-        only_friendlies_present = only_friendlies_present && (byte(combat_ptr + 0x250 + i) <= max_player_id || (byte(combat_ptr + 0x250 + i) == neutral_party_id))
-    }
-
-    // we break the loop here because right after the final friendly group, we should see a 0xff
-
-    // Every slot after must be 0xff
-    for i in range(num_starting_teams + 1, 11) {
-        only_friendlies_present = only_friendlies_present && (byte(combat_ptr + 0x250 + i)) == 0xff
-    }
-
-    return only_friendlies_present
-}
-
-// Check if any of the player-controlled teams are alive and only player-controlled teams.
-// As I write this, this is getting more convoluted for a basic "did you win" check.
-// TODO simplify this by checking post-combat things
-function player_team_last_standing(num_starting_teams) {
-    // Player team indexed from 0, so if you run 4 teams your max ID seen should be 0x03
-    max_player_id = num_starting_teams - 0x01
-    // At least one player-controllable character should be alive
-    only_friendlies_present = ptr_valid(full_combat_ptr) && byte(combat_ptr + 0x250) <= max_player_id
-    // From the end of the team order array to where friendly teams could begin, we should see 0xff
-    for i in range(num_starting_teams + 1, 11) {
-        only_friendlies_present = only_friendlies_present && (byte(combat_ptr + 0x250 + i)) == 0xff
-    }
-
-    // In the range of [1, num_starting_teams] we should see one of the following:
-    // the player team ID; OR
-    // it was a non-player team ID and flipped to 0xff (a player team died)
-    // this should at most be 3 more cases to handle so just do them manually
-
-    if (num_starting_teams == 0x02) {
-        only_friendlies_present = only_friendlies_present && 
-        (
-            // 1 death
-            (prev(byte(combat_ptr + 0x250 + 1)) <= 0x0b && byte(combat_ptr + 0x250 + 1) == 0xff)
-            // 0 death
-            || (byte(combat_ptr + 0x250 + 1) <= max_player_id)
-        )
-    }
-
-    if (num_starting_teams == 0x03) {
-        only_friendlies_present = only_friendlies_present &&
-        (
-            // 2 deaths
-
-            // 1 death
-            // no death
-        )
-
-    }
-
-    if (num_starting_teams == 0x04) {
-        // 3 deaths
-        // 2 deaths
-        // 1 death
-        // 0 deaths
-    }
-
-    for i in range(1, num_starting_teams) {
-        only_friendlies_present = only_friendlies_present 
-            && (((byte(combat_ptr + 0x250 + i)) <= max_player_id)
-                || (prev(byte(combat_ptr + 0x250 + i)) <= 0x0b && byte(combat_ptr + 0x250 + i) == 0xff))
-    }
-
-
-    return only_friendlies_present
-}
-
-// See if any additional teams joined the fight
-function adds_spawned(num_starting_teams, threshold) {
-    initial_max_team_id = num_starting_teams - 0x01
-    threshold_team_id = initial_max_team_id + threshold
-    
-    teams_present = byte(combat_ptr + 0x250) <= threshold_team_id || byte(combat_ptr + 0x250) == 0xff
-    for i in range(0, 11) {
-        teams_present = teams_present 
-            && ((byte(combat_ptr + 0x250 + i)) <= threshold_team_id || (byte(combat_ptr + 0x250 + i)) == 0xff)
-    }
-    return teams_present
 }
 
 // Total of 67 skills
@@ -1251,11 +1291,18 @@ function char_fate_stage_maxed(char_name) {
     ]
 
     cond = always_false()
-    for char_addr in array_positions {
+    for i in range(0, 13) {
+        char_addr = 0x002844e4 + (i * 0x24)
         cond = cond || (word(char_addr) == chararacter_ids_by_name[char_name] 
-                && prev(byte(char_addr + 0x21)) == 0x04 
-                && byte(char_addr + 0x21) == 0x05)
+            && prev(byte(char_addr + 0x21)) == 0x04 
+            && byte(char_addr + 0x21) == 0x05)
+
     }
+    // for char_addr in array_positions {
+    //     cond = cond || (word(char_addr) == chararacter_ids_by_name[char_name] 
+    //             && prev(byte(char_addr + 0x21)) == 0x04 
+    //             && byte(char_addr + 0x21) == 0x05)
+    // }
     return cond
 }
 
@@ -1360,7 +1407,25 @@ combat_missions_by_name = {
     "Demon-Hacked":     0x000e,
 }
 
-missions = {
+event_id_by_name = {
+    "Death Clip":       0x3e9,
+    "Daichi's Crisis":  0x3f1,
+    "A Man Named Joe":  0x3f3,
+    "Daichi's Resolve": 0x3f4,
+    "App Abuser":       0x7d4,
+    "Never Say Die":    0x7d8,
+    "Demon-Hacked":     0x7da,
+    "Osaka Soul":       0x7dc,
+    "Merak Arrives":    0x7e2,
+    "Vs. Q":            0xbbb,
+    "Girl in Pursuit":  0xbbd,
+    "Boy in Combat":    0xbbe,        
+    "Hacker Revealed":  0xbbf,
+    "Saving Daichi":    0xbc2,
+    "Megrez Meeting":   0xfa8
+}
+
+missions_by_id = {
     // Exclusively Sunday Missions
     0x3e9: "Death Clip",
     0x3ea: "Shinjuku Crisis",
@@ -1406,7 +1471,7 @@ missions = {
     0xbbc: "To Nagoya",
     0xbbd: "Girl in Pursuit",
     0xbbe: "Boy in Combat",
-    0xbbf: "Mystery Hacker Revealed",
+    0xbbf: "Hacker Revealed",
     0xbc0: "Nicaea Mystery",
     0xbc1: "The Server",
     0xbc2: "Saving Daichi",
@@ -1510,6 +1575,18 @@ function active_mission_completed(mission_name) {
     if (mission_name == "A Man Named Joe") {
         return prev(bit1(0x00284b56)) == 0x00 && bit1(0x00284b56) == 0x01
     }
+
+    if (mission_name == "Never Say Die") {
+        return prev(bit2(0x00284b57)) == 0x00 && bit2(0x00284b57) == 0x01
+    }
+
+    if (mission_name == "Osaka Soul") { 
+        return prev(bit4(0x00284b54)) == 0x00 && bit4(0x00284b54) == 0x01
+    }
+
+    if (mission_name == "Hacker Revealed") {
+        return prev(bit2(0x00284b56)) == 0x00 && bit2(0x00284b56) == 0x01
+    }
 }
 
 // Helper while we're still mapping out mails.
@@ -1521,6 +1598,8 @@ function mailbox_hunt_helper() {
     mapped_addrs = [
         0x00284cb3,
         0x00284cb4,
+        0x00284cb5,
+        0x00284cb6,
         0x00284cb7,
         0x00284ccb,
         0x00284ccc,
@@ -1554,8 +1633,6 @@ achievement(
     trigger = day <= 0x08 && (
         // 0x00284ad8
         (prev(bit1(0x00284ad8)) == 0x00 && bit1(0x00284ad8) == 0x01) ||
-        (prev(bit2(0x00284ad8)) == 0x00 && bit2(0x00284ad8) == 0x01) ||
-        (prev(bit3(0x00284ad8)) == 0x00 && bit3(0x00284ad8) == 0x01) ||
         (prev(bit4(0x00284ad8)) == 0x00 && bit4(0x00284ad8) == 0x01) ||
         (prev(bit5(0x00284ad8)) == 0x00 && bit5(0x00284ad8) == 0x01) ||
         (prev(bit6(0x00284ad8)) == 0x00 && bit6(0x00284ad8) == 0x01) ||
@@ -1563,24 +1640,17 @@ achievement(
         // 0x00284ad9
         (prev(bit0(0x00284ad9)) == 0x00 && bit0(0x00284ad9) == 0x01) ||
         (prev(bit1(0x00284ad9)) == 0x00 && bit1(0x00284ad9) == 0x01) ||
-        (prev(bit2(0x00284ad9)) == 0x00 && bit2(0x00284ad9) == 0x01) ||
         (prev(bit3(0x00284ad9)) == 0x00 && bit3(0x00284ad9) == 0x01) ||
         (prev(bit4(0x00284ad9)) == 0x00 && bit4(0x00284ad9) == 0x01) ||
-        (prev(bit7(0x00284ad9)) == 0x00 && bit7(0x00284ad9) == 0x01) ||
         // 0x00284ada
-        (prev(bit0(0x00284ada)) == 0x00 && bit0(0x00284ada) == 0x01) ||
         (prev(bit1(0x00284ada)) == 0x00 && bit1(0x00284ada) == 0x01) ||
         (prev(bit2(0x00284ada)) == 0x00 && bit2(0x00284ada) == 0x01) ||
         (prev(bit3(0x00284ada)) == 0x00 && bit3(0x00284ada) == 0x01) ||
         (prev(bit4(0x00284ada)) == 0x00 && bit4(0x00284ada) == 0x01) ||
         (prev(bit5(0x00284ada)) == 0x00 && bit5(0x00284ada) == 0x01) ||
         (prev(bit6(0x00284ada)) == 0x00 && bit6(0x00284ada) == 0x01) ||
-        (prev(bit7(0x00284ada)) == 0x00 && bit7(0x00284ada) == 0x01) ||
         // 0x00284adb
-        (prev(bit0(0x00284adb)) == 0x00 && bit0(0x00284adb) == 0x01) ||
-        (prev(bit1(0x00284adb)) == 0x00 && bit1(0x00284adb) == 0x01) ||
         (prev(bit2(0x00284adb)) == 0x00 && bit2(0x00284adb) == 0x01) ||
-        (prev(bit5(0x00284adb)) == 0x00 && bit5(0x00284adb) == 0x01) ||
         (prev(bit6(0x00284adb)) == 0x00 && bit6(0x00284adb) == 0x01) ||
         (prev(bit7(0x00284adb)) == 0x00 && bit7(0x00284adb) == 0x01) ||
         // 0x00284adc
@@ -1589,22 +1659,15 @@ achievement(
         (prev(bit2(0x00284adc)) == 0x00 && bit2(0x00284adc) == 0x01) ||
         (prev(bit3(0x00284adc)) == 0x00 && bit3(0x00284adc) == 0x01) ||
         (prev(bit4(0x00284adc)) == 0x00 && bit4(0x00284adc) == 0x01) ||
-        (prev(bit6(0x00284adc)) == 0x00 && bit6(0x00284adc) == 0x01) ||
         // 0x00284add
-        (prev(bit0(0x00284add)) == 0x00 && bit0(0x00284add) == 0x01) ||
         (prev(bit1(0x00284add)) == 0x00 && bit1(0x00284add) == 0x01) ||
         (prev(bit2(0x00284add)) == 0x00 && bit2(0x00284add) == 0x01) ||
-        (prev(bit3(0x00284add)) == 0x00 && bit3(0x00284add) == 0x01) ||
-        (prev(bit4(0x00284add)) == 0x00 && bit4(0x00284add) == 0x01) ||
-        (prev(bit5(0x00284add)) == 0x00 && bit5(0x00284add) == 0x01) ||
-        (prev(bit6(0x00284add)) == 0x00 && bit6(0x00284add) == 0x01) ||
         (prev(bit7(0x00284add)) == 0x00 && bit7(0x00284add) == 0x01) ||
         // 0x00284ade
         (prev(bit0(0x00284ade)) == 0x00 && bit0(0x00284ade) == 0x01) ||
         (prev(bit1(0x00284ade)) == 0x00 && bit1(0x00284ade) == 0x01) ||
         (prev(bit2(0x00284ade)) == 0x00 && bit2(0x00284ade) == 0x01) ||
         (prev(bit3(0x00284ade)) == 0x00 && bit3(0x00284ade) == 0x01) ||
-        (prev(bit4(0x00284ade)) == 0x00 && bit4(0x00284ade) == 0x01) ||
         (prev(bit5(0x00284ade)) == 0x00 && bit5(0x00284ade) == 0x01) ||
         (prev(bit6(0x00284ade)) == 0x00 && bit6(0x00284ade) == 0x01) ||
         // 0x00284adf
@@ -1613,62 +1676,363 @@ achievement(
         (prev(bit2(0x00284adf)) == 0x00 && bit2(0x00284adf) == 0x01) ||
         (prev(bit3(0x00284adf)) == 0x00 && bit3(0x00284adf) == 0x01) ||
         (prev(bit4(0x00284adf)) == 0x00 && bit4(0x00284adf) == 0x01) ||
-        (prev(bit5(0x00284adf)) == 0x00 && bit5(0x00284adf) == 0x01) ||
-        (prev(bit6(0x00284adf)) == 0x00 && bit6(0x00284adf) == 0x01) ||
         (prev(bit7(0x00284adf)) == 0x00 && bit7(0x00284adf) == 0x01) ||
         // 0x00284ae0
         (prev(bit0(0x00284ae0)) == 0x00 && bit0(0x00284ae0) == 0x01) ||
         (prev(bit1(0x00284ae0)) == 0x00 && bit1(0x00284ae0) == 0x01) ||
-        (prev(bit3(0x00284ae0)) == 0x00 && bit3(0x00284ae0) == 0x01) ||
-        (prev(bit4(0x00284ae0)) == 0x00 && bit4(0x00284ae0) == 0x01) ||
         (prev(bit5(0x00284ae0)) == 0x00 && bit5(0x00284ae0) == 0x01) ||
         (prev(bit6(0x00284ae0)) == 0x00 && bit6(0x00284ae0) == 0x01) ||
         (prev(bit7(0x00284ae0)) == 0x00 && bit7(0x00284ae0) == 0x01) ||
         // 0x00284ae1
         (prev(bit0(0x00284ae1)) == 0x00 && bit0(0x00284ae1) == 0x01) ||
         (prev(bit1(0x00284ae1)) == 0x00 && bit1(0x00284ae1) == 0x01) ||
-        (prev(bit2(0x00284ae1)) == 0x00 && bit2(0x00284ae1) == 0x01) ||
         (prev(bit3(0x00284ae1)) == 0x00 && bit3(0x00284ae1) == 0x01) ||
         (prev(bit4(0x00284ae1)) == 0x00 && bit4(0x00284ae1) == 0x01) ||
         (prev(bit6(0x00284ae1)) == 0x00 && bit6(0x00284ae1) == 0x01) ||
         (prev(bit7(0x00284ae1)) == 0x00 && bit7(0x00284ae1) == 0x01) ||
-        // 0x00284ae2
+        // 0x00284ae2 needs a sign of anything being there before we commit
+        (prev(bit0(0x00284ae2)) == 0x00 && bit0(0x00284ae2) == 0x01) ||
+        (prev(bit1(0x00284ae2)) == 0x00 && bit1(0x00284ae2) == 0x01) ||
+        (prev(bit2(0x00284ae2)) == 0x00 && bit2(0x00284ae2) == 0x01) ||
+        (prev(bit3(0x00284ae2)) == 0x00 && bit3(0x00284ae2) == 0x01) ||
+        (prev(bit4(0x00284ae2)) == 0x00 && bit4(0x00284ae2) == 0x01) ||
+        (prev(bit5(0x00284ae2)) == 0x00 && bit5(0x00284ae2) == 0x01) ||
+        (prev(bit6(0x00284ae2)) == 0x00 && bit6(0x00284ae2) == 0x01) ||
+        (prev(bit7(0x00284ae2)) == 0x00 && bit7(0x00284ae2) == 0x01) ||
         // 0x00284ae3
+        (prev(bit0(0x00284ae3)) == 0x00 && bit0(0x00284ae3) == 0x01) ||
+        (prev(bit4(0x00284ae3)) == 0x00 && bit4(0x00284ae3) == 0x01) ||
+        (prev(bit5(0x00284ae3)) == 0x00 && bit5(0x00284ae3) == 0x01) ||
+        (prev(bit6(0x00284ae3)) == 0x00 && bit6(0x00284ae3) == 0x01) ||
+        (prev(bit7(0x00284ae3)) == 0x00 && bit7(0x00284ae3) == 0x01) ||
         // 0x00284ae4
+        (prev(bit0(0x00284ae4)) == 0x00 && bit0(0x00284ae4) == 0x01) ||
+        (prev(bit2(0x00284ae4)) == 0x00 && bit2(0x00284ae4) == 0x01) ||
+        (prev(bit3(0x00284ae4)) == 0x00 && bit3(0x00284ae4) == 0x01) ||
+        (prev(bit6(0x00284ae4)) == 0x00 && bit6(0x00284ae4) == 0x01) ||
+        (prev(bit7(0x00284ae4)) == 0x00 && bit7(0x00284ae4) == 0x01) ||
         // 0x00284ae5
+        (prev(bit0(0x00284ae5)) == 0x00 && bit0(0x00284ae5) == 0x01) ||
+        (prev(bit1(0x00284ae5)) == 0x00 && bit1(0x00284ae5) == 0x01) ||
+        (prev(bit2(0x00284ae5)) == 0x00 && bit2(0x00284ae5) == 0x01) ||
+        (prev(bit3(0x00284ae5)) == 0x00 && bit3(0x00284ae5) == 0x01) ||
+        // bit4 is likely Jungo's Find
+        (prev(bit4(0x00284ae5)) == 0x00 && bit4(0x00284ae5) == 0x01) ||
+        (prev(bit5(0x00284ae5)) == 0x00 && bit5(0x00284ae5) == 0x01) ||
+        (prev(bit6(0x00284ae5)) == 0x00 && bit6(0x00284ae5) == 0x01) ||
+        (prev(bit7(0x00284ae5)) == 0x00 && bit7(0x00284ae5) == 0x01) ||
         // 0x00284ae6
+        (prev(bit1(0x00284ae6)) == 0x00 && bit1(0x00284ae6) == 0x01) ||
+        (prev(bit2(0x00284ae6)) == 0x00 && bit2(0x00284ae6) == 0x01) ||
+        (prev(bit3(0x00284ae6)) == 0x00 && bit3(0x00284ae6) == 0x01) ||
+        (prev(bit4(0x00284ae6)) == 0x00 && bit4(0x00284ae6) == 0x01) ||
+        (prev(bit5(0x00284ae6)) == 0x00 && bit5(0x00284ae6) == 0x01) ||
+        (prev(bit6(0x00284ae6)) == 0x00 && bit6(0x00284ae6) == 0x01) ||
+        (prev(bit7(0x00284ae6)) == 0x00 && bit7(0x00284ae6) == 0x01) ||
         // 0x00284ae7
+        (prev(bit1(0x00284ae7)) == 0x00 && bit1(0x00284ae7) == 0x01) ||
+        (prev(bit2(0x00284ae7)) == 0x00 && bit2(0x00284ae7) == 0x01) ||
+        (prev(bit3(0x00284ae7)) == 0x00 && bit3(0x00284ae7) == 0x01) ||
+        (prev(bit4(0x00284ae7)) == 0x00 && bit4(0x00284ae7) == 0x01) ||
+        (prev(bit5(0x00284ae7)) == 0x00 && bit5(0x00284ae7) == 0x01) ||
+        (prev(bit6(0x00284ae7)) == 0x00 && bit6(0x00284ae7) == 0x01) ||
+        (prev(bit7(0x00284ae7)) == 0x00 && bit7(0x00284ae7) == 0x01) ||
         // 0x00284ae8
+        (prev(bit0(0x00284ae8)) == 0x00 && bit0(0x00284ae8) == 0x01) ||
+        (prev(bit1(0x00284ae8)) == 0x00 && bit1(0x00284ae8) == 0x01) ||
+        (prev(bit2(0x00284ae8)) == 0x00 && bit2(0x00284ae8) == 0x01) ||
+        (prev(bit3(0x00284ae8)) == 0x00 && bit3(0x00284ae8) == 0x01) ||
+        (prev(bit4(0x00284ae8)) == 0x00 && bit4(0x00284ae8) == 0x01) ||
+        (prev(bit6(0x00284ae8)) == 0x00 && bit6(0x00284ae8) == 0x01) ||
+        (prev(bit7(0x00284ae8)) == 0x00 && bit7(0x00284ae8) == 0x01) ||
         // 0x00284ae9
+        (prev(bit0(0x00284ae9)) == 0x00 && bit0(0x00284ae9) == 0x01) ||
+        (prev(bit1(0x00284ae9)) == 0x00 && bit1(0x00284ae9) == 0x01) ||
+        (prev(bit2(0x00284ae9)) == 0x00 && bit2(0x00284ae9) == 0x01) ||
+        (prev(bit3(0x00284ae9)) == 0x00 && bit3(0x00284ae9) == 0x01) ||
+        (prev(bit4(0x00284ae9)) == 0x00 && bit4(0x00284ae9) == 0x01) ||
+        (prev(bit5(0x00284ae9)) == 0x00 && bit5(0x00284ae9) == 0x01) ||
+        (prev(bit6(0x00284ae9)) == 0x00 && bit6(0x00284ae9) == 0x01) ||
+        (prev(bit7(0x00284ae9)) == 0x00 && bit7(0x00284ae9) == 0x01) ||
         // 0x00284aea
         (prev(bit0(0x00284aea)) == 0x00 && bit0(0x00284aea) == 0x01) ||
         (prev(bit1(0x00284aea)) == 0x00 && bit1(0x00284aea) == 0x01) ||
         (prev(bit2(0x00284aea)) == 0x00 && bit2(0x00284aea) == 0x01) ||
-        // 0x00284aeb
-        (prev(bit7(0x00284aeb)) == 0x00 && bit7(0x00284aeb) == 0x01) ||
-        // 0x00284aec
-        (prev(bit3(0x00284aec)) == 0x00 && bit3(0x00284aec) == 0x01) ||
-        (prev(bit4(0x00284aec)) == 0x00 && bit4(0x00284aec) == 0x01) ||
-        (prev(bit5(0x00284aec)) == 0x00 && bit5(0x00284aec) == 0x01) ||
+        // 0x00284aeb is fully covered
+        // 0x00284aec is fully covered
         // 0x00284aed is fully covered
         // 0x00284aee is fully covered
-        // 0x00284aef
-        (prev(bit0(0x00284aef)) == 0x00 && bit0(0x00284aef) == 0x01) ||
-        (prev(bit2(0x00284aef)) == 0x00 && bit2(0x00284aef) == 0x01) ||
-        (prev(bit3(0x00284aef)) == 0x00 && bit3(0x00284aef) == 0x01) ||
-        (prev(bit4(0x00284aef)) == 0x00 && bit4(0x00284aef) == 0x01) ||
-        (prev(bit5(0x00284aef)) == 0x00 && bit5(0x00284aef) == 0x01) ||
-        (prev(bit6(0x00284aef)) == 0x00 && bit6(0x00284aef) == 0x01) ||
-        (prev(bit7(0x00284aef)) == 0x00 && bit7(0x00284aef) == 0x01) ||
-        // 0x00284af0
-        (prev(bit0(0x00284af0)) == 0x00 && bit0(0x00284af0) == 0x01) ||
-        (prev(bit1(0x00284af0)) == 0x00 && bit1(0x00284af0) == 0x01) ||
-        (prev(bit2(0x00284af0)) == 0x00 && bit2(0x00284af0) == 0x01) ||
-        (prev(bit3(0x00284af0)) == 0x00 && bit3(0x00284af0) == 0x01) ||
-        (prev(bit4(0x00284af0)) == 0x00 && bit4(0x00284af0) == 0x01) ||
-        (prev(bit5(0x00284af0)) == 0x00 && bit5(0x00284af0) == 0x01) ||
-        (prev(bit6(0x00284af0)) == 0x00 && bit6(0x00284af0) == 0x01) ||
-        (prev(bit7(0x00284af0)) == 0x00 && bit7(0x00284af0) == 0x01) ||
+        // 0x00284aef is fully covered
+        // 0x00284af0 is fully covered
+        // 0x00284af1 is fully covered
+        // 0x00284af2
+        (prev(bit0(0x00284af2)) == 0x00 && bit0(0x00284af2) == 0x01) ||
+        (prev(bit2(0x00284af2)) == 0x00 && bit2(0x00284af2) == 0x01) ||
+        // 0x00284af3
+        (prev(bit1(0x00284af3)) == 0x00 && bit1(0x00284af3) == 0x01) ||
+        // 0x00284af4
+        (prev(bit0(0x00284af4)) == 0x00 && bit0(0x00284af4) == 0x01) ||
+        (prev(bit4(0x00284af4)) == 0x00 && bit4(0x00284af4) == 0x01) ||
+        (prev(bit5(0x00284af4)) == 0x00 && bit5(0x00284af4) == 0x01) ||
+        (prev(bit6(0x00284af4)) == 0x00 && bit6(0x00284af4) == 0x01) ||
+        // 0x00284af5
+        (prev(bit1(0x00284af5)) == 0x00 && bit1(0x00284af5) == 0x01) ||
+        (prev(bit2(0x00284af5)) == 0x00 && bit2(0x00284af5) == 0x01) ||
+        (prev(bit4(0x00284af5)) == 0x00 && bit4(0x00284af5) == 0x01) ||
+        (prev(bit5(0x00284af5)) == 0x00 && bit5(0x00284af5) == 0x01) ||
+        (prev(bit6(0x00284af5)) == 0x00 && bit6(0x00284af5) == 0x01) ||
+        (prev(bit7(0x00284af5)) == 0x00 && bit7(0x00284af5) == 0x01) ||
+        // 0x00284af6
+        (prev(bit0(0x00284af6)) == 0x00 && bit0(0x00284af6) == 0x01) ||
+        (prev(bit1(0x00284af6)) == 0x00 && bit1(0x00284af6) == 0x01) ||
+        (prev(bit2(0x00284af6)) == 0x00 && bit2(0x00284af6) == 0x01) ||
+        (prev(bit3(0x00284af6)) == 0x00 && bit3(0x00284af6) == 0x01) ||
+        (prev(bit4(0x00284af6)) == 0x00 && bit4(0x00284af6) == 0x01) ||
+        (prev(bit5(0x00284af6)) == 0x00 && bit5(0x00284af6) == 0x01) ||
+        (prev(bit6(0x00284af6)) == 0x00 && bit6(0x00284af6) == 0x01) ||
+        // 0x00284af7
+        (prev(bit0(0x00284af7)) == 0x00 && bit0(0x00284af7) == 0x01) ||
+        (prev(bit1(0x00284af7)) == 0x00 && bit1(0x00284af7) == 0x01) ||
+        (prev(bit2(0x00284af7)) == 0x00 && bit2(0x00284af7) == 0x01) ||
+        (prev(bit3(0x00284af7)) == 0x00 && bit3(0x00284af7) == 0x01) ||
+        (prev(bit4(0x00284af7)) == 0x00 && bit4(0x00284af7) == 0x01) ||
+        (prev(bit5(0x00284af7)) == 0x00 && bit5(0x00284af7) == 0x01) ||
+        (prev(bit6(0x00284af7)) == 0x00 && bit6(0x00284af7) == 0x01) ||
+        (prev(bit7(0x00284af7)) == 0x00 && bit7(0x00284af7) == 0x01) ||
+        // 0x00284af8
+        (prev(bit0(0x00284af8)) == 0x00 && bit0(0x00284af8) == 0x01) ||
+        (prev(bit1(0x00284af8)) == 0x00 && bit1(0x00284af8) == 0x01) ||
+        (prev(bit2(0x00284af8)) == 0x00 && bit2(0x00284af8) == 0x01) ||
+        (prev(bit3(0x00284af8)) == 0x00 && bit3(0x00284af8) == 0x01) ||
+        (prev(bit4(0x00284af8)) == 0x00 && bit4(0x00284af8) == 0x01) ||
+        (prev(bit5(0x00284af8)) == 0x00 && bit5(0x00284af8) == 0x01) ||
+        (prev(bit6(0x00284af8)) == 0x00 && bit6(0x00284af8) == 0x01) ||
+        (prev(bit7(0x00284af8)) == 0x00 && bit7(0x00284af8) == 0x01) ||
+        // 0x00284af9
+        (prev(bit0(0x00284af9)) == 0x00 && bit0(0x00284af9) == 0x01) ||
+        (prev(bit1(0x00284af9)) == 0x00 && bit1(0x00284af9) == 0x01) ||
+        (prev(bit2(0x00284af9)) == 0x00 && bit2(0x00284af9) == 0x01) ||
+        (prev(bit3(0x00284af9)) == 0x00 && bit3(0x00284af9) == 0x01) ||
+        (prev(bit4(0x00284af9)) == 0x00 && bit4(0x00284af9) == 0x01) ||
+        (prev(bit5(0x00284af9)) == 0x00 && bit5(0x00284af9) == 0x01) ||
+        (prev(bit6(0x00284af9)) == 0x00 && bit6(0x00284af9) == 0x01) ||
+        (prev(bit7(0x00284af9)) == 0x00 && bit7(0x00284af9) == 0x01) ||
+        // 0x00284afa
+        (prev(bit0(0x00284afa)) == 0x00 && bit0(0x00284afa) == 0x01) ||
+        (prev(bit1(0x00284afa)) == 0x00 && bit1(0x00284afa) == 0x01) || 
+        (prev(bit2(0x00284afa)) == 0x00 && bit2(0x00284afa) == 0x01) || 
+        (prev(bit3(0x00284afa)) == 0x00 && bit3(0x00284afa) == 0x01) || 
+        (prev(bit4(0x00284afa)) == 0x00 && bit4(0x00284afa) == 0x01) || 
+        (prev(bit5(0x00284afa)) == 0x00 && bit5(0x00284afa) == 0x01) || 
+        (prev(bit6(0x00284afa)) == 0x00 && bit6(0x00284afa) == 0x01) || 
+        (prev(bit7(0x00284afa)) == 0x00 && bit7(0x00284afa) == 0x01) || 
+        // 0x00284afb
+        (prev(bit0(0x00284afb)) == 0x00 && bit0(0x00284afb) == 0x01) ||
+        (prev(bit1(0x00284afb)) == 0x00 && bit1(0x00284afb) == 0x01) ||
+        (prev(bit2(0x00284afb)) == 0x00 && bit2(0x00284afb) == 0x01) ||
+        (prev(bit3(0x00284afb)) == 0x00 && bit3(0x00284afb) == 0x01) ||
+        (prev(bit4(0x00284afb)) == 0x00 && bit4(0x00284afb) == 0x01) ||
+        (prev(bit5(0x00284afb)) == 0x00 && bit5(0x00284afb) == 0x01) ||
+        (prev(bit6(0x00284afb)) == 0x00 && bit6(0x00284afb) == 0x01) ||
+        (prev(bit7(0x00284afb)) == 0x00 && bit7(0x00284afb) == 0x01) ||
+        // 0x00284afc
+        (prev(bit0(0x00284afc)) == 0x00 && bit0(0x00284afc) == 0x01) ||
+        (prev(bit1(0x00284afc)) == 0x00 && bit1(0x00284afc) == 0x01) ||
+        (prev(bit2(0x00284afc)) == 0x00 && bit2(0x00284afc) == 0x01) ||
+        (prev(bit3(0x00284afc)) == 0x00 && bit3(0x00284afc) == 0x01) ||
+        (prev(bit4(0x00284afc)) == 0x00 && bit4(0x00284afc) == 0x01) ||
+        (prev(bit5(0x00284afc)) == 0x00 && bit5(0x00284afc) == 0x01) ||
+        (prev(bit6(0x00284afc)) == 0x00 && bit6(0x00284afc) == 0x01) ||
+        (prev(bit7(0x00284afc)) == 0x00 && bit7(0x00284afc) == 0x01) ||
+        // 0x00284afd
+        (prev(bit0(0x00284afd)) == 0x00 && bit0(0x00284afd) == 0x01) ||
+        (prev(bit1(0x00284afd)) == 0x00 && bit1(0x00284afd) == 0x01) ||
+        (prev(bit2(0x00284afd)) == 0x00 && bit2(0x00284afd) == 0x01) ||
+        (prev(bit3(0x00284afd)) == 0x00 && bit3(0x00284afd) == 0x01) ||
+        (prev(bit4(0x00284afd)) == 0x00 && bit4(0x00284afd) == 0x01) ||
+        (prev(bit5(0x00284afd)) == 0x00 && bit5(0x00284afd) == 0x01) ||
+        (prev(bit6(0x00284afd)) == 0x00 && bit6(0x00284afd) == 0x01) ||
+        (prev(bit7(0x00284afd)) == 0x00 && bit7(0x00284afd) == 0x01) ||
+        // 0x00284afe
+        (prev(bit0(0x00284afe)) == 0x00 && bit0(0x00284afe) == 0x01) ||
+        (prev(bit1(0x00284afe)) == 0x00 && bit1(0x00284afe) == 0x01) ||
+        (prev(bit2(0x00284afe)) == 0x00 && bit2(0x00284afe) == 0x01) ||
+        (prev(bit3(0x00284afe)) == 0x00 && bit3(0x00284afe) == 0x01) ||
+        (prev(bit4(0x00284afe)) == 0x00 && bit4(0x00284afe) == 0x01) ||
+        (prev(bit5(0x00284afe)) == 0x00 && bit5(0x00284afe) == 0x01) ||
+        (prev(bit6(0x00284afe)) == 0x00 && bit6(0x00284afe) == 0x01) ||
+        (prev(bit7(0x00284afe)) == 0x00 && bit7(0x00284afe) == 0x01) ||
+        // 0x00284aff
+        (prev(bit0(0x00284aff)) == 0x00 && bit0(0x00284aff) == 0x01) || 
+        (prev(bit1(0x00284aff)) == 0x00 && bit1(0x00284aff) == 0x01) || 
+        (prev(bit2(0x00284aff)) == 0x00 && bit2(0x00284aff) == 0x01) || 
+        (prev(bit3(0x00284aff)) == 0x00 && bit3(0x00284aff) == 0x01) || 
+        (prev(bit4(0x00284aff)) == 0x00 && bit4(0x00284aff) == 0x01) || 
+        (prev(bit5(0x00284aff)) == 0x00 && bit5(0x00284aff) == 0x01) || 
+        (prev(bit6(0x00284aff)) == 0x00 && bit6(0x00284aff) == 0x01) || 
+        (prev(bit7(0x00284aff)) == 0x00 && bit7(0x00284aff) == 0x01) || 
+        // 0x00284b00
+        (prev(bit0(0x00284b00)) == 0x00 && bit0(0x00284b00) == 0x01) ||
+        (prev(bit1(0x00284b00)) == 0x00 && bit1(0x00284b00) == 0x01) || 
+        (prev(bit2(0x00284b00)) == 0x00 && bit2(0x00284b00) == 0x01) || 
+        (prev(bit3(0x00284b00)) == 0x00 && bit3(0x00284b00) == 0x01) || 
+        (prev(bit4(0x00284b00)) == 0x00 && bit4(0x00284b00) == 0x01) || 
+        (prev(bit5(0x00284b00)) == 0x00 && bit5(0x00284b00) == 0x01) || 
+        (prev(bit6(0x00284b00)) == 0x00 && bit6(0x00284b00) == 0x01) || 
+        (prev(bit7(0x00284b00)) == 0x00 && bit7(0x00284b00) == 0x01) || 
+        // 0x00284b01
+        (prev(bit0(0x00284b01)) == 0x00 && bit0(0x00284b01) == 0x01) ||
+        (prev(bit1(0x00284b01)) == 0x00 && bit1(0x00284b01) == 0x01) ||
+        (prev(bit2(0x00284b01)) == 0x00 && bit2(0x00284b01) == 0x01) ||
+        (prev(bit3(0x00284b01)) == 0x00 && bit3(0x00284b01) == 0x01) ||
+        (prev(bit4(0x00284b01)) == 0x00 && bit4(0x00284b01) == 0x01) ||
+        (prev(bit5(0x00284b01)) == 0x00 && bit5(0x00284b01) == 0x01) ||
+        (prev(bit6(0x00284b01)) == 0x00 && bit6(0x00284b01) == 0x01) ||
+        (prev(bit7(0x00284b01)) == 0x00 && bit7(0x00284b01) == 0x01) ||
+        // 0x00284b02
+        (prev(bit0(0x00284b02)) == 0x00 && bit0(0x00284b02) == 0x01) ||
+        (prev(bit1(0x00284b02)) == 0x00 && bit1(0x00284b02) == 0x01) ||
+        (prev(bit2(0x00284b02)) == 0x00 && bit2(0x00284b02) == 0x01) ||
+        (prev(bit3(0x00284b02)) == 0x00 && bit3(0x00284b02) == 0x01) ||
+        (prev(bit4(0x00284b02)) == 0x00 && bit4(0x00284b02) == 0x01) ||
+        (prev(bit5(0x00284b02)) == 0x00 && bit5(0x00284b02) == 0x01) ||
+        (prev(bit6(0x00284b02)) == 0x00 && bit6(0x00284b02) == 0x01) ||
+        (prev(bit7(0x00284b02)) == 0x00 && bit7(0x00284b02) == 0x01) ||
+        // 0x00284b03
+        (prev(bit0(0x00284b03)) == 0x00 && bit0(0x00284b03) == 0x01) ||
+        (prev(bit1(0x00284b03)) == 0x00 && bit1(0x00284b03) == 0x01) ||
+        (prev(bit2(0x00284b03)) == 0x00 && bit2(0x00284b03) == 0x01) ||
+        (prev(bit3(0x00284b03)) == 0x00 && bit3(0x00284b03) == 0x01) ||
+        (prev(bit4(0x00284b03)) == 0x00 && bit4(0x00284b03) == 0x01) ||
+        (prev(bit5(0x00284b03)) == 0x00 && bit5(0x00284b03) == 0x01) ||
+        (prev(bit6(0x00284b03)) == 0x00 && bit6(0x00284b03) == 0x01) ||
+        (prev(bit7(0x00284b03)) == 0x00 && bit7(0x00284b03) == 0x01) ||
+        // 0x00284b04
+        (prev(bit0(0x00284b04)) == 0x00 && bit0(0x00284b04) == 0x01) ||
+        (prev(bit1(0x00284b04)) == 0x00 && bit1(0x00284b04) == 0x01) ||
+        (prev(bit2(0x00284b04)) == 0x00 && bit2(0x00284b04) == 0x01) ||
+        (prev(bit3(0x00284b04)) == 0x00 && bit3(0x00284b04) == 0x01) ||
+        (prev(bit4(0x00284b04)) == 0x00 && bit4(0x00284b04) == 0x01) ||
+        (prev(bit5(0x00284b04)) == 0x00 && bit5(0x00284b04) == 0x01) ||
+        (prev(bit6(0x00284b04)) == 0x00 && bit6(0x00284b04) == 0x01) ||
+        (prev(bit7(0x00284b04)) == 0x00 && bit7(0x00284b04) == 0x01) ||
+        // 0x00284b05
+        (prev(bit0(0x00284b05)) == 0x00 && bit0(0x00284b05) == 0x01) ||
+        (prev(bit1(0x00284b05)) == 0x00 && bit1(0x00284b05) == 0x01) ||
+        (prev(bit2(0x00284b05)) == 0x00 && bit2(0x00284b05) == 0x01) ||
+        (prev(bit3(0x00284b05)) == 0x00 && bit3(0x00284b05) == 0x01) ||
+        (prev(bit4(0x00284b05)) == 0x00 && bit4(0x00284b05) == 0x01) ||
+        (prev(bit5(0x00284b05)) == 0x00 && bit5(0x00284b05) == 0x01) ||
+        (prev(bit6(0x00284b05)) == 0x00 && bit6(0x00284b05) == 0x01) ||
+        (prev(bit7(0x00284b05)) == 0x00 && bit7(0x00284b05) == 0x01) ||
+        // 0x00284b06
+        (prev(bit0(0x00284b06)) == 0x00 && bit0(0x00284b06) == 0x01) ||
+        (prev(bit1(0x00284b06)) == 0x00 && bit1(0x00284b06) == 0x01) ||
+        (prev(bit2(0x00284b06)) == 0x00 && bit2(0x00284b06) == 0x01) ||
+        (prev(bit3(0x00284b06)) == 0x00 && bit3(0x00284b06) == 0x01) ||
+        (prev(bit4(0x00284b06)) == 0x00 && bit4(0x00284b06) == 0x01) ||
+        (prev(bit5(0x00284b06)) == 0x00 && bit5(0x00284b06) == 0x01) ||
+        (prev(bit6(0x00284b06)) == 0x00 && bit6(0x00284b06) == 0x01) ||
+        (prev(bit7(0x00284b06)) == 0x00 && bit7(0x00284b06) == 0x01) ||
+        // 0x00284b07
+        (prev(bit0(0x00284b07)) == 0x00 && bit0(0x00284b07) == 0x01) ||
+        (prev(bit1(0x00284b07)) == 0x00 && bit1(0x00284b07) == 0x01) ||
+        (prev(bit2(0x00284b07)) == 0x00 && bit2(0x00284b07) == 0x01) ||
+        (prev(bit3(0x00284b07)) == 0x00 && bit3(0x00284b07) == 0x01) ||
+        (prev(bit4(0x00284b07)) == 0x00 && bit4(0x00284b07) == 0x01) ||
+        (prev(bit5(0x00284b07)) == 0x00 && bit5(0x00284b07) == 0x01) ||
+        (prev(bit6(0x00284b07)) == 0x00 && bit6(0x00284b07) == 0x01) ||
+        (prev(bit7(0x00284b07)) == 0x00 && bit7(0x00284b07) == 0x01) ||
+        // 0x00284b08
+        (prev(bit0(0x00284b08)) == 0x00 && bit0(0x00284b08) == 0x01) ||
+        (prev(bit1(0x00284b08)) == 0x00 && bit1(0x00284b08) == 0x01) ||
+        (prev(bit2(0x00284b08)) == 0x00 && bit2(0x00284b08) == 0x01) ||
+        (prev(bit3(0x00284b08)) == 0x00 && bit3(0x00284b08) == 0x01) ||
+        (prev(bit4(0x00284b08)) == 0x00 && bit4(0x00284b08) == 0x01) ||
+        (prev(bit5(0x00284b08)) == 0x00 && bit5(0x00284b08) == 0x01) ||
+        (prev(bit6(0x00284b08)) == 0x00 && bit6(0x00284b08) == 0x01) ||
+        (prev(bit7(0x00284b08)) == 0x00 && bit7(0x00284b08) == 0x01) ||
+        // 0x00284b09
+        (prev(bit0(0x00284b09)) == 0x00 && bit0(0x00284b09) == 0x01) ||
+        (prev(bit1(0x00284b09)) == 0x00 && bit1(0x00284b09) == 0x01) ||
+        (prev(bit2(0x00284b09)) == 0x00 && bit2(0x00284b09) == 0x01) ||
+        (prev(bit3(0x00284b09)) == 0x00 && bit3(0x00284b09) == 0x01) ||
+        (prev(bit4(0x00284b09)) == 0x00 && bit4(0x00284b09) == 0x01) ||
+        (prev(bit5(0x00284b09)) == 0x00 && bit5(0x00284b09) == 0x01) ||
+        (prev(bit6(0x00284b09)) == 0x00 && bit6(0x00284b09) == 0x01) ||
+        (prev(bit7(0x00284b09)) == 0x00 && bit7(0x00284b09) == 0x01) ||
+        // 0x00284b0a
+        (prev(bit0(0x00284b0a)) == 0x00 && bit0(0x00284b0a) == 0x01) ||
+        (prev(bit1(0x00284b0a)) == 0x00 && bit1(0x00284b0a) == 0x01) ||
+        (prev(bit2(0x00284b0a)) == 0x00 && bit2(0x00284b0a) == 0x01) ||
+        (prev(bit3(0x00284b0a)) == 0x00 && bit3(0x00284b0a) == 0x01) ||
+        (prev(bit4(0x00284b0a)) == 0x00 && bit4(0x00284b0a) == 0x01) ||
+        (prev(bit5(0x00284b0a)) == 0x00 && bit5(0x00284b0a) == 0x01) ||
+        (prev(bit6(0x00284b0a)) == 0x00 && bit6(0x00284b0a) == 0x01) ||
+        (prev(bit7(0x00284b0a)) == 0x00 && bit7(0x00284b0a) == 0x01) ||
+        // 0x00284b0b
+        (prev(bit0(0x00284b0b)) == 0x00 && bit0(0x00284b0b) == 0x01) ||
+        (prev(bit1(0x00284b0b)) == 0x00 && bit1(0x00284b0b) == 0x01) ||
+        (prev(bit2(0x00284b0b)) == 0x00 && bit2(0x00284b0b) == 0x01) ||
+        (prev(bit3(0x00284b0b)) == 0x00 && bit3(0x00284b0b) == 0x01) ||
+        (prev(bit4(0x00284b0b)) == 0x00 && bit4(0x00284b0b) == 0x01) ||
+        (prev(bit5(0x00284b0b)) == 0x00 && bit5(0x00284b0b) == 0x01) ||
+        (prev(bit6(0x00284b0b)) == 0x00 && bit6(0x00284b0b) == 0x01) ||
+        (prev(bit7(0x00284b0b)) == 0x00 && bit7(0x00284b0b) == 0x01) ||
+        // 0x00284b0c
+        (prev(bit0(0x00284b0c)) == 0x00 && bit0(0x00284b0c) == 0x01) ||
+        (prev(bit1(0x00284b0c)) == 0x00 && bit1(0x00284b0c) == 0x01) ||
+        (prev(bit2(0x00284b0c)) == 0x00 && bit2(0x00284b0c) == 0x01) ||
+        (prev(bit3(0x00284b0c)) == 0x00 && bit3(0x00284b0c) == 0x01) ||
+        (prev(bit4(0x00284b0c)) == 0x00 && bit4(0x00284b0c) == 0x01) ||
+        (prev(bit5(0x00284b0c)) == 0x00 && bit5(0x00284b0c) == 0x01) ||
+        (prev(bit6(0x00284b0c)) == 0x00 && bit6(0x00284b0c) == 0x01) ||
+        (prev(bit7(0x00284b0c)) == 0x00 && bit7(0x00284b0c) == 0x01) ||
+        // 0x00284b0d
+        (prev(bit0(0x00284b0d)) == 0x00 && bit0(0x00284b0d) == 0x01) ||
+        (prev(bit1(0x00284b0d)) == 0x00 && bit1(0x00284b0d) == 0x01) ||
+        (prev(bit2(0x00284b0d)) == 0x00 && bit2(0x00284b0d) == 0x01) ||
+        (prev(bit3(0x00284b0d)) == 0x00 && bit3(0x00284b0d) == 0x01) ||
+        (prev(bit4(0x00284b0d)) == 0x00 && bit4(0x00284b0d) == 0x01) ||
+        (prev(bit5(0x00284b0d)) == 0x00 && bit5(0x00284b0d) == 0x01) ||
+        (prev(bit6(0x00284b0d)) == 0x00 && bit6(0x00284b0d) == 0x01) ||
+        (prev(bit7(0x00284b0d)) == 0x00 && bit7(0x00284b0d) == 0x01) ||
+        // 0x00284b0e
+        (prev(bit0(0x00284b0e)) == 0x00 && bit0(0x00284b0e) == 0x01) ||
+        (prev(bit1(0x00284b0e)) == 0x00 && bit1(0x00284b0e) == 0x01) ||
+        (prev(bit2(0x00284b0e)) == 0x00 && bit2(0x00284b0e) == 0x01) ||
+        (prev(bit3(0x00284b0e)) == 0x00 && bit3(0x00284b0e) == 0x01) ||
+        (prev(bit4(0x00284b0e)) == 0x00 && bit4(0x00284b0e) == 0x01) ||
+        (prev(bit5(0x00284b0e)) == 0x00 && bit5(0x00284b0e) == 0x01) ||
+        (prev(bit6(0x00284b0e)) == 0x00 && bit6(0x00284b0e) == 0x01) ||
+        (prev(bit7(0x00284b0e)) == 0x00 && bit7(0x00284b0e) == 0x01) ||
+        // 0x00284b0f
+        (prev(bit0(0x00284b0f)) == 0x00 && bit0(0x00284b0f) == 0x01) ||
+        (prev(bit1(0x00284b0f)) == 0x00 && bit1(0x00284b0f) == 0x01) ||
+        (prev(bit2(0x00284b0f)) == 0x00 && bit2(0x00284b0f) == 0x01) ||
+        (prev(bit3(0x00284b0f)) == 0x00 && bit3(0x00284b0f) == 0x01) ||
+        (prev(bit4(0x00284b0f)) == 0x00 && bit4(0x00284b0f) == 0x01) ||
+        (prev(bit5(0x00284b0f)) == 0x00 && bit5(0x00284b0f) == 0x01) ||
+        (prev(bit6(0x00284b0f)) == 0x00 && bit6(0x00284b0f) == 0x01) ||
+        (prev(bit7(0x00284b0f)) == 0x00 && bit7(0x00284b0f) == 0x01) ||
+        // 0x00284b10
+        (prev(bit0(0x00284b10)) == 0x00 && bit0(0x00284b10) == 0x01) ||
+        (prev(bit1(0x00284b10)) == 0x00 && bit1(0x00284b10) == 0x01) ||
+        (prev(bit2(0x00284b10)) == 0x00 && bit2(0x00284b10) == 0x01) ||
+        (prev(bit3(0x00284b10)) == 0x00 && bit3(0x00284b10) == 0x01) ||
+        (prev(bit4(0x00284b10)) == 0x00 && bit4(0x00284b10) == 0x01) ||
+        (prev(bit5(0x00284b10)) == 0x00 && bit5(0x00284b10) == 0x01) ||
+        (prev(bit6(0x00284b10)) == 0x00 && bit6(0x00284b10) == 0x01) ||
+        (prev(bit7(0x00284b10)) == 0x00 && bit7(0x00284b10) == 0x01) ||
+        // 0x00284b11
+        (prev(bit0(0x00284b11)) == 0x00 && bit0(0x00284b11) == 0x01) ||
+        (prev(bit1(0x00284b11)) == 0x00 && bit1(0x00284b11) == 0x01) ||
+        (prev(bit2(0x00284b11)) == 0x00 && bit2(0x00284b11) == 0x01) ||
+        (prev(bit3(0x00284b11)) == 0x00 && bit3(0x00284b11) == 0x01) ||
+        (prev(bit4(0x00284b11)) == 0x00 && bit4(0x00284b11) == 0x01) ||
+        (prev(bit5(0x00284b11)) == 0x00 && bit5(0x00284b11) == 0x01) ||
+        (prev(bit6(0x00284b11)) == 0x00 && bit6(0x00284b11) == 0x01) ||
+        (prev(bit7(0x00284b11)) == 0x00 && bit7(0x00284b11) == 0x01) ||
         // it goes down to here :(
         (prev(bit0(0x00284b12)) == 0x00 && bit0(0x00284b12) == 0x01) ||
         (prev(bit1(0x00284b12)) == 0x00 && bit1(0x00284b12) == 0x01) ||
@@ -1677,7 +2041,128 @@ achievement(
         (prev(bit4(0x00284b12)) == 0x00 && bit4(0x00284b12) == 0x01) ||
         (prev(bit5(0x00284b12)) == 0x00 && bit5(0x00284b12) == 0x01) ||
         (prev(bit6(0x00284b12)) == 0x00 && bit6(0x00284b12) == 0x01) ||
-        (prev(bit7(0x00284b12)) == 0x00 && bit7(0x00284b12) == 0x01)
+        (prev(bit7(0x00284b12)) == 0x00 && bit7(0x00284b12) == 0x01) ||
+        // 0x00284b13
+        (prev(bit0(0x00284b13)) == 0x00 && bit0(0x00284b13) == 0x01) ||
+        (prev(bit1(0x00284b13)) == 0x00 && bit1(0x00284b13) == 0x01) ||
+        (prev(bit4(0x00284b13)) == 0x00 && bit4(0x00284b13) == 0x01) ||
+        (prev(bit5(0x00284b13)) == 0x00 && bit5(0x00284b13) == 0x01) ||
+        (prev(bit6(0x00284b13)) == 0x00 && bit6(0x00284b13) == 0x01) ||
+        (prev(bit7(0x00284b13)) == 0x00 && bit7(0x00284b13) == 0x01) ||
+        // 0x00284b14
+        (prev(bit0(0x00284b14)) == 0x00 && bit0(0x00284b14) == 0x01) ||
+        (prev(bit1(0x00284b14)) == 0x00 && bit1(0x00284b14) == 0x01) ||
+        (prev(bit2(0x00284b14)) == 0x00 && bit2(0x00284b14) == 0x01) ||
+        (prev(bit3(0x00284b14)) == 0x00 && bit3(0x00284b14) == 0x01) ||
+        (prev(bit4(0x00284b14)) == 0x00 && bit4(0x00284b14) == 0x01) ||
+        (prev(bit5(0x00284b14)) == 0x00 && bit5(0x00284b14) == 0x01) ||
+        (prev(bit6(0x00284b14)) == 0x00 && bit6(0x00284b14) == 0x01) ||
+        (prev(bit7(0x00284b14)) == 0x00 && bit7(0x00284b14) == 0x01) ||
+        // 0x00284b15
+        (prev(bit0(0x00284b15)) == 0x00 && bit0(0x00284b15) == 0x01) ||
+        (prev(bit1(0x00284b15)) == 0x00 && bit1(0x00284b15) == 0x01) ||
+        (prev(bit2(0x00284b15)) == 0x00 && bit2(0x00284b15) == 0x01) ||
+        (prev(bit3(0x00284b15)) == 0x00 && bit3(0x00284b15) == 0x01) ||
+        (prev(bit4(0x00284b15)) == 0x00 && bit4(0x00284b15) == 0x01) ||
+        (prev(bit5(0x00284b15)) == 0x00 && bit5(0x00284b15) == 0x01) ||
+        (prev(bit6(0x00284b15)) == 0x00 && bit6(0x00284b15) == 0x01) ||
+        (prev(bit7(0x00284b15)) == 0x00 && bit7(0x00284b15) == 0x01) ||
+        // 0x00284b16
+        (prev(bit0(0x00284b16)) == 0x00 && bit0(0x00284b16) == 0x01) ||
+        (prev(bit1(0x00284b16)) == 0x00 && bit1(0x00284b16) == 0x01) ||
+        (prev(bit2(0x00284b16)) == 0x00 && bit2(0x00284b16) == 0x01) ||
+        (prev(bit3(0x00284b16)) == 0x00 && bit3(0x00284b16) == 0x01) ||
+        (prev(bit4(0x00284b16)) == 0x00 && bit4(0x00284b16) == 0x01) ||
+        (prev(bit5(0x00284b16)) == 0x00 && bit5(0x00284b16) == 0x01) ||
+        (prev(bit6(0x00284b16)) == 0x00 && bit6(0x00284b16) == 0x01) ||
+        (prev(bit7(0x00284b16)) == 0x00 && bit7(0x00284b16) == 0x01) ||
+        // 0x00284b17
+        (prev(bit0(0x00284b17)) == 0x00 && bit0(0x00284b17) == 0x01) ||
+        (prev(bit1(0x00284b17)) == 0x00 && bit1(0x00284b17) == 0x01) ||
+        (prev(bit2(0x00284b17)) == 0x00 && bit2(0x00284b17) == 0x01) ||
+        (prev(bit3(0x00284b17)) == 0x00 && bit3(0x00284b17) == 0x01) ||
+        (prev(bit4(0x00284b17)) == 0x00 && bit4(0x00284b17) == 0x01) ||
+        (prev(bit5(0x00284b17)) == 0x00 && bit5(0x00284b17) == 0x01) ||
+        (prev(bit6(0x00284b17)) == 0x00 && bit6(0x00284b17) == 0x01) ||
+        (prev(bit7(0x00284b17)) == 0x00 && bit7(0x00284b17) == 0x01) ||
+        // 0x00284b18
+        (prev(bit0(0x00284b18)) == 0x00 && bit0(0x00284b18) == 0x01) ||
+        (prev(bit1(0x00284b18)) == 0x00 && bit1(0x00284b18) == 0x01) ||
+        (prev(bit2(0x00284b18)) == 0x00 && bit2(0x00284b18) == 0x01) ||
+        (prev(bit3(0x00284b18)) == 0x00 && bit3(0x00284b18) == 0x01) ||
+        (prev(bit4(0x00284b18)) == 0x00 && bit4(0x00284b18) == 0x01) ||
+        (prev(bit5(0x00284b18)) == 0x00 && bit5(0x00284b18) == 0x01) ||
+        (prev(bit6(0x00284b18)) == 0x00 && bit6(0x00284b18) == 0x01) ||
+        (prev(bit7(0x00284b18)) == 0x00 && bit7(0x00284b18) == 0x01) ||
+        // 0x00284b19
+        (prev(bit0(0x00284b19)) == 0x00 && bit0(0x00284b19) == 0x01) ||
+        (prev(bit1(0x00284b19)) == 0x00 && bit1(0x00284b19) == 0x01) ||
+        (prev(bit2(0x00284b19)) == 0x00 && bit2(0x00284b19) == 0x01) ||
+        (prev(bit3(0x00284b19)) == 0x00 && bit3(0x00284b19) == 0x01) ||
+        (prev(bit4(0x00284b19)) == 0x00 && bit4(0x00284b19) == 0x01) ||
+        (prev(bit5(0x00284b19)) == 0x00 && bit5(0x00284b19) == 0x01) ||
+        (prev(bit6(0x00284b19)) == 0x00 && bit6(0x00284b19) == 0x01) ||
+        (prev(bit7(0x00284b19)) == 0x00 && bit7(0x00284b19) == 0x01) ||
+        // 0x00284b1a
+        (prev(bit0(0x00284b1a)) == 0x00 && bit0(0x00284b1a) == 0x01) ||
+        (prev(bit1(0x00284b1a)) == 0x00 && bit1(0x00284b1a) == 0x01) ||
+        (prev(bit2(0x00284b1a)) == 0x00 && bit2(0x00284b1a) == 0x01) ||
+        (prev(bit3(0x00284b1a)) == 0x00 && bit3(0x00284b1a) == 0x01) ||
+        (prev(bit4(0x00284b1a)) == 0x00 && bit4(0x00284b1a) == 0x01) ||
+        (prev(bit5(0x00284b1a)) == 0x00 && bit5(0x00284b1a) == 0x01) ||
+        (prev(bit6(0x00284b1a)) == 0x00 && bit6(0x00284b1a) == 0x01) ||
+        (prev(bit7(0x00284b1a)) == 0x00 && bit7(0x00284b1a) == 0x01) ||
+        // 0x00284b1b
+        (prev(bit0(0x00284b1b)) == 0x00 && bit0(0x00284b1b) == 0x01) ||
+        (prev(bit1(0x00284b1b)) == 0x00 && bit1(0x00284b1b) == 0x01) ||
+        (prev(bit2(0x00284b1b)) == 0x00 && bit2(0x00284b1b) == 0x01) ||
+        (prev(bit3(0x00284b1b)) == 0x00 && bit3(0x00284b1b) == 0x01) ||
+        (prev(bit4(0x00284b1b)) == 0x00 && bit4(0x00284b1b) == 0x01) ||
+        (prev(bit5(0x00284b1b)) == 0x00 && bit5(0x00284b1b) == 0x01) ||
+        (prev(bit6(0x00284b1b)) == 0x00 && bit6(0x00284b1b) == 0x01) ||
+        (prev(bit7(0x00284b1b)) == 0x00 && bit7(0x00284b1b) == 0x01) ||
+        // 0x00284b1c
+        (prev(bit0(0x00284b1c)) == 0x00 && bit0(0x00284b1c) == 0x01) ||
+        (prev(bit1(0x00284b1c)) == 0x00 && bit1(0x00284b1c) == 0x01) ||
+        (prev(bit2(0x00284b1c)) == 0x00 && bit2(0x00284b1c) == 0x01) ||
+        (prev(bit3(0x00284b1c)) == 0x00 && bit3(0x00284b1c) == 0x01) ||
+        (prev(bit4(0x00284b1c)) == 0x00 && bit4(0x00284b1c) == 0x01) ||
+        (prev(bit5(0x00284b1c)) == 0x00 && bit5(0x00284b1c) == 0x01) ||
+        (prev(bit6(0x00284b1c)) == 0x00 && bit6(0x00284b1c) == 0x01) ||
+        (prev(bit7(0x00284b1c)) == 0x00 && bit7(0x00284b1c) == 0x01) ||
+        // 0x00284b1d
+        (prev(bit0(0x00284b1d)) == 0x00 && bit0(0x00284b1d) == 0x01) ||
+        (prev(bit1(0x00284b1d)) == 0x00 && bit1(0x00284b1d) == 0x01) ||
+        (prev(bit2(0x00284b1d)) == 0x00 && bit2(0x00284b1d) == 0x01) ||
+        (prev(bit3(0x00284b1d)) == 0x00 && bit3(0x00284b1d) == 0x01) ||
+        (prev(bit4(0x00284b1d)) == 0x00 && bit4(0x00284b1d) == 0x01) ||
+        (prev(bit5(0x00284b1d)) == 0x00 && bit5(0x00284b1d) == 0x01) ||
+        (prev(bit6(0x00284b1d)) == 0x00 && bit6(0x00284b1d) == 0x01) ||
+        (prev(bit7(0x00284b1d)) == 0x00 && bit7(0x00284b1d) == 0x01) ||
+        // 0x00284b1e
+        (prev(bit0(0x00284b1e)) == 0x00 && bit0(0x00284b1e) == 0x01) ||
+        (prev(bit1(0x00284b1e)) == 0x00 && bit1(0x00284b1e) == 0x01) ||
+        (prev(bit2(0x00284b1e)) == 0x00 && bit2(0x00284b1e) == 0x01) ||
+        (prev(bit3(0x00284b1e)) == 0x00 && bit3(0x00284b1e) == 0x01) ||
+        (prev(bit4(0x00284b1e)) == 0x00 && bit4(0x00284b1e) == 0x01) ||
+        (prev(bit5(0x00284b1e)) == 0x00 && bit5(0x00284b1e) == 0x01) ||
+        (prev(bit6(0x00284b1e)) == 0x00 && bit6(0x00284b1e) == 0x01) ||
+        (prev(bit7(0x00284b1e)) == 0x00 && bit7(0x00284b1e) == 0x01) ||
+        // 0x00284b1f
+        (prev(bit0(0x00284b1f)) == 0x00 && bit0(0x00284b1f) == 0x01) ||
+        (prev(bit1(0x00284b1f)) == 0x00 && bit1(0x00284b1f) == 0x01) ||
+        (prev(bit2(0x00284b1f)) == 0x00 && bit2(0x00284b1f) == 0x01) ||
+        (prev(bit3(0x00284b1f)) == 0x00 && bit3(0x00284b1f) == 0x01) ||
+        (prev(bit4(0x00284b1f)) == 0x00 && bit4(0x00284b1f) == 0x01) ||
+        (prev(bit5(0x00284b1f)) == 0x00 && bit5(0x00284b1f) == 0x01) ||
+        (prev(bit6(0x00284b1f)) == 0x00 && bit6(0x00284b1f) == 0x01) ||
+        (prev(bit7(0x00284b1f)) == 0x00 && bit7(0x00284b1f) == 0x01) ||
+        // 0x00284b20
+        (prev(bit0(0x00284b20)) == 0x00 && bit0(0x00284b20) == 0x01) ||
+        (prev(bit1(0x00284b20)) == 0x00 && bit1(0x00284b20) == 0x01) ||
+        (prev(bit2(0x00284b20)) == 0x00 && bit2(0x00284b20) == 0x01) ||
+        (prev(bit5(0x00284b20)) == 0x00 && bit5(0x00284b20) == 0x01) ||
+        (prev(bit7(0x00284b20)) == 0x00 && bit7(0x00284b20) == 0x01)
     )
 )
 
@@ -1689,21 +2174,21 @@ achievement(
     title = "False Alarm",
     description = "Avert the crisis shown in your death clip.",
     points = 1,
-    trigger =  day == 0x01 && most_recent_mission == 0x3e9 && player_team_last_standing(3),
+    trigger =  day == 0x01 && on_mission("Death Clip") && all_allied_teams_last_standing(3),
     type = "progression"
 )
 achievement(
     title = "She's Sealed Away for a Reason",
     description = "Avert the crisis shown in the second death clip on Sunday.",
     points = 1,
-    trigger = on_mission("Daichi's Crisis", 0x3f1) && active_mission_completed("Daichi's Crisis"),
+    trigger = on_mission("Daichi's Crisis") && active_mission_completed("Daichi's Crisis"),
     type = "progression"
 )
 achievement(
     title = "Just Needed Moral Support",
     description = "Have Daichi's team land the killing blow on Bai Suzhen in Daichi's Crisis.",
     points = 5,
-    trigger = most_recent_mission == 0x3f1 
+    trigger = on_mission("Daichi's Crisis")
         && (
             (attacker_leader_is("Daichi") && defender_leader_is("Bai Suzhen") && defender_leader_defeated()) || 
             (defender_leader_is("Daichi") && attacker_leader_is("Bai Suzhen") && attacker_leader_defeated())
@@ -1714,7 +2199,7 @@ achievement(
     title = "Taking on Troublesome Contracts",
     description = "Help Joe resolve his outstanding contract.",
     points = 2,
-    trigger = on_mission("A Man Named Joe", 0x3f3) && active_mission_completed("A Man Named Joe"),
+    trigger = on_mission("A Man Named Joe") && active_mission_completed("A Man Named Joe"),
     type = "progression"
 )
 achievement(
@@ -1739,7 +2224,7 @@ achievement(
     title = "Dubious Dubhe",
     description = "Defeat Dubhe.",
     points = 5,
-    trigger = most_recent_mission == 0x3f4
+    trigger = on_mission("Daichi's Resolve")
         && ((attacker_leader_is("Dubhe (Half)") && attacker_leader_defeated()) || defender_leader_is("Dubhe (Half)") && defender_leader_defeated()),
     type = "progression"
 )
@@ -1749,7 +2234,7 @@ achievement(
     description = "Without using the Suspend function, defeat all human enemies in App Abuser before any have a chance to escape.",
     points = 3,
     trigger = never(most_recent_mission != 0x7d4)
-        && most_recent_mission == 0x7d4
+        && on_mission("App Abuser")
         && on_grid_map()
         && trigger_when(once(defender_leader_is("Punk") && defender_leader_defeated())) 
         && trigger_when(once(defender_leader_is("Salaryman") && defender_leader_defeated()))
@@ -1761,10 +2246,10 @@ achievement(
 )
 // Suspend allowed
 achievement(
-    title = "[NEEDS_DEV]Busting the 'valgate Party",
+    title = "Busting the 'valgate Party",
     description = "Defeat the Vacant Woman in Demon-Hacked before a second wave of demons joins the fight.",
     points = 5,
-    trigger = most_recent_mission == 0x7da
+    trigger = on_mission("Demon-Hacked")
         && in_combat()
         && trigger_when(defender_leader_is("Vacant Woman")) && trigger_when(defender_leader_defeated())
         // I'm making the hot presumption that Fumi's team position is static
@@ -1778,57 +2263,101 @@ achievement(
         ),
     type = "missable"
 )
-// simple achievement here, just recruit hinako
 achievement(
-    title = "[NEEDS_DEV]Hinako Recruitment",
-    description = "Recruit Hinako to JPs.",
-    points = 3,
-    trigger = day == 0x09,
-    type = "progression"
-
-)
-achievement(
-    title = "[NEEDS_DEV]Miasma Maestro",
-    description = "Clear all of the miasma in either of 'Osaka Soul' or 'Too Late' before any additional enemy teams are summoned.",
+    title = "I Hate Escorting People",
+    description = "In 'Never Say Die', defeat all enemy demons with the civilians at full HP.",
     points = 5,
-    trigger = day == 0x09, // TODO needs battle team information
+    trigger = on_mission("Never Say Die") && team_leader_hp_full(0x0a) && team_leader_hp_full(0x0b)
+        && trigger_when(active_mission_completed("Never Say Die")),
     type = "missable"
 )
 achievement(
-    title = "[NEEDS_DEV]Savior of the Angry",
+    title = "Take Me to the Men in Yellow",
+    description = "Recruit Hinako to the party.",
+    points = 3,
+    trigger = on_mission("Never Say Die") && character_recruited("Hinako"),
+    type = "progression"
+)
+achievement(
+    title = "Miasma Maestro",
+    description = "Clear all of the miasma in 'Osaka Soul' before any additional enemy teams are summoned and complete the mission without using the Suspend feature.",
+    points = 5,
+    trigger = on_mission("Osaka Soul") 
+        && never(loaded_from_suspend())
+        && disable_when(unit_respawns(), until=most_recent_mission != event_id_by_name["Osaka Soul"])
+        && trigger_when(bit0(0x00284b5a) == 0x01)
+        && trigger_when(bit1(0x00284b5a) == 0x01)
+        && trigger_when(bit2(0x00284b5a) == 0x01)
+        && trigger_when(bit3(0x00284b59) == 0x01)
+        && trigger_when(active_mission_completed("Osaka Soul")),
+    type = "missable"
+)
+achievement(
+    title = "Savior of the Angry",
     description = "Prevent the death foretold by Monday's death clip.",
     points = 3,
-    trigger = bit1(0x00284aee) == 0x01 && most_recent_mission == 0x7dc && character_alive("Keita") && prev(in_combat()) && !in_combat(),
+    trigger = bit1(0x00284aee) == 0x01 && on_mission("Osaka Soul") && character_alive("Keita") && character_recruited("Keita"),
     type = "missable"
 )
 achievement(
-    title = "[NEEDS_DEV]Treading Carefully",
-    description = "In a single session, defeat Merak without it ever using Circumpolarity.",
-    points = 3,
-    trigger = day == 0x09,
+    title = "Treading Carefully",
+    description = "Defeat Merak without it ever using Circumpolarity and without using the Suspend feature.",
+    points = 5,
+    trigger = on_grid_map() && on_mission("Merak Arrives") 
+            && ptr_valid(full_team_array_ptr)
+            && never(loaded_from_suspend())
+            && trigger_when((attacker_leader_is("Merak") && attacker_leader_defeated()) 
+            || defender_leader_is("Merak") && defender_leader_defeated())
+            && disable_when(prev(byte(team_array_ptr + 0xc3b)) == 0x00 && byte(team_array_ptr + 0xc3b) == 0x0a, until=most_recent_mission != 0x7e2),
     type = "missable"
 )
 achievement(
-    title = "[NEEDS_DEV]Meticulous Merak",
+    title = "Meticulous Merak",
     description = "Defeat Merak.",
-    points = 0,
-    trigger = most_recent_mission == 0x7e2 
+    points = 5,
+    trigger = on_mission("Merak Arrives")  
         && ((attacker_leader_is("Merak") && attacker_leader_defeated()) || defender_leader_is("Merak") && defender_leader_defeated()),
     type = "progression"
 )
-// This should be "Defeat Ghost Q" because it seems like this is the only instance of Ghost Q actually comin around
-// TODO consider level cap after testing
 achievement(
-    title = "[IN DEV]Vs. Q",
+    title = "A Fun-Filled Q...!",
     description = "Defeat Ghost Q.",
-    points = 5,
-    trigger = day == 0x03 && most_recent_mission == 0xbbb
-        && ((defender_leader_is("Ghost Q") && defender_leader_defeated()) || (attacker_leader_is("Ghost Q") && attacker_leader_defeated()))
+    points = 10,
+    trigger = day == 0x03 && on_mission("Vs. Q")
+        && ((defender_leader_is("Ghost Q") && defender_leader_defeated()) || (attacker_leader_is("Ghost Q") && attacker_leader_defeated())),
+    type = "missable"
 )
-
-// help airi - progression
-// help jungo - progression
-// Mystery-Hacking Woman or whatever it's called: just win, the mission is hard enough. but guaranteed cheev
+achievement(
+    title = "Hands Off The Food, Bud",
+    description = "Prevent the salaryman carrying food from escaping in Girl in Pursuit.",
+    points = 3,
+    trigger = on_mission("Girl in Pursuit") && ((defender_leader_is("Salaryman Carrying Food") && defender_leader_defeated()) || (attacker_leader_is("Salaryman Carrying Food") && attacker_leader_defeated())),
+    type = "missable"
+)
+achievement(
+    title = "Hot-Headed Redhead",
+    description = "Recruit Airi to the party.",
+    points = 2,
+    trigger = bit4(0x00284af2) == 0x01 && bit5(0x00284af2) == 0x01
+        && (most_recent_mission == event_id_by_name["Girl in Pursuit"] || most_recent_mission == event_id_by_name["Boy in Combat"])
+        && prev(actively_in_event()) && !actively_in_event(),
+    type = "progression"
+)
+achievement(
+    title = "Second Time's the Charm",
+    description = "Defeat Botis in 'Hacker Revealed.'",
+    points = 5,
+    trigger = on_mission("Hacker Revealed") &&
+        ((defender_leader_is("Botis") && defender_leader_defeated()) || (attacker_leader_is("Botis") && attacker_leader_defeated())),
+    type = "missable"
+)
+achievement(
+    title = "Hmm... Mm?",
+    description = "Complete 'Hacker Revealed'",
+    points = 3,
+    trigger = on_mission("Hacker Revealed") && active_mission_completed("Hacker Revealed"),
+    type = "progression"
+)
 achievement(
     title = "[NEEDS_DEV]Untie Me Already!",
     description = "Escort Daichi to the rescue point in the mission where he gets tied up",
@@ -1838,17 +2367,17 @@ achievement(
 )
 // Badge should be picture of rioters in Planetarium that gang up on Jungo
 achievement(
-    title = "[NEEDS_DEV]Savior of the Strong",
+    title = "Savior of the Strong",
     description = "Prevent the death foretold by Tuesday's death clip.",
-    points = 0,
+    points = 5,
     // probably needs a bit more in case of game over
-    trigger = most_recent_mission == 0xbc2 && character_alive("Jungo") && prev(on_grid_map()) && !on_grid_map(),
+    trigger = bit2(0x00284af1) == 0x01 && on_mission("Saving Daichi") && character_alive("Jungo") && character_recruited("Jungo"),
     type = "missable"
 )
 // Man of Fury: Defeat Ronaldo before any supporter has a chance to escape. "Go for the Head"
 achievement(
     title = "[NEEDS_DEV]Brutal Efficiency",
-    description = "Defeat only Ronaldo in the Man of Fury.",
+    description = "In 'Man of Fury,' defeat Ronaldo while all other enemy teams still on the map.",
     points = 10,
     // Loose high level idea here:
     // you detect when Ronaldo's HP hits 0, this is the trigger
@@ -1886,6 +2415,12 @@ achievement(
     points = 5,
     trigger = day == 0x09,
     type = "missable"
+)
+achievement(
+    title="Can I Go to Timor With This?",
+    description="Unlock the ability to use the Terminal.",
+    points = 1,
+    trigger = most_recent_mission == event_id_by_name["Megrez Meeting"] && prev(actively_in_event()) && !(actively_in_event())
 )
 achievement(
     title = "[NEEDS_DEV]Y'all Gotta Cool It",
@@ -1933,8 +2468,6 @@ achievement(
 // *** Avoidable Deaths to Cover ***
 // Otome
 // Makoto
-// Girl in Pursuit: Prevent any rioters from escaping and win.
-// Boy in Combat: Nothing notable in mission probably just a "meet Jungo"
 // Saving Daichi OR Goodbye Jungo: Actually save Daichi by bringing him to a rescue point. Do what the mission says!!!
 // Man of Fury pt. 2: Defeat Phecda
 // Megrez missions: Have only the team leader on any team get hit when Megrez's Bud uses its Diastrophism skill.
@@ -1944,143 +2477,149 @@ achievement(
 // A Hard Choice: Defeat all the demons / Neko Shogun
 // Power Outage: Ronaldo survives fight as well
 // Mystery Man
+// Need to decide if Dera-deka is being split up into two cheevos or one
+achievement(
+    title = "A Mysterious Man Indeed",
+    description = "Witness all of the events surrounding the Mystery Man.",
+    points = 5,
+    trigger = day == 0x09, // TODO need more digging
+    type = "missable"
+)
 // Delta Battle: Win the fight without clearing any Miasma.
 
 // no Free Battle progression
-
-// day 1
 achievement(
-    title = "[IN DEV]Uncool to Grind in Tokyo",
-    description = "Complete Day 1 without ever entering any Free Battle on a New Game file.",
+    title = "Sunday's Melancholy",
+    description = "Reach the end of Day 1 without ever entering any Free Battle on a New Game file.",
     points = 5,
-    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x01) && day == 0x02,
+    trigger = never(is_new_game_plus()) && !entered_free_battle() && in_game_clock == 0x4ec && day == 0x01 && prev(bit0(0x00284aec)) == 0x00 && bit0(0x00284aec) == 0x01,
     type = "missable"
 )
-// day 2
 achievement(
-    title = "[IN DEV]Uncool to Grind in Osaka",
-    description = "Complete Day 2 without ever entering any Free Battle on a New Game file.",
-    points = 5,
-    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x02) && day == 0x03,
-    type = "missable"
-)
-// day 3
-achievement(
-    title = "[IN DEV]Uncool to Grind in Nagoya",
-    description = "Complete Day 3 without ever entering any Free Battle on a New Game file.",
+    title = "Monday's Turmoil",
+    description = "Reach the end of Day 2 without ever entering any Free Battle on a New Game file.",
     points = 10,
-    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x03) && day == 0x04,
+    trigger = never(is_new_game_plus()) && !entered_free_battle() && in_game_clock == 0x4ec && day == 0x02 && prev(bit2(0x00284aef)) == 0x00 && bit2(0x00284aef) == 0x01,
     type = "missable"
 )
-// day 4
 achievement(
-    title = "[IN DEV] Survived Day 4",
-    description = "Complete Day 4 without ever entering any Free Battle on a New Game file.",
+    title = "Tuesday's Disquiet",
+    description = "Reach the end of Day 3 without ever entering any Free Battle on a New Game file.",
+    points = 10,
+    trigger = never(is_new_game_plus()) && !entered_free_battle() && in_game_clock == 0x4ec && day == 0x03 && prev(bit1(0x00284af2)) == 0x00 && bit1(0x00284af2) == 0x01,
+    type = "missable"
+)
+achievement(
+    title = "Wednesday's Changes",
+    description = "Reach the end of Day 4 without ever entering any Free Battle on a New Game file.",
     points = 10,
     trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x04) && day == 0x05,
     type = "missable"
 )
-// day 5
 achievement(
-    title = "[IN DEV] Survived Day 5",
-    description = "Complete Day 5 without ever entering any Free Battle on a New Game file.",
+    title = "[NEEDS DEV]Thursday",
+    description = "Reach the end of Day 5 without ever entering any Free Battle on a New Game file.",
     points = 10,
     trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x05) && day == 0x06,
     type = "missable"
 )
-// day 6
 achievement(
-    title = "[IN DEV] Survived Day 6",
-    description = "Complete Day 6 without ever entering any Free Battle on a New Game file.",
+    title = "[NEEDS DEV]Friday",
+    description = "Reach the end of Day 6 without ever entering any Free Battle on a New Game file.",
     points = 10,
     trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x06) && day == 0x07,
     type = "missable"
 )
-// day 7
 achievement(
-    title = "[IN DEV]Wait, You Can Just... Grind?",
+    title = "[NEEDS DEV]Saturday",
+    description = "Reach the end of Day 7 without ever entering any Free Battle on a New Game file.",
+    points = 10,
+    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x07) && day == 0x08,
+    type = "missable"
+)
+achievement(
+    title = "[NEEDS DEV]Wait, You Can Just... Grind?",
     description = "Complete any ending without ever entering any Free Battle on a New Game file.",
     points = 25,
     trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x07) && day == 0x08,
     type = "missable"
 )
-
 // FATE stages
 
 achievement(
-    title = "[IN DEV]Ronaldo's Best Friend",
+    title = "[NEEDS_TEST]Ronaldo's Best Friend",
     description = "Reach FATE stage 5 with Ronaldo.",
     points = 10,
     trigger = char_fate_stage_maxed("Ronaldo")
 )
 achievement(
-    title = "[IN DEV]IO's Best Friend",
+    title = "[NEEDS_TEST]IO's Best Friend",
     description = "Reach FATE stage 5 with Io.",
     points = 10,
     trigger = char_fate_stage_maxed("Io")
 )
 achievement(
-    title = "[IN DEV]Yamato's Best Friend",
+    title = "[NEEDS_TEST]Yamato's Best Friend",
     description = "Reach FATE stage 5 with Yamato.",
     points = 10,
     trigger = char_fate_stage_maxed("Yamato")
 )
 achievement(
-    title = "[IN DEV]Fumi's Best Friend",
+    title = "[NEEDS_TEST]Fumi's Best Friend",
     description = "Reach FATE stage 5 with Fumi.",
     points = 10,
     trigger = char_fate_stage_maxed("Fumi")
 )
 achievement(
-    title = "[IN DEV]Daichi's Best Friend",
+    title = "[NEEDS_TEST]Daichi's Best Friend",
     description = "Reach FATE stage 5 with Daichi.",
     points = 10,
     trigger = char_fate_stage_maxed("Daichi") 
 )
 achievement(
-    title = "[IN DEV]Otome's Best Friend",
+    title = "[NEEDS_TEST]Otome's Best Friend",
     description = "Reach FATE stage 5 with Otome.",
     points = 10,
     trigger = char_fate_stage_maxed("Otome") 
 )
 achievement(
-    title = "[IN DEV]Jungo's Best Friend",
+    title = "[NEEDS_TEST]Jungo's Best Friend",
     description = "Reach FATE stage 5 with Jungo.",
     points = 10,
     trigger = char_fate_stage_maxed("Jungo") 
 )
 achievement(
-    title = "[IN DEV]Makoto's Best Friend",
+    title = "[NEEDS_TEST]Makoto's Best Friend",
     description = "Reach FATE stage 5 with Makoto.",
     points = 10,
     trigger = char_fate_stage_maxed("Makoto") 
 )
 achievement(
-    title = "[IN DEV]Keita's Best Friend",
+    title = "[NEEDS_TEST]Keita's Best Friend",
     description = "Reach FATE stage 5 with Keita.",
     points = 10,
     trigger = char_fate_stage_maxed("Keita") 
 )
 achievement(
-    title = "[IN DEV]Airi's Best Friend",
+    title = "[NEEDS_TEST]Airi's Best Friend",
     description = "Reach FATE stage 5 with Airi.",
     points = 10,
     trigger = character_alive("Airi") && char_fate_stage_maxed("Airi") 
 )
 achievement(
-    title = "[IN DEV]Joe's Best Friend",
+    title = "[NEEDS_TEST]Joe's Best Friend",
     description = "Reach FATE stage 5 with Joe.",
     points = 10,
     trigger = char_fate_stage_maxed("Joe") 
 )
 achievement(
-    title = "[IN DEV]Hinako's Best Friend",
+    title = "[NEEDS_TEST]Hinako's Best Friend",
     description = "Reach FATE stage 5 with Hinako.",
     points = 10,
     trigger = char_fate_stage_maxed("Hinako") 
 )
 achievement(
-    title = "[IN DEV]Anguished One's Best Friend",
+    title = "[NEEDS_TEST]Anguished One's Best Friend",
     description = "Reach FATE stage 5 with the Anguished One.",
     points = 10,
     trigger = char_fate_stage_maxed("Anguished One") 
@@ -2105,12 +2644,13 @@ achievement(
     trigger = ptr_valid(full_auction_ptr)
         && macca < prev(macca)
         && byte(auction_ptr) == 0x1c
+        // this has been consistently wrong, it's not a flag of "yeah it asked for extra" but is something else
         && byte(auction_ptr + 0x214) == 0x01
         && (dword(auction_ptr + 0x1cc) + dword(auction_ptr + 0x1e4) + macca) > prev(macca)
 )
 achievement(
     title = "Clearance Sale",
-    description = "Win 3 bids during a Special Auction.",
+    description = "Win 3 bids during a single Special Auction.",
     points = 3,
     trigger = never(!ptr_valid(full_auction_ptr))
         && never(byte(auction_ptr) == 0x0c)
@@ -2142,12 +2682,127 @@ achievement(
         && bit4(auctions_unlocked) == 0x01
 )
 
+achievement(
+    title = "[NEEDS_DEV] 6x Technical",
+    description = "Get a 6x Technical Bonus or higher in any combat.",
+    points = 3,
+    trigger = word(0x001c9ff2) >= 0x06 && byte(0x001c9ff3) != 0xff
+        && ptr_valid(full_combat_ptr) 
+        && prev(active_unit_in_combat()) 
+        && !active_unit_in_combat()
+)
+achievement(
+    title = "Power Overwhelming",
+    description = "Get both of No Damage and Overwhelm bonuses from a single combat.",
+    points = 5,
+    trigger = ptr_valid(full_combat_ptr) 
+        && bit0(0x001c9ff8) == 0x01
+        && bit1(0x001c9ff8) == 0x01
+        && prev(active_unit_in_combat()) 
+        && !active_unit_in_combat()
+)
+
+// Anime Teams
+// General concept: Win any battle while including a team composed of <team leader>, <requiredDemon> and <any other demon || otherRequiredDemon> 
+
+// Protag + Byakko + Suzaku
+// However, in the actual game they have different names :)
+// If This Can Solve Things, I'll Do It
+achievement(
+    title = "A Few Episodes Too Late",
+    description = "Win any battle while including a team composed of the protagonist and Baihu.",
+    points = 3,
+    trigger = pairing_present("Hero", "Baihu") && prev(in_combat()) && !in_combat() 
+)
+// Makoto + Power => "Makoto": 0x0a, or Makoto + Pallas Athena
+// I'm Doing It, If It Will Help Us
+achievement(
+    title = "\"If It Will Help Us...\"",
+    description = "Win any battle while including a team composed of Makoto and Power.",
+    points = 3,
+    trigger = pairing_present("Makoto", "Power") && prev(in_combat()) && !in_combat() 
+)
+achievement(
+    title = "\"Don't Be Thankin' Me\"",
+    description = "Win any battle while including a team composed of Keita and Berserker.",
+    points = 3,
+    trigger = pairing_present("Keita", "Berserker") && prev(in_combat()) && !in_combat() 
+)
+achievement(
+    title = "\"You See... I Can't Just Sit Still\"",
+    description = "Win any battle while including a team composed of Hinako and Lilim.",
+    points = 3,
+    trigger = pairing_present("Hinako", "Lilim") && prev(in_combat()) && !in_combat() 
+)
+achievement(
+    title = "\"Like You, I Want To Try Hard\"",
+    description = "Win any battle while including a team composed of Io and Kikuri-Hime.",
+    points = 3,
+    trigger = pairing_present("Io", "Kikuri-Hime") && prev(in_combat()) && !in_combat() 
+)
+// Ronaldo + Hagen => "Ronaldo": 0x03,
+// "Kuze Hibiki... He's Our Hope"
+achievement(
+    title = "\"Think About It. What Is Proper?\"",
+    description = "Win any battle while including a team composed of Ronaldo and Hagen.",
+    points = 3,
+    trigger = pairing_present("Ronaldo", "Hagen") && prev(in_combat()) && !in_combat() 
+)
+// Joe + Orcus => "Joe": 0x0d,
+achievement(
+    title = "\"Well, This Has Gotten Crazy, Huh?\"",
+    description = "Win any battle while including a team composed of Joe and Orcus.",
+    points = 3,
+    trigger = pairing_present("Joe", "Orcus") && prev(in_combat()) && !in_combat() 
+)
+// Otome + Sarasvati with Drain => "Otome": 0x08,
+// "I'm a mysterious woman, aren't I?"
+achievement(
+    title = "[NEEDS_DEV / ANIME TIE IN]Otome",
+    description = "Win any battle while including a team composed of Otome and Sarasvati.",
+    points = 3,
+    trigger = pairing_present("Otome", "Sarasvati") && prev(in_combat()) && !in_combat() 
+)
+achievement(
+    title = "\"Violence Is Not Good\"",
+    description = "Win any battle while including a team composed of Jungo and Neko Shogun.",
+    points = 3,
+    trigger = pairing_present("Jungo", "Neko Shogun") && prev(in_combat()) && !in_combat() 
+)
+achievement(
+    title = "\"Don't Make Me Do That Again\"",
+    description = "Win any battle while including a team composed of Yamato and Cerberus.",
+    points = 3,
+    trigger = pairing_present("Yamato", "Cerberus") && prev(in_combat()) && !in_combat() 
+)
+achievement(
+    title = "No Forgiveness",
+    description = "Win any battle while including a team composed of Airi and Lorelei.",
+    points = 3,
+    trigger = pairing_present("Airi", "Lorelei") && prev(in_combat()) && !in_combat() 
+)
+achievement(
+    title = "Fighting Frequency with Frequency",
+    description = "Win any battle while including a team composed of Fumi and Trumpeter.",
+    points = 3,
+    trigger = pairing_present("Fumi", "Trumpeter") && prev(in_combat()) && !in_combat() 
+)
+achievement(
+    title = "\"Hee. HO.\"",
+    description = "Win any battle while including a team composed of Daichi and Black Frost.",
+    points = 3,
+    trigger = pairing_present("Daichi", "Black Frost") && prev(in_combat()) && !in_combat() 
+)
+
 // Compendium and Demon Recruitment
 // *** Unique Teams and Fusion Things ***
-// Daichi with two Bai Suzhens
-// Fumi with Botis and ?
-// Sleipnir and Odin
-// Fuse any Element monster
+achievement(
+    title = "[NEEDS_DEV]Unique Demons",
+    description = "Win any battle with 8 active demons that all have the Unique attribute.",
+    points = 5,
+    trigger = day == 0x09 // TODO.
+)
+
 // get any advanced race skill
 
 achievement(
@@ -2178,10 +2833,16 @@ achievement(
     trigger = prev(num_registered_compendium() == 0xdc) && measured(num_registered_compendium() == 0xdd, when=always_true(), format="raw")
 )
 achievement(
-    title = "[IN DEV]The Purest of Form",
-    description = "Register all four element demons in your compendium.",
+    title = "The Purest of Form",
+    description = "Register all four demons of the Element race in your compendium.",
     points = 5,
     trigger = prev(elements_registered() == 0x03) && measured(elements_registered() == 0x04, when=always_true(), format="raw") 
+)
+achievement(
+    title="Spirits of the Second Run",
+    description="Register all four demons of the Mitama race in your compendium.",
+    points = 5,
+    trigger = prev(mitamas_registered() == 0x03) && measured(mitamas_registered == 0x04, when=always_true(), format="raw")
 )
 
 // Skill-Adjacent Achievements
@@ -2244,7 +2905,7 @@ rich_presence_conditional_display(ptr_valid(full_auction_ptr), "{0} {1} | Gettin
     rich_presence_value("Time", in_game_clock, "SECS")
 )
 
-rich_presence_conditional_display(in_combat() && active_unit_in_combat(), "{0} {1} | At {2} | {3} ⚔️ {4} | Time on Mission={5}",
+rich_presence_conditional_display(in_combat() && ptr_valid(full_combat_ptr) && active_unit_in_combat(), "{0} {1} | At {2} | {3} ⚔️ {4} | Time on Mission={5}",
     rich_presence_lookup("Day", day, day_of_week),
     rich_presence_value("Time", in_game_clock, "SECS"),
     rich_presence_lookup("Location", current_location, location),
@@ -2253,17 +2914,116 @@ rich_presence_conditional_display(in_combat() && active_unit_in_combat(), "{0} {
     rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
 )
 
-rich_presence_conditional_display(on_grid_map() && friendly_unit_moving(), "{0} {1} | In Combat at {2} | Time on Mission={3}",
+// If we could do lookups based on dynamic values, this could be one condition. Alas, it's four.
+rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x00), "{0} {1} | {2} is moving around {3} | Time on Mission={4}",
     rich_presence_lookup("Day", day, day_of_week),
     rich_presence_value("Time", in_game_clock, "SECS"),
+    rich_presence_lookup("Unit", word(combat_ptr + 0x276), enemy_name_by_id),
     rich_presence_lookup("Location", current_location, location),
     rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
 )
 
-rich_presence_display("{0} {1} 💰 {2} | At {3} | IGT={4}",
+rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x01), "{0} {1} | {2} is moving around {3} | Time on Mission={4}",
+    rich_presence_lookup("Day", day, day_of_week),
+    rich_presence_value("Time", in_game_clock, "SECS"),
+    rich_presence_lookup("Unit", word(combat_ptr + 0x4f2), enemy_name_by_id),
+    rich_presence_lookup("Location", current_location, location),
+    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+)
+
+rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x02), "{0} {1} | {2} is moving around {3} | Time on Mission={4}",
+    rich_presence_lookup("Day", day, day_of_week),
+    rich_presence_value("Time", in_game_clock, "SECS"),
+    rich_presence_lookup("Unit", word(combat_ptr + 0x76e), enemy_name_by_id),
+    rich_presence_lookup("Location", current_location, location),
+    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+)
+
+rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x03), "{0} {1} | {2} is moving around {3} | Time on Mission={4}",
+    rich_presence_lookup("Day", day, day_of_week),
+    rich_presence_value("Time", in_game_clock, "SECS"),
+    rich_presence_lookup("Unit", word(combat_ptr + 0x9ea), enemy_name_by_id),
+    rich_presence_lookup("Location", current_location, location),
+    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+)
+
+// Similar with these, if we could do lookups based on dynamic values, this could be one condition. Alas, it's eight.
+rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x04), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
+    rich_presence_lookup("Day", day, day_of_week),
+    rich_presence_value("Time", in_game_clock, "SECS"),
+    rich_presence_lookup("Unit", word(combat_ptr + 0xc66), enemy_name_by_id),
+    rich_presence_lookup("Location", current_location, location),
+    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+)
+
+rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x05), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
+    rich_presence_lookup("Day", day, day_of_week),
+    rich_presence_value("Time", in_game_clock, "SECS"),
+    rich_presence_lookup("Unit", word(combat_ptr + 0xee2), enemy_name_by_id),
+    rich_presence_lookup("Location", current_location, location),
+    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+)
+
+rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x06), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
+    rich_presence_lookup("Day", day, day_of_week),
+    rich_presence_value("Time", in_game_clock, "SECS"),
+    rich_presence_lookup("Unit", word(combat_ptr + 0x115e), enemy_name_by_id),
+    rich_presence_lookup("Location", current_location, location),
+    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+)
+
+rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x07), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
+    rich_presence_lookup("Day", day, day_of_week),
+    rich_presence_value("Time", in_game_clock, "SECS"),
+    rich_presence_lookup("Unit", word(combat_ptr + 0x13da), enemy_name_by_id),
+    rich_presence_lookup("Location", current_location, location),
+    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+)
+
+rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x08), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
+    rich_presence_lookup("Day", day, day_of_week),
+    rich_presence_value("Time", in_game_clock, "SECS"),
+    rich_presence_lookup("Unit", word(combat_ptr + 0x1656), enemy_name_by_id),
+    rich_presence_lookup("Location", current_location, location),
+    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+)
+
+rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x09), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
+    rich_presence_lookup("Day", day, day_of_week),
+    rich_presence_value("Time", in_game_clock, "SECS"),
+    rich_presence_lookup("Unit", word(combat_ptr + 0x18d2), enemy_name_by_id),
+    rich_presence_lookup("Location", current_location, location),
+    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+)
+
+rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x0a), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
+    rich_presence_lookup("Day", day, day_of_week),
+    rich_presence_value("Time", in_game_clock, "SECS"),
+    rich_presence_lookup("Unit", word(combat_ptr + 0x1b4e), enemy_name_by_id),
+    rich_presence_lookup("Location", current_location, location),
+    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+)
+
+rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x0b), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
+    rich_presence_lookup("Day", day, day_of_week),
+    rich_presence_value("Time", in_game_clock, "SECS"),
+    rich_presence_lookup("Unit", word(combat_ptr + 0x1dca), enemy_name_by_id),
+    rich_presence_lookup("Location", current_location, location),
+    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+)
+
+// Non-combat things
+rich_presence_conditional_display(actively_in_event(), "{0} {1} 💰 {2} | At {3} | IGT={4}",
     rich_presence_lookup("Day", day, day_of_week),
     rich_presence_value("Time", in_game_clock, "SECS"),
     rich_presence_value("Macca", macca),
     rich_presence_lookup("Location", current_location, location),
+    rich_presence_value("In-Game Time", in_game_time / 60, "SECS")
+)
+
+rich_presence_display("{0} {1} 💰 {2} | Thinking about where to go next | IGT={3}",
+    rich_presence_lookup("Day", day, day_of_week),
+    rich_presence_value("Time", in_game_clock, "SECS"),
+    rich_presence_value("Macca", macca),
     rich_presence_value("In-Game Time", in_game_time / 60, "SECS")
 )

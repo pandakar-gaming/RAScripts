@@ -6,107 +6,118 @@
 // However, the DS only has 4MB of RAM so with RA addressing you can just take the 24 bytes denoted by xxxxxx and deref that
 // Because of that, this script has two named variables per ptr until I figure out a more elegant way to reference this
 
-in_game_clock = word(0x00284ab4)
-day = byte(0x00284aba)
-macca = dword(0x00284a98)
-current_location = byte(0x00284da9)
-current_city = byte(0x00284d85)
-current_combat_event = word(0x00284abe)
+IN_GAME_CLOCK = word(0x00284ab4)
+DAY = byte(0x00284aba)
+MACCA = dword(0x00284a98)
+CURRENT_LOCATION = byte(0x00284da9)
 // Game stores most recent 12 missions and their IDs in an array, this is the last value in the array
-most_recent_mission = word(0x00284fae)
-current_event = word(0x00198824)
-full_combat_ptr = dword(0x001be0ac)
-combat_ptr = tbyte(0x001be0ac)
-full_team_array_ptr = dword(0x001be040)
-team_array_ptr = tbyte(0x001be040)
+MOST_RECENT_MISSION = word(0x00284fae)
+FULL_COMBAT_PTR = dword(0x001be0ac)
+COMBAT_PTR = tbyte(0x001be0ac)
+FULL_TEAM_ARRAY_PTR = dword(0x001be040)
+TEAM_ARRAY_PTR = tbyte(0x001be040)
 // both of these are counted in frames, game runs @ 30fps
-current_time_in_mission = dword(combat_ptr + 0x10)
-total_time_in_mission = dword(combat_ptr + 0x28)
+current_time_in_mission = dword(COMBAT_PTR + 0x10)
+TOTAL_TIME_IN_MISSION = dword(COMBAT_PTR + 0x28)
 // yet for whatever reason this is counted at 60 fps?
-in_game_time = tbyte(0x00284480)
+IN_GAME_TIME = tbyte(0x00284480)
 // for now splitting into two named addresses
 // maybe later we optimize but I like having both on hand
-full_auction_ptr = dword(0x001be73c)
-auction_ptr = tbyte(0x001be73c)
-battle_tutorials = byte(0x00284ad7)
-auction_unlock_eligibility = 0x00284ad0
-auctions_unlocked = 0x00284acb
+FULL_AUCTION_PTR = dword(0x001be73c)
+AUCTION_PTR = tbyte(0x001be73c)
+AUCTION_UNLOCK_ELIGIBILITY = 0x00284ad0
+AUCTIONS_UNLOCKED = 0x00284acb
+FULL_ATTACKER_TEAM_PTR = dword(0x001c9fd0)
+ATTACKER_TEAM_PTR = tbyte(0x001c9fd0)
+FULL_DEFENDER_TEAM_PTR = dword(0x001c9fd4)
+DEFENDER_PTR = tbyte(0x001c9fd4)
+
+// Structure I haven't figured out that I want to keep a note for:
+// [32-bit Pointer] Pointer to overworld event select
+// +0x53 City select [8-bit]
+// 0x00 = All
+// 0x01 = Tokyo
+// 0x02 = Osaka
+// 0x03 = Nagoya
+// +0x54 y-index of event being hovered [8-bit]
+// +0x60 Area ID being hovered [8-bit]
+// Above is in a linked list and it'd be only useful for RP
 
 // Assert whether a DS pointer is valid.
 // This checks that the given 32-bit value looks like a DS pointer, which takes the form of 0x02xxxxxx.
 function ptr_valid(addr) => addr != 0x00 && addr >= 0x02000000 && addr <= 0x02ffffff
+
 // This is not indicative of combat on its own. All combat happens on grids though!
 function on_grid_map() => byte(0x00284abb) == 0x01
+
 // This checks the 16-bit value at 0x00284abe to see if it's anything other than "null." 
 // This is correlated with being on combat. 
 // The address in question was believed to be "combat event id" or something similar but a duplicate was witnessed on a death clip combat.
 // This address consistently changes to *something* when you're in a combat event though!
 function in_combat() => word(0x00284abe) != 0xffff
+
+function in_combat_mission(mission_name) => word(0x00284abe) == combat_mission_by_name[mission_name]
+
 // Whenever you're in an event (combat or otherwise) the 8-bit value at 0x00284ab8 is set to 0x1e. 
 // I'm not sure why that is significant, however it is a helpful fingerprint to know if the player is doing something.
 function actively_in_event() => byte(0x00284ab8) == 0x1e
-active_combat_mission_id = word(0x00284abe)
 
 // This does not confirm what combat mission you're on, just that you're in one.
 // @param mission_name the String name of the mission that the player would see.
-function on_mission(mission_name) {
-    return actively_in_event() && most_recent_mission == event_id_by_name[mission_name]
-}
+function on_mission(mission_name) => actively_in_event() && MOST_RECENT_MISSION == event_id_by_name[mission_name]
 
 // Check if the team taking their turn is engaged in combat.
-function active_unit_in_combat() {
-    return bit0(combat_ptr + 0x1c) == 0
-}
+function active_unit_in_combat() => bit0(COMBAT_PTR + 0x1c) == 0
 
 // Check what team is actively moving and whether it's a friendly unit.
 function expected_team_moving(expected_team_lead_index) {
-    return ptr_valid(full_combat_ptr) && byte(combat_ptr + 0x250) == expected_team_lead_index && unit_moving()
+    return ptr_valid(FULL_COMBAT_PTR) && byte(COMBAT_PTR + 0x250) == expected_team_lead_index && unit_moving()
 }
 
 // See if the current unit is moving around while in combat.
-function unit_moving() => ptr_valid(full_combat_ptr) && bit0(combat_ptr + 0x1c) == 1
+function unit_moving() => ptr_valid(FULL_COMBAT_PTR) && bit0(COMBAT_PTR + 0x1c) == 1
 
 // This is checking if the player *ever* entered a free battle, not if they're currently in one.
 // This is done by seeing if the player ever saw the tutorials for how Free Combat works.
 function entered_free_battle() => bit0(0x00284ad7) == 0x01 || bit1(0x00284ad7) == 0x01
 
-full_attacker_team_ptr = dword(0x001c9fd0)
-attacker_team_ptr = tbyte(0x001c9fd0)
-full_defender_team_ptr = dword(0x001c9fd4)
-defender_ptr = tbyte(0x001c9fd4)
 // Check if the enemy we're looking for is the defending team in this active combat.
 // We only care about the enemy leader for the most part; side enemies are hopefully not notable enough for most achievements.
-function defender_leader_is(enemy_name) => ptr_valid(full_defender_team_ptr) && word(defender_ptr + 0x0a) == enemy_id_by_name[enemy_name]
+function defender_leader_is(enemy_name) => ptr_valid(FULL_DEFENDER_TEAM_PTR) && word(DEFENDER_PTR + 0x0a) == enemy_id_by_name[enemy_name]
 
 // Check if the enemy we're looking for is the attacking team in this active combat.
 // We only care about the enemy leader for the most part; side enemies are hopefully not notable enough for most achievements.
-function attacker_leader_is(enemy_name) => ptr_valid(full_attacker_team_ptr) && word(attacker_team_ptr + 0x0a) == enemy_id_by_name[enemy_name]
+function attacker_leader_is(enemy_name) => ptr_valid(FULL_ATTACKER_TEAM_PTR) && word(ATTACKER_TEAM_PTR + 0x0a) == enemy_id_by_name[enemy_name]
 
 // See if the attacking leader was defeated in this particular combat.
-function attacker_leader_defeated() => ptr_valid(full_attacker_team_ptr)  && unit_defeated(attacker_team_ptr + 0x18)
+function attacker_leader_defeated() => ptr_valid(FULL_ATTACKER_TEAM_PTR)  && unit_defeated(ATTACKER_TEAM_PTR + 0x18)
+
 // See if the unit on the left side of the attacker's team was defeated in this particular combat.
-function attacker_left_unit_defeated() => ptr_valid(full_attacker_team_ptr) && unit_defeated(attacker_team_ptr + 0xbc)
+function attacker_left_unit_defeated() => ptr_valid(FULL_ATTACKER_TEAM_PTR) && unit_defeated(ATTACKER_TEAM_PTR + 0xbc)
+
 // See if the unit on the right side of the attacker's team was defeated in this particular combat.
-function attacker_right_unit_defeated() => ptr_valid(full_attacker_team_ptr) && unit_defeated(attacker_team_ptr + 0x160)
+function attacker_right_unit_defeated() => ptr_valid(FULL_ATTACKER_TEAM_PTR) && unit_defeated(ATTACKER_TEAM_PTR + 0x160)
 
 // See if the defending leader was defeated in this particular combat.
-function defender_leader_defeated() => ptr_valid(full_defender_team_ptr) && unit_defeated(defender_ptr + 0x18)
+function defender_leader_defeated() => ptr_valid(FULL_DEFENDER_TEAM_PTR) && unit_defeated(DEFENDER_PTR + 0x18)
+
 // See if the unit on the left side of the defender's team was defeated in this combat.
-function defender_left_unit_defeated() => ptr_valid(full_defender_team_ptr) && unit_defeated(defender_ptr + 0xbc)
+function defender_left_unit_defeated() => ptr_valid(FULL_DEFENDER_TEAM_PTR) && unit_defeated(DEFENDER_PTR + 0xbc)
+
 // See if the unit on the right side of the defender's team was defeated in combat.
-function defender_right_unit_defeated() => ptr_valid(full_defender_team_ptr) && unit_defeated(defender_ptr + 0x160)
+function defender_right_unit_defeated() => ptr_valid(FULL_DEFENDER_TEAM_PTR) && unit_defeated(DEFENDER_PTR + 0x160)
 
 // Should be valid when the count of 0xff in the turn order array goes down by one.
 function unit_respawns() {
-    cond = ptr_valid(full_combat_ptr)
+    cond = ptr_valid(FULL_COMBAT_PTR)
 
-    running_total = prev((byte(combat_ptr + 0x250))) / 0xff
+    running_total = prev((byte(COMBAT_PTR + 0x250))) / 0xff
     for i in range(1, 11) {
-        running_total = running_total + (prev((byte(combat_ptr + 0x250 + i))) / 0xff)
+        running_total = running_total + (prev((byte(COMBAT_PTR + 0x250 + i))) / 0xff)
     }
 
     for i in range(0, 11) {
-        running_total = running_total - (byte(combat_ptr + 0x250 + i) / 0xff)
+        running_total = running_total - (byte(COMBAT_PTR + 0x250 + i) / 0xff)
     }
 
     return cond && running_total == 0x01
@@ -119,22 +130,22 @@ function all_allied_teams_last_standing(num_starting_teams) {
     // enemy ids have to start at 0x04 as a result
     max_player_id = 0x03
     // At least one player-controllable character should be alive
-    only_friendlies_present = ptr_valid(full_combat_ptr)
+    only_friendlies_present = ptr_valid(FULL_COMBAT_PTR)
     
     // From the end of the team order array to where friendly teams could begin, we should see 0xff
     for i in range(num_starting_teams + 1, 11) {
-        only_friendlies_present = only_friendlies_present && (byte(combat_ptr + 0x250 + i)) == 0xff
+        only_friendlies_present = only_friendlies_present && (byte(COMBAT_PTR + 0x250 + i)) == 0xff
     }
 
     for i in range(0, num_starting_teams - 1) {
-        only_friendlies_present = only_friendlies_present && (byte(combat_ptr + 0x250 + i)) <= max_player_id
+        only_friendlies_present = only_friendlies_present && (byte(COMBAT_PTR + 0x250 + i)) <= max_player_id
     }
 
 
     // finally, check that the slot past the last alive friendly team just died
     only_friendlies_present = only_friendlies_present && (
-        prev((byte(combat_ptr + 0x250 + num_starting_teams))) > max_player_id &&
-        byte(combat_ptr + 0x250 + num_starting_teams) == 0xff
+        prev((byte(COMBAT_PTR + 0x250 + num_starting_teams))) > max_player_id &&
+        byte(COMBAT_PTR + 0x250 + num_starting_teams) == 0xff
     )
 
     return only_friendlies_present
@@ -147,10 +158,11 @@ function game_over() => ptr_valid(dword(0x001beac8))
 // Determine if the specific unit was just defeated.
 // A "unit" is either a team leader or a demon. 
 // Input: address of unit's current health. It is expected that the max health is directly 0x02 after and is the same size. 
+// Note: this looks specifically for the enemy's HP hitting 0. Some do not on defeat.
+// See: Man of Fury, Ronaldo for a specific example of this
 function unit_defeated(addr_unit_current_health) {
     return prev(word(addr_unit_current_health)) <= word(addr_unit_current_health + 0x02) && word(addr_unit_current_health) == 0x00
 }
-
 // Check if a character is still alive according to plot flags.
 // Some characters can permanently die if you meet (or fail to meet) certain conditions.
 function character_alive(char_name) {
@@ -171,7 +183,7 @@ function character_recruited(char_name) {
 // @param x the expected x-coordinate
 // @param y the expected y-coordinate
 function team_moves_to_coord(team_offset, x, y) {
-    cond = ptr_valid(full_combat_ptr)
+    cond = ptr_valid(FULL_COMBAT_PTR)
     cond = cond && team_moves_to_x(team_offset, x)
     cond = cond && team_moves_to_y(team_offset, y)
     return cond
@@ -181,8 +193,8 @@ function team_moves_to_coord(team_offset, x, y) {
 // @param team_offset a value from 0x00 to 0x0b indicating which team is moving around
 // @param x the expected x-coordinate
 function team_moves_to_x(team_offset, x) {
-    cond = ptr_valid(full_team_array_ptr)
-    cond = cond && prev(byte(team_array_ptr + (0x27c * team_offset) + 0x1f2)) != x && byte(team_array_ptr + (0x27c * team_offset) + 0x1f2) == x
+    cond = ptr_valid(FULL_TEAM_ARRAY_PTR)
+    cond = cond && prev(byte(TEAM_ARRAY_PTR + (0x27c * team_offset) + 0x1f2)) != x && byte(TEAM_ARRAY_PTR + (0x27c * team_offset) + 0x1f2) == x
     return cond
 }
 
@@ -190,27 +202,41 @@ function team_moves_to_x(team_offset, x) {
 // @param team_offset a value from 0x00 to 0x0b indicating which team is moving around
 // @param y the expected y-coordinate
 function team_moves_to_y(team_offset, y) {
-    cond = ptr_valid(full_team_array_ptr)
-    cond = cond && prev(byte(team_array_ptr + (0x27c * team_offset) + 0x1f3)) != y && byte(team_array_ptr + (0x27c * team_offset) + 0x1f3) == y
+    cond = ptr_valid(FULL_TEAM_ARRAY_PTR)
+    cond = cond && prev(byte(TEAM_ARRAY_PTR + (0x27c * team_offset) + 0x1f3)) != y && byte(TEAM_ARRAY_PTR + (0x27c * team_offset) + 0x1f3) == y
     return cond
 }
 
 // Given the index of a team, ensure that the leader's HP is full.
 function team_leader_hp_full(team_offset) {
-    return ptr_valid(full_team_array_ptr) && word(team_array_ptr + (0x27c * team_offset) + 0x18) == word(team_array_ptr + (0x27c * team_offset) + 0x1a)
+    return ptr_valid(FULL_TEAM_ARRAY_PTR) && word(TEAM_ARRAY_PTR + (0x27c * team_offset) + 0x18) == word(TEAM_ARRAY_PTR + (0x27c * team_offset) + 0x1a)
+}
+
+// Given the team's offset, determine if they're still on the map.
+// This is done by checking the turn order array for combat and whether the offset is still available in the active turn order.
+function team_leader_on_map(team_offset) {
+    cond = ptr_valid(FULL_COMBAT_PTR)
+
+    return cond && any_of(range(COMBAT_PTR + 0x250, COMBAT_PTR + 0x25c), i => byte(i) == team_offset)
+}
+
+// See how many teams are still active on the current combat map.
+function num_teams_on_map(num_teams) {
+    cond = ptr_valid(FULL_COMBAT_PTR)
+
+    for i in range(0, num_teams - 1) {
+        cond = cond && byte(COMBAT_PTR + 0x250 + i) != 0xff
+    }
+
+    for i in range(num_teams, 0x0b) {
+        cond = cond && byte(COMBAT_PTR + 0x250 + i) == 0xff
+    }
+
+    return cond
 }
 
 // Check if the given team is deployed in the current combat.
 // This specifically looks to see if the team leader is paired with a specific demon.
-// I think we have two options for this, can investigate both:
-// 1. Check combat pointer and teams;
-// 2. Check static array of demons and correlate with which leader is deployed.
-// If 2 is possible we should do that.
-// Protag always leads array and is fixed at 0x002844c2.
-//        0x002844e4,
-//        0x00284508,
-//        0x0028452c,
-
 function pairing_present(team_leader_name, demon_name) {
     // Protagonist is special as they're always the first deployed team
     if (team_leader_name == "Hero") {
@@ -239,38 +265,25 @@ function right_demon(team_offset) {
     return word(0x00284700 + 0x02 + (team_offset * 0x20) + 0x20)
 }
 
-// Check if the given team is deployed in the current combat.
-// This specifically looks to see if the team leader is using two specific demons.
-function team_present(team_leader_name, demon_one, demon_two) {
-    // Protagonist is special as they're always the first deployed team
-    if (team_leader_name == "Hero") {
-        return (
-            (left_demon(0x00) == enemy_id_by_name[demon_one] && right_demon(0x00) == enemy_id_by_name[demon_two]) || 
-            (left_demon(0x00) == enemy_id_by_name[demon_two] && right_demon(0x00) == enemy_id_by_name[demon_one])
-        )
-    } else {
-        return (
-            team_leader(0x01) == chararacter_ids_by_name["Ronaldo"] && (
-                (left_demon(0x01) == enemy_id_by_name[demon_one] && right_demon(0x01) == enemy_id_by_name[demon_two]) ||
-                (left_demon(0x01) == enemy_id_by_name[demon_two] && right_demon(0x01) == enemy_id_by_name[demon_one])
-            ) ||
-            (team_leader(0x02) == chararacter_ids_by_name["Ronaldo"] && (left_demon(0x02) == enemy_id_by_name[demon_name] || right_demon(0x02) == enemy_id_by_name[demon_name])) ||
-            (team_leader(0x03) == chararacter_ids_by_name["Ronaldo"] && (left_demon(0x03) == enemy_id_by_name[demon_name] || right_demon(0x03) == enemy_id_by_name[demon_name]))
-        )
-    }
-}
-
 // Calculates offered Macca + Extra that the demon demands
-function true_auction_cost() => dword(full_auction_ptr + 0x1cc) + dword(full_auction_ptr + 0x1e4)
+function true_auction_cost() => dword(FULL_AUCTION_PTR + 0x1cc) + dword(FULL_AUCTION_PTR + 0x1e4)
 
 // Stub for now until I have logic for this.
 function is_new_game_plus() => always_false()
 
-// The game offers a Suspend function. This is very similar to using a Save State.
+// The game offers a Suspend feature. This is very similar to using a Save State.
 // This doesn't work for some of the achievements being coded, so we get to detect if someone actually hopped on a mission
 // using the menu or if they're loading from suspend.
 // DO NOT USE THIS FOR PROGRESSION. ONLY CHALLENGES.
-function loaded_from_suspend() => ptr_valid(full_combat_ptr) && byte(combat_ptr + 0x268) == 0x01
+function loaded_from_suspend() => FULL_TEAM_ARRAY_PTR > 0x02ffffff || FULL_TEAM_ARRAY_PTR < 0x02000000
+
+// Checks if the turn that's being started is an allied unit's turn.
+function allied_turn_starts() {
+    cond = ptr_valid(FULL_COMBAT_PTR)
+
+    return cond && byte(COMBAT_PTR + 0x250) <= 0x03 
+        && prev(byte(COMBAT_PTR + 0x24)) == 0x00 && byte(COMBAT_PTR + 0x24) == 0x02 
+}
 
 // I would do by id/offset BUT THEY PUT GAPS IN BETWEEN SOME.
 // They also intermingle demons you can get and demons/enemies you can't get in the Compendium
@@ -720,6 +733,7 @@ enemy_id_by_name = {
     "Kusi Mitama":    0xca,
     "Saki Mitama":    0xcb,
     "Merak":          0xcd,
+    "Phecda (Whole)": 0xce,
     "Megrez":         0xcf,
     "Satan":          0xd5,
     "Beelzebub":      0xd6,
@@ -742,6 +756,8 @@ enemy_id_by_name = {
     "Botis":          0xf0,
     "Salaryman":      0xf2,  // Specifically from App Abuser Amrita/Phys Up/Hustle
     "Punk":           0xf9,  // Specifically from App Abuser Snipe/Mana Bonus/Hustle
+    "Phecda (Magic)": 0xff,
+    "Phecda (Phys)":  0x100,
     "Young Man":      0x10c, // Specifically from App Abuser Extra Cancel/Extra Bonus/Hustle
     "Dubhe (Whole)":  0x114, // Dubhe that can reflect phys and null others
     "Dubhe (Half)":   0x115, 
@@ -763,8 +779,7 @@ enemy_id_by_name = {
     "Vacant Woman":   0x164, // Fumi in Demon-Hacked
 }
 
-// This map is strictly getting enemies that can lead teams. That's it.
-// too many goddamn dicts in this script already
+// This map exists for RP purposes, that's it
 enemy_name_by_id = {
     0x00: "Hero", // That's what the game calls him!
     0x01: "Ronaldo",
@@ -780,217 +795,217 @@ enemy_name_by_id = {
     0x0b: "Joe",
     0x0c: "Hinako",
     0x0d: "Anguished One",
-    // End of presumed character IDs 
-    // "Tonatiuh":      0x0e,
-    // "Chernobog":     0x0f,
-    // "Wu Kong":       0x10,
-    // "Susano-o":      0x11,
-    // "Kartikeya":     0x12,
-    // "Shiva":         0x13,
-    // "Hathor":        0x14,
-    // "Sarasvati":     0x15,
-    // "Kikuri-Hime":   0x16,
-    // "Brigid":        0x17,
-    // "Scathach":      0x18,
-    // "Laksmi":        0x19,
-    // "Norn":          0x1a,
-    // "Isis":          0x1b,
-    // "Amaterasu":     0x1c,
-    // "Mahakala":      0x1d,
-    // "Thor":          0x1e,
-    // "Arahabaki":     0x1f,
-    // "Odin":          0x20,
-    // "Yama":          0x21,
-    // "Lugh":          0x22,
-    // "Baal":          0x23,
-    // "Asura":         0x24,
-    // "Orcus":         0x25,
-    // "Pazuzu":        0x26,
-    // "Abaddon":       0x27,
-    // "Tao Tie":       0x28,
-    // "Arioch":        0x29,
-    // "Tezcatlipoca":  0x2a,
-    // "Nyarlathotep":  0x2b,
-    // "Makara":        0x2c,
-    // "Nozuchi":       0x2d,
-    // "Pendragon":     0x2e,
-    // "Gui Xian":      0x2f,
-    // "Quetzalcoatl":  0x30,
-    // "Seiryuu":       0x31,
-    // "Orochi":        0x32,
-    // "Ananta":        0x33,
-    // "Hoyau Kamui":   0x34,
+    0x0e: "Tonatiuh",
+    0x0f: "Chernobog",
+    0x10: "Wu Kong",
+    0x11: "Susano-o",
+    0x12: "Kartikeya",
+    0x13: "Shiva",
+    0x14: "Hathor",
+    0x15: "Sarasvati",
+    0x16: "Kikuri-Hime",
+    0x17: "Brigid",
+    0x18: "Scathach",
+    0x19: "Laksmi",
+    0x1a: "Norn",
+    0x1b: "Isis",
+    0x1c: "Amaterasu",
+    0x1d: "Mahakala",
+    0x1e: "Thor",
+    0x1f: "Arahabaki",
+    0x20: "Odin",
+    0x21: "Yama",
+    0x22: "Lugh",
+    0x23: "Baal",
+    0x24: "Asura",
+    0x25: "Orcus",
+    0x26: "Pazuzu",
+    0x27: "Abaddon",
+    0x28: "Tao Tie",
+    0x29: "Arioch",
+    0x2a: "Tezcatlipoca",
+    0x2b: "Nyarlathotep",
+    0x2c: "Makara",
+    0x2d: "Nozuchi",
+    0x2e: "Pendragon",
+    0x2f: "Gui Xian",
+    0x30: "Quetzalcoatl",
+    0x31: "Seiryuu",
+    0x32: "Orochi",
+    0x33: "Ananta",
+    0x34: "Hoyau Kamui",
     0x35: "Toubyou",
     0x36: "Bai Suzhen",
-    // "Basilisk":      0x37,
-    // "Ym":            0x38,
-    // "Python":        0x39,
-    // "Culebre":       0x3a,
-    // "Vritra":        0x3b,
-    // "Vasuki":        0x3c,
+    0x37: "Basilisk",
+    0x38: "Ym",
+    0x39: "Python",
+    0x3a: "Culebre",
+    0x3b: "Vritra",
+    0x3c: "Vasuki",
     // My notes indicate something called "Holy Ghost" is 0x3d, but I don't know if that's a real thing you can encounter
-    // "Angel":         0x3e,
-    // "Power":         0x3f,
-    // "Lailah":        0x40,
-    // "Aniel":         0x41, 
-    // "Kazfiel":       0x42,
-    // "Remiel":        0x43,
-    // "Metatron":      0x44,
+    0x3e: "Angel",
+    0x3f: "Power",
+    0x40: "Lailah",
+    0x41: "Aniel", 
+    0x42: "Kazfiel",
+    0x43: "Remiel",
+    0x44: "Metatron",
     0x45: "Itsumade",
-    // "Moh Shuvuu":    0x46,
+    0x46: "Moh Shuvuu",
     0x47: "Hamsa",
-    // "Suparna":       0x48,
-    // "Vidofnir":      0x49,
-    // "Badb Catha":    0x4a,
-    // "Anzu":          0x4b,
-    // "Feng Huang":    0x4c,
-    // "Garuda":        0x4d,
+    0x48: "Suparna",
+    0x49: "Vidofnir",
+    0x4a: "Badb Catha",
+    0x4b: "Anzu",
+    0x4c: "Feng Huang",
+    0x4d: "Garuda",
     0x4e: "Gagyson",
-    // "Abraxas":       0x4f,
-    // "Flauros":       0x50,
-    // "Nisroc":        0x51,
-    // "Orobas":        0x52,
-    // "Decarabia":     0x53,
-    // "Nebiros":       0x54,
-    // "Agares":        0x55,
-    // "Murmur":        0x56,
-    // "Heqet":         0x57,
-    // "Kamapua'a":     0x58,
+    0x4f: "Abraxas",
+    0x50: "Flauros",
+    0x51: "Nisroc",
+    0x52: "Orobas",
+    0x53: "Decarabia",
+    0x54: "Nebiros",
+    0x55: "Agares",
+    0x56: "Murmur",
+    0x57: "Heqet",
+    0x58: "Kamapua'a",
     0x59: "Shiisaa",
-    // "Bai Ze":        0x5a,
-    // "Baihu":         0x5b,
-    // "Airavata":      0x5c,
-    // "Ukano Mitama":  0x5d,
-    // "Barong":        0x5e,
-    // "Anubis":        0x5f,
+    0x5a: "Bai Ze",
+    0x5b: "Baihu",
+    0x5c: "Airavata",
+    0x5d: "Ukano Mitama",
+    0x5e: "Barong",
+    0x5f: "Anubis",
     0x60: "Kabuso",
-    // "Hairy Jack":    0x61,
-    // "Nekomata":      0x62,
-    // "Cait Sith":     0x63,
-    // "Nue":           0x64,
-    // "Orthrus":       0x65,
-    // "Myrmecolion":   0x66,
-    // "Cerberus":      0x67,
-    // "Fenrir":        0x68,
+    0x61: "Hairy Jack",
+    0x62: "Nekomata",
+    0x63: "Cait Sith",
+    0x64: "Nue",
+    0x65: "Orthrus",
+    0x66: "Myrmecolion",
+    0x67: "Cerberus",
+    0x68: "Fenrir",
     0x69: "Hare of Inaba",
     0x6a: "Waira",
-    // "Garm":          0x6b,
-    // "Afanc":         0x6c,
-    // "Mothman":       0x6d,
-    // "Taown":         0x6e,
-    // "Behemoth":      0x6f,
-    // "Ammut":         0x70,
-    // "Tam Lin":       0x71,
-    // "Jambavan":      0x72,
-    // "Tlaloc":        0x73,
+    0x6b: "Garm",
+    0x6c: "Afanc",
+    0x6d: "Mothman",
+    0x6e: "Taown",
+    0x6f: "Behemoth",
+    0x70: "Ammut",
+    0x71: "Tam Lin",
+    0x72: "Jambavan",
+    0x73: "Tlaloc",
     0x74: "Ictinike",
-    // "Hanuman":       0x75,
-    // "Cu Chulainn":   0x76,
-    // "Kresnik":       0x77,
-    // "Ganesha":       0x78,
-    // "Heimdall":      0x79,
+    0x75: "Hanuman",
+    0x76: "Cu Chulainn",
+    0x77: "Kresnik",
+    0x78: "Ganesha",
+    0x79: "Heimdall",
     0x7a: "Pixie",
     0x7b: "Knocker",
-    // "Kijimunaa":     0x7c,
+    0x7c: "Kijimunaa",
     0x7d: "Jack Frost",
     0x7e: "Pyro Jack",
-    // "Silky":         0x7f,
-    // "Lorelei":       0x80,
-    // "Vivian":        0x81,
-    // "Titania":       0x82,
-    // "Oberon":        0x83,
-    // "King Frost":    0x84,
-    // "Moloch":        0x85,
-    // "Hecate":        0x86,
-    // "Tzitzmitl":     0x87,
-    // "Astaroth":      0x88,
-    // "Mot":           0x89,
-    // "Loki":          0x8a,
-    // "Lucifer":       0x8b,
-    // "Ubelluris":     0x8c,
-    // "Nalagiri":       0x8d,
-    // "Hitokotonusi":   0x8e,
-    // "Take-Mikazuchi": 0x8f,
-    // "Zouchouten":    0x90,
-    // "Jikokuten":     0x91,
-    // "Koumokuten":    0x92,
-    // "Bishamonten":   0x93,
-    // "Zaou Gongen":   0x94,
+    0x7f: "Silky",
+    0x80: "Lorelei",
+    0x81: "Vivian",
+    0x82: "Titania",
+    0x83: "Oberon",
+    0x84: "King Frost",
+    0x85: "Moloch",
+    0x86: "Hecate",
+    0x87: "Tzitzmitl",
+    0x88: "Astaroth",
+    0x89: "Mot",
+    0x8a: "Loki",
+    0x8b: "Lucifer",
+    0x8c: "Ubelluris",
+    0x8d: "Nalagiri",
+    0x8e: "Hitokotonusi",
+    0x8f: "Take-Mikazuchi",
+    0x90: "Zouchouten",
+    0x91: "Jikokuten",
+    0x92: "Koumokuten",
+    0x93: "Bishamonten",
+    0x94: "Zaou Gongen",
     0x95: "Kobold",
     0x96: "Bilwis",
-    // "Gozuki":        0x97,
-    // "Mezuki":        0x98,
-    // "Ikusa":         0x99,
-    // "Lham Dearg":    0x9a,
-    // "Berserker":     0x9b,
-    // "Yaksa":         0x9c,
-    // "Nata Taishi":   0x9d,
-    // "Oumitsunu":     0x9e,
+    0x97: "Gozuki",
+    0x98: "Mezuki",
+    0x99: "Ikusa",
+    0x9a: "Lham Dearg",
+    0x9b: "Berserker",
+    0x9c: "Yaksa",
+    0x9d: "Nata Taishi",
+    0x9e: "Oumitsunu",
     0x9f: "Obariyon",
-    // "Ogre":          0xa0,
-    // "Mokoi":         0xa1,
-    // "Ogun":          0xa2,
+    0xa0: "Ogre",
+    0xa1: "Mokoi",
+    0xa2: "Ogun",
     0xa3: "Wendigo",
-    // "Legion":        0xa4,
-    // "Rakshasa":      0xa5,
-    // "Girimehkala":   0xa6,
-    // "Grendel":       0xa7,
-    // "Black Frost":   0xa8,
-    // "Kikimora":      0xa9,
-    // "Lilim":         0xaa,
-    // "Yuki Jyorou":   0xab,
-    // "Leanan Sidhe":  0xac,
-    // "Peri":          0xad,
-    // "Hariti":        0xae,
-    // "Rangda":        0xaf,
-    // "Kali":          0xb0,
-    // "Lilith":        0xb1,
+    0xa4: "Legion",
+    0xa5: "Rakshasa",
+    0xa6: "Girimehkala",
+    0xa7: "Grendel",
+    0xa8: "Black Frost",
+    0xa9: "Kikimora",
+    0xaa: "Lilim",
+    0xab: "Yuki Jyorou",
+    0xac: "Leanan Sidhe",
+    0xad: "Peri",
+    0xae: "Hariti",
+    0xaf: "Rangda",
+    0xb0: "Kali",
+    0xb1: "Lilith",
     0xb2: "Poltergeist",
     0xb3: "Agathion",
-    // "Tenong Cut":    0xb4,
-    // "Kumbhanda":     0xb5,
-    // "Loa":           0xb6,
-    // "Pisaca":        0xb7,
-    // "Kudlak":        0xb8,
-    // "Purple Mirror": 0xb9,
-    // "Billiken":      0xba,
+    0xb4: "Tenong Cut",
+    0xb5: "Kumbhanda",
+    0xb6: "Loa",
+    0xb7: "Pisaca",
+    0xb8: "Kudlak",
+    0xb9: "Purple Mirror",
+    0xba: "Billiken",
     0xbb: "Ghost Q",
-    // "Sage of Time":  0xbc,
-    // "Alice":         0xbd,
-    // "Trumpeter":     0xbe,
-    // "Neko Shogun":   0xbf,
-    // "Hagen":         0xc0,
-    // "Jeanne d'Arc":  0xc1,
-    // "Yoshitsune":    0xc2,
-    // "Guan Yu":       0xc3,
-    // "Flaemis":       0xc4,
-    // "Aquans":        0xc5,
-    // "Aeros":         0xc6,
-    // "Erthys":        0xc7,
-    // "Ara Mitama":    0xc8,
-    // "Nigi Mitama":   0xc9,
-    // "Kusi Mitama":   0xca,
-    // "Saki Mitama":   0xcb,
+    0xbc: "Sage of Time",
+    0xbd: "Alice",
+    0xbe: "Trumpeter",
+    0xbf: "Neko Shogun",
+    0xc0: "Hagen",
+    0xc1: "Jeanne d'Arc",
+    0xc2: "Yoshitsune",
+    0xc3: "Guan Yu",
+    0xc4: "Flaemis",
+    0xc5: "Aquans",
+    0xc6: "Aeros",
+    0xc7: "Erthys",
+    0xc8: "Ara Mitama",
+    0xc9: "Nigi Mitama",
+    0xca: "Kusi Mitama",
+    0xcb: "Saki Mitama",
     0xcd: "Merak",
-    // "Megrez":        0xcf,
-    // "Satan":         0xd5,
-    // "Beelzebub":     0xd6,
-    // "Belial":        0xd7,
-    // "Asp":           0xe0,
-    // "Apis":          0xe1,
-    // "Pabilsag":      0xe2,
-    // "Sleipnir":      0xe3,
-    // "Xiezhai":       0xe4,
-    // "Kangiten":      0xe5,
-    // "Baphomet":      0xe6,
-    // "Anat":          0xe7,
-    // "Pallas Athena": 0xe8,
-    // "Mithra":        0xe9,
-    // "Osiris":        0xea,
-    // "Gucumatz":      0xeb,
-    // "Da Peng":       0xec,
-    // "Ometeotl":      0xed,
-    // "Jarilo":        0xee,
+    0xce: "Phecda",
+    0xcf: "Megrez",
+    0xd5: "Satan",
+    0xd6: "Beelzebub",
+    0xd7: "Belial",
+    0xe0: "Asp",
+    0xe1: "Apis",
+    0xe2: "Pabilsag",
+    0xe3: "Sleipnir",
+    0xe4: "Xiezhai",
+    0xe5: "Kangiten",
+    0xe6: "Baphomet",
+    0xe7: "Anat",
+    0xe8: "Pallas Athena",
+    0xe9: "Mithra",
+    0xea: "Osiris",
+    0xeb: "Gucumatz",
+    0xec: "Da Peng",
+    0xed: "Ometeotl",
+    0xee: "Jarilo",
     0xf0: "Botis",
     0xf2: "Salaryman",
     0xf3: "Salaryman",
@@ -998,26 +1013,30 @@ enemy_name_by_id = {
     0xf7: "Office Lady",
     0xf8: "Office Lady",
     0xf9: "Punk",
+    0xfa: "Punk",
     0xfc: "Yakuza",
+    0xff: "Phecda",
+    0x100: "Phecda",
     0x10a: "Worker",
     0x10b: "Student",
     0x10c: "Young Man",
     0x114: "Dubhe",
     0x115: "Dubhe",
-     // "Bifrons":       0x116,
-     // "Barbatos":      0x117,
-     // "Dzelarhons":    0x118,
-     // "Kama":          0x119,
-     // "Parvati":       0x11a,
-     // "Ixtab":         0x11b,
-     // "Balor":         0x11c,
-     // "Nergal":        0x11d,
-     // "Inti":          0x11e,
-     // "Alilat":        0x11f,
-     // "Beiji-Weng":    0x120,
-     // "Lord Nan Dou":  0x121,
-     // "Masakado":      0x122,
+    0x116: "Bifrons",
+    0x117: "Barbatos",
+    0x118: "Dzelarhons",
+    0x119: "Kama",
+    0x11a: "Parvati",
+    0x11b: "Ixtab",
+    0x11c: "Balor",
+    0x11d: "Nergal",
+    0x11e: "Inti",
+    0x11f: "Alilat",
+    0x120: "Beiji-Weng",
+    0x121: "Lord Nan Dou",
+    0x122: "Masakado",
     0x134: "Tall Woman",  // Makoto in Daichi's Crisis
+    0x137: "Daichi (Tied Up)", // Daichi in Saving Daichi / Goodbye Jungo
     0x146: "Salaryman Carrying Food", // in Girl in Pursuit
     0x161: "Fumi",        // in Hacker Revealed
     0x164: "Vacant Woman" // Fumi in Demon-Hacked
@@ -1052,7 +1071,7 @@ function elements_registered() {
 
 // There are 4 demons with the Mitama race, but 5 have it in their name.
 function mitamas_registered() {
-
+    return demon_registered("Nigi Mitama") + demon_registered("Saki Mitama") + demon_registered("Ara Mitama") + demon_registered("Kusi Mitama")
 }
 
 // Total of 67 skills
@@ -1395,18 +1414,17 @@ location = {
     0x53: "Oosu Akamon Crosswalk"
 }
 
-// This does not include Free Battle as there are several different Free Battles you can go to
-combat_missions_by_name = {
-    "Death Clip":       0x0002,
-    "Daichi's Crisis":  0x0003,
-    "A Man Named Joe":  0x0004,
-    "Daichi's Resolve": 0x0005,
-    "App Abuser":       0x000b,
-    "Osaka Soul":       0x000c,
-    "Never Say Die":    0x000d,
-    "Demon-Hacked":     0x000e,
+// This is for combat missions
+// Note that some missions share an ID; there's likely multiple factors being used to set up the real combat mission
+// As an example: Osaka Soul vs. Too Late share an ID
+// The mission is largely the same, except in Too Late the Keita unit is replaced with a Waira unit
+// Easier to think of it as a "combat mission id" though.
+combat_mission_by_name = {
+    "Man of Fury (Ronaldo)": 0x0020,
+    "Man of Fury (Phecda)": 0x0021,
 }
 
+// This is for events selected on the map
 event_id_by_name = {
     "Death Clip":       0x3e9,
     "Daichi's Crisis":  0x3f1,
@@ -1422,6 +1440,7 @@ event_id_by_name = {
     "Boy in Combat":    0xbbe,        
     "Hacker Revealed":  0xbbf,
     "Saving Daichi":    0xbc2,
+    "Man of Fury":      0xbc4,
     "Megrez Meeting":   0xfa8
 }
 
@@ -1563,6 +1582,10 @@ day_of_week = {
     0x08: "Final Day"
 }
 
+// Game keeps a separate byte stored to indicate which unit is taking their turn.
+// This byte is null until the mission starts, so we can use it to determine when the player has selected "Mission Start"
+function active_mission_started() => ptr_valid(FULL_COMBAT_PTR) && prev(byte(COMBAT_PTR + 0x26f)) == 0x00 && byte(COMBAT_PTR + 0x26f) == 0x10
+
 // Rolling with this approach until something more consistent pops up.
 // The game seems to like to use the following addresses for flags for the *current* mission:
 // [0x00284b54, 0x00284b55, 0x00284b56, 0x00284b57, 0x00284b58].
@@ -1609,7 +1632,7 @@ function mailbox_hunt_helper() {
         0x00284ce7
     ]
 
-    mails_to_check = day <= 0x08
+    mails_to_check = DAY <= 0x08
 
     for i in range(0x00284cb0, 0x00284d83) {
         if (!array_contains(mapped_addrs, i)) {
@@ -1623,14 +1646,14 @@ achievement(
     title = "[FOR DEV]Mailbox Hunt",
     description = "You got mail!",
     points = 0,
-    trigger = day <= 0x08 && mailbox_hunt_helper()
+    trigger = IN_GAME_CLOCK != 0x0000 && DAY <= 0x08 && mailbox_hunt_helper()
 )
 
 achievement(
     title = "[FOR DEV]Event Flag Hunt",
     description = "Events have flags associated to say 'you did this.' This might be one of them!",
     points = 0,
-    trigger = day <= 0x08 && (
+    trigger = DAY <= 0x08 && (
         // 0x00284ad8
         (prev(bit1(0x00284ad8)) == 0x00 && bit1(0x00284ad8) == 0x01) ||
         (prev(bit4(0x00284ad8)) == 0x00 && bit4(0x00284ad8) == 0x01) ||
@@ -2153,7 +2176,6 @@ achievement(
         (prev(bit1(0x00284b1f)) == 0x00 && bit1(0x00284b1f) == 0x01) ||
         (prev(bit2(0x00284b1f)) == 0x00 && bit2(0x00284b1f) == 0x01) ||
         (prev(bit3(0x00284b1f)) == 0x00 && bit3(0x00284b1f) == 0x01) ||
-        (prev(bit4(0x00284b1f)) == 0x00 && bit4(0x00284b1f) == 0x01) ||
         (prev(bit5(0x00284b1f)) == 0x00 && bit5(0x00284b1f) == 0x01) ||
         (prev(bit6(0x00284b1f)) == 0x00 && bit6(0x00284b1f) == 0x01) ||
         (prev(bit7(0x00284b1f)) == 0x00 && bit7(0x00284b1f) == 0x01) ||
@@ -2174,14 +2196,7 @@ achievement(
     title = "False Alarm",
     description = "Avert the crisis shown in your death clip.",
     points = 1,
-    trigger =  day == 0x01 && on_mission("Death Clip") && all_allied_teams_last_standing(3),
-    type = "progression"
-)
-achievement(
-    title = "She's Sealed Away for a Reason",
-    description = "Avert the crisis shown in the second death clip on Sunday.",
-    points = 1,
-    trigger = on_mission("Daichi's Crisis") && active_mission_completed("Daichi's Crisis"),
+    trigger =  DAY == 0x01 && on_mission("Death Clip") && all_allied_teams_last_standing(3),
     type = "progression"
 )
 achievement(
@@ -2196,6 +2211,13 @@ achievement(
     type = "missable"
 )
 achievement(
+    title = "She's Sealed Away for a Reason",
+    description = "Avert the crisis shown in the second death clip on Sunday.",
+    points = 1,
+    trigger = on_mission("Daichi's Crisis") && active_mission_completed("Daichi's Crisis"),
+    type = "progression"
+)
+achievement(
     title = "Taking on Troublesome Contracts",
     description = "Help Joe resolve his outstanding contract.",
     points = 2,
@@ -2206,48 +2228,49 @@ achievement(
     title = "No Demon Left Behind",
     description = "Get all allies to the escape area in Daichi's Worth without Dubhe killing any demons and without using the Suspend feature.",
     points = 5,
-    trigger = never(most_recent_mission != 0x3f4)
-        && ptr_valid(full_team_array_ptr)
+    trigger = never(MOST_RECENT_MISSION != 0x3f4)
+        && ptr_valid(FULL_TEAM_ARRAY_PTR)
         && bit3(0x00284aec) == 0x01
-        && trigger_when(prev(word(team_array_ptr + (0x27c * 0x04) + 0x0a)) == 0x114 && word(team_array_ptr + (0x27c * 0x04) + 0x0a) == 0x115)
-        && never((attacker_leader_is("Dubhe (Whole)") && defender_left_unit_defeated())
-        || (attacker_leader_is("Dubhe (Whole)") && defender_right_unit_defeated())
-        || (defender_leader_is("Dubhe (Whole)") && attacker_left_unit_defeated())
-        || (defender_leader_is("Dubhe (Whole)") && attacker_right_unit_defeated()))
+        && trigger_when(prev(word(TEAM_ARRAY_PTR + (0x27c * 0x04) + 0x0a)) == 0x114 && word(TEAM_ARRAY_PTR + (0x27c * 0x04) + 0x0a) == 0x115)
+        && (
+            disable_when(attacker_leader_is("Dubhe (Whole)") && defender_left_unit_defeated())
+        && disable_when(attacker_leader_is("Dubhe (Whole)") && defender_right_unit_defeated())
+        && disable_when(defender_leader_is("Dubhe (Whole)") && attacker_left_unit_defeated())
+        && disable_when(defender_leader_is("Dubhe (Whole)") && attacker_right_unit_defeated())
+        )
         // This may not be technically necessary, but it makes me feel better!
         // I'm observing that the game does not use a separate pointer to access teams when the game loads from suspend in this mission
-        // which means that the validity check for the full_team_array_ptr is actually doing work
-        && disable_when(loaded_from_suspend(), until=most_recent_mission != 0x3f4),
+        // which means that the validity check for the FULL_TEAM_ARRAY_PTR is actually doing work
+        && disable_when(loaded_from_suspend(), until=MOST_RECENT_MISSION != 0x3f4),
     type = "missable"
 )
 achievement(
     title = "Dubious Dubhe",
     description = "Defeat Dubhe.",
-    points = 5,
+    points = 3,
     trigger = on_mission("Daichi's Resolve")
         && ((attacker_leader_is("Dubhe (Half)") && attacker_leader_defeated()) || defender_leader_is("Dubhe (Half)") && defender_leader_defeated()),
     type = "progression"
 )
 achievement(
     title = "I Take My Volunteer Work Seriously",
-    // We don't actively need to check for the Suspend function here, the hits take care of that
-    description = "Without using the Suspend function, defeat all human enemies in App Abuser before any have a chance to escape.",
+    description = "Without using the Suspend feature, defeat all human enemies in App Abuser before any have a chance to escape.",
     points = 3,
-    trigger = never(most_recent_mission != 0x7d4)
+    trigger = never(MOST_RECENT_MISSION != 0x7d4)
         && on_mission("App Abuser")
         && on_grid_map()
+        && never(loaded_from_suspend())
         && trigger_when(once(defender_leader_is("Punk") && defender_leader_defeated())) 
         && trigger_when(once(defender_leader_is("Salaryman") && defender_leader_defeated()))
         && trigger_when(once(defender_leader_is("Young Man") && defender_leader_defeated()))
-        && disable_when(team_moves_to_x(0x04, 0x0e), until=most_recent_mission != 0x7d4)
-        && disable_when(team_moves_to_x(0x05, 0x0e), until=most_recent_mission != 0x7d4)
-        && disable_when(team_moves_to_x(0x06, 0x0e), until=most_recent_mission != 0x7d4),
+        && disable_when(team_moves_to_x(0x04, 0x0e), until=MOST_RECENT_MISSION != 0x7d4)
+        && disable_when(team_moves_to_x(0x05, 0x0e), until=MOST_RECENT_MISSION != 0x7d4)
+        && disable_when(team_moves_to_x(0x06, 0x0e), until=MOST_RECENT_MISSION != 0x7d4),
     type = "missable"
 )
-// Suspend allowed
 achievement(
     title = "Busting the 'valgate Party",
-    description = "Defeat the Vacant Woman in Demon-Hacked before a second wave of demons joins the fight.",
+    description = "Defeat the Vacant Woman in Demon-Hacked before a second wave of demons joins the fight and without using the Suspend feature.",
     points = 5,
     trigger = on_mission("Demon-Hacked")
         && in_combat()
@@ -2256,10 +2279,10 @@ achievement(
         // There's 0 way this bites me in the ass. No way!
         // In all seriousness the other summon is a special one that doesn't happen on "her" turn
         // so we only have to check this occurs once.
-        && ptr_valid(full_team_array_ptr)
+        && ptr_valid(FULL_TEAM_ARRAY_PTR)
         && disable_when(
-            once(prev(word(team_array_ptr + 0x162b)) == 0x0c && word(team_array_ptr + 0x162b) == 0x11),
-            until=most_recent_mission != 0x7da
+            once(prev(word(TEAM_ARRAY_PTR + 0x162b)) == 0x0c && word(TEAM_ARRAY_PTR + 0x162b) == 0x11),
+            until=MOST_RECENT_MISSION != 0x7da
         ),
     type = "missable"
 )
@@ -2284,7 +2307,7 @@ achievement(
     points = 5,
     trigger = on_mission("Osaka Soul") 
         && never(loaded_from_suspend())
-        && disable_when(unit_respawns(), until=most_recent_mission != event_id_by_name["Osaka Soul"])
+        && disable_when(unit_respawns(), until=MOST_RECENT_MISSION != event_id_by_name["Osaka Soul"])
         && trigger_when(bit0(0x00284b5a) == 0x01)
         && trigger_when(bit1(0x00284b5a) == 0x01)
         && trigger_when(bit2(0x00284b5a) == 0x01)
@@ -2304,11 +2327,11 @@ achievement(
     description = "Defeat Merak without it ever using Circumpolarity and without using the Suspend feature.",
     points = 5,
     trigger = on_grid_map() && on_mission("Merak Arrives") 
-            && ptr_valid(full_team_array_ptr)
+            && ptr_valid(FULL_TEAM_ARRAY_PTR)
             && never(loaded_from_suspend())
             && trigger_when((attacker_leader_is("Merak") && attacker_leader_defeated()) 
             || defender_leader_is("Merak") && defender_leader_defeated())
-            && disable_when(prev(byte(team_array_ptr + 0xc3b)) == 0x00 && byte(team_array_ptr + 0xc3b) == 0x0a, until=most_recent_mission != 0x7e2),
+            && disable_when(prev(byte(TEAM_ARRAY_PTR + 0xc3b)) == 0x00 && byte(TEAM_ARRAY_PTR + 0xc3b) == 0x0a, until=MOST_RECENT_MISSION != 0x7e2),
     type = "missable"
 )
 achievement(
@@ -2323,7 +2346,7 @@ achievement(
     title = "A Fun-Filled Q...!",
     description = "Defeat Ghost Q.",
     points = 10,
-    trigger = day == 0x03 && on_mission("Vs. Q")
+    trigger = DAY == 0x03 && on_mission("Vs. Q")
         && ((defender_leader_is("Ghost Q") && defender_leader_defeated()) || (attacker_leader_is("Ghost Q") && attacker_leader_defeated())),
     type = "missable"
 )
@@ -2339,7 +2362,7 @@ achievement(
     description = "Recruit Airi to the party.",
     points = 2,
     trigger = bit4(0x00284af2) == 0x01 && bit5(0x00284af2) == 0x01
-        && (most_recent_mission == event_id_by_name["Girl in Pursuit"] || most_recent_mission == event_id_by_name["Boy in Combat"])
+        && (MOST_RECENT_MISSION == event_id_by_name["Girl in Pursuit"] || MOST_RECENT_MISSION == event_id_by_name["Boy in Combat"])
         && prev(actively_in_event()) && !actively_in_event(),
     type = "progression"
 )
@@ -2353,195 +2376,224 @@ achievement(
 )
 achievement(
     title = "Hmm... Mm?",
-    description = "Complete 'Hacker Revealed'",
+    description = "Complete 'Hacker Revealed.'",
     points = 3,
     trigger = on_mission("Hacker Revealed") && active_mission_completed("Hacker Revealed"),
     type = "progression"
 )
 achievement(
-    title = "[NEEDS_DEV]Untie Me Already!",
-    description = "Escort Daichi to the rescue point in the mission where he gets tied up",
+    title = "Solid Snake Would Be Proud",
+    description = "Escort Daichi to the rescue point in Saving Daichi.",
     points = 5,
-    trigger = day == 0x09,
+    trigger = on_mission("Saving Daichi") && bit4(0x00284b1f) == 0x01 
+        && trigger_when(prev(bit5(0x00284b56)) == 0x00) 
+        && trigger_when(bit5(0x00284b56) == 0x01),
     type = "missable"
 )
-// Badge should be picture of rioters in Planetarium that gang up on Jungo
 achievement(
     title = "Savior of the Strong",
     description = "Prevent the death foretold by Tuesday's death clip.",
     points = 5,
-    // probably needs a bit more in case of game over
     trigger = bit2(0x00284af1) == 0x01 && on_mission("Saving Daichi") && character_alive("Jungo") && character_recruited("Jungo"),
     type = "missable"
 )
-// Man of Fury: Defeat Ronaldo before any supporter has a chance to escape. "Go for the Head"
 achievement(
-    title = "[NEEDS_DEV]Brutal Efficiency",
-    description = "In 'Man of Fury,' defeat Ronaldo while all other enemy teams still on the map.",
-    points = 10,
+    title = "Brutal Efficiency",
+    description = "In 'Man of Fury,' defeat Ronaldo while all other teams are still on the map.",
+    points = 5,
     // Loose high level idea here:
-    // you detect when Ronaldo's HP hits 0, this is the trigger
-    // you verify that the first N slots in the turn order are != 0xff. that's it
-    trigger = day == 0x09,
+    // Normally I would detect when HP hits 0, but HP actually hits 1 here
+    // Instead of going through and adding that edge case, we'll rely on combat flags flipping while all other teams are up
+    trigger = on_mission("Man of Fury") && num_teams_on_map(0x0a) &&
+        in_combat_mission("Man of Fury (Ronaldo)") &&
+        // The underlying pointers here continue pointing to the associated defender/attacker until next combat is entered, so this is fine
+        trigger_when((defender_leader_is("Ronaldo") || attacker_leader_is("Ronaldo"))) &&
+        trigger_when(prev(bit6(0x00284b59) == 0x00)) && trigger_when(bit6(0x00284b59) == 0x01) &&
+        trigger_when(prev(bit7(0x00284b59) == 0x00)) && trigger_when(bit7(0x00284b59) == 0x01),
     type = "missable"
 )
 achievement(
-    title = "[NEEDS_DEV]Efficient Multitasker",
+    title = "We Gotta Deal With This Quick",
     // Make sure it's very clear that you can Suspend before it splits, but any Suspend after it splits 
     // will result in not being to accomplish this challenge 
-    description = "In a single session, defeat Phecda within 5 turns of it splitting into two units.",
-    points = 5,
-    trigger = day == 0x09,
+    description =  "After seeing Phecda split, use 7 or fewer turns to defeat both forms (Suspend BEFORE split is allowed).",
+    points = 10,
+    trigger = on_mission("Man of Fury") && in_combat_mission("Man of Fury (Phecda)") 
+        && once(prev(bit3(0x00284b5a)) == 0x00 && bit3(0x00284b5a) == 0x01) && 
+        ((
+            trigger_when(bit0(0x00284b56) == 0x01)
+            && trigger_when((attacker_leader_is("Phecda (Magic)") || defender_leader_is ("Phecda (Magic)")))
+            && trigger_when(prev(bit6(0x00284b55) == 0x00)) 
+            && trigger_when(bit6(0x00284b55) == 0x01)
+        ) ||
+        // Magic already defeated, Phys being defeated
+        (
+            trigger_when(bit6(0x00284b55) == 0x01)
+            && trigger_when((attacker_leader_is("Phecda (Phys)") || defender_leader_is("Phecda (Phys)")))
+            && trigger_when(prev(bit0(0x00284b56)) == 0x00)
+            && trigger_when(bit0(0x00284b56) == 0x01)
+        )) &&
+        never(MOST_RECENT_MISSION != event_id_by_name["Man of Fury"]) &&
+        disable_when(repeated(0x08, bit3(0x00284b5a) == 0x01 && allied_turn_starts()), until=MOST_RECENT_MISSION != event_id_by_name["Man of Fury"]),
     type = "missable"
 )
-// Phecda Challenge: Defeat Phecda in under ? player turns
 achievement(
-    title = "[NEEDS_DEV]Partitioned Phecda",
+    title = "Partitioned Phecda",
     description = "Defeat Phecda.",
     points = 5,
-    trigger = most_recent_mission == 0xbc4 
+    trigger = on_mission("Man of Fury") &&
+        // Phys already defeated, Magic being defeated
+        ((
+            bit0(0x00284b56) == 0x01 
+            && (attacker_leader_is("Phecda (Magic)") || defender_leader_is ("Phecda (Magic)")) 
+            && prev(bit6(0x00284b55) == 0x00) 
+            && bit6(0x00284b55) == 0x01
+        ) ||
+        // Magic already defeated, Phys being defeated
+        (
+            bit6(0x00284b55) == 0x01 
+            && (attacker_leader_is("Phecda (Phys)") || defender_leader_is("Phecda (Phys)")) 
+            && prev(bit0(0x00284b56)) == 0x00 
+            && bit0(0x00284b56) == 0x01
+        )),
     // This will actually need a pair of clauses
     // There's multiple Phecda forms and you can defeat one or the other
     // This will also need to make sure that regardless of session, both Phecdas are defeated
-    // Phecda (Whole)
-    // Phecda (Phys Immune)
-    // Phecda (Magic Immune)
-        && ((attacker_leader_is("Phecda") && attacker_leader_defeated()) || defender_leader_is("Phecda") && defender_leader_defeated()),
     type = "progression"
 )
+
+// Megrez missions: Have only the team leader on any team get hit when Megrez's Bud uses its Diastrophism skill.
+// ^ above can be either Megrez bud or refight
+// Confrontation: Fight both the JP members and civilians and clear everyone out.
+// App and Muggers: idk just clear it, throw the player a prog achievement
+// A Hard Choice: Defeat all the demons / Neko Shogun
+// Power Outage: Ronaldo survives fight as well
+
 achievement(
     title = "[NEEDS_DEV]Having Wings Seems Pretty Cool",
     description = "On any team, have only the team leader get hit by Diastrophism.",
     points = 5,
-    trigger = day == 0x09,
-    type = "missable"
-)
-achievement(
-    title="Can I Go to Timor With This?",
-    description="Unlock the ability to use the Terminal.",
-    points = 1,
-    trigger = most_recent_mission == event_id_by_name["Megrez Meeting"] && prev(actively_in_event()) && !(actively_in_event())
-)
-achievement(
-    title = "[NEEDS_DEV]Y'all Gotta Cool It",
-    description = "Fight both the civilians and JP members in Confrontation and win.",
-    points = 3,
-    trigger = day == 0x09,
+    trigger = DAY == 0x09,
     type = "missable"
 )
 achievement(
     title = "[NEEDS_DEV]Truly a Hard Choice",
     description = "Defeat Neko Shogun in A Hard Choice",
     points = 5,
-    trigger = day == 0x09
+    trigger = DAY == 0x09
     // unsure if progression or missable, needs more testing
+)
+achievement(
+    title="Can I Go to Timor With This?",
+    description="Unlock the ability to use the Terminal.",
+    points = 1,
+    trigger = MOST_RECENT_MISSION == event_id_by_name["Megrez Meeting"] && prev(actively_in_event()) && !(actively_in_event())
+)
+achievement(
+    title = "[NEEDS_DEV]Y'all Gotta Cool It",
+    description = "Fight both the civilians and JP members in Confrontation and win.",
+    points = 3,
+    trigger = DAY == 0x09,
+    type = "missable"
 )
 achievement(
     title = "[NEEDS_DEV]Don't Work Him Too Hard",
     description = "Ensure Ronaldo lives through the Power Outage mission.",
     points = 0,
-    trigger = day == 0x09
+    trigger = DAY == 0x09
 )
 // Badge should be picture of Pyro Jack
 achievement(
     title = "[NEEDS_DEV]Savior of the Aloof",
     description = "Prevent the death foretold by Wednesday's death clip.",
     points = 0,
-    trigger = most_recent_mission == 0xfb0 && character_alive("Joe") && prev(on_grid_map()) && !on_grid_map(),
+    trigger = MOST_RECENT_MISSION == 0xfb0 && character_alive("Joe") && prev(on_grid_map()) && !on_grid_map(),
     type = "missable"
 )
 achievement(
     title = "[NEEDS_DEV]No Time To Mess Around On My Phone",
     description = "Win the Delta Battle mission without clearing any of the miasma.",
     points = 5,
-    trigger = day == 0x09,
+    trigger = DAY == 0x09,
     type = "missable"
 )
 achievement(
     title = "[NEEDS_DEV]Marooned Megrez",
     description = "Defeat Megrez.",
     points = 5,
-    trigger = day == 0x09,
+    trigger = DAY == 0x09,
     type = "progression"
 )
 
 // *** Avoidable Deaths to Cover ***
 // Otome
 // Makoto
-// Saving Daichi OR Goodbye Jungo: Actually save Daichi by bringing him to a rescue point. Do what the mission says!!!
-// Man of Fury pt. 2: Defeat Phecda
-// Megrez missions: Have only the team leader on any team get hit when Megrez's Bud uses its Diastrophism skill.
-// ^ above can be either Megrez bud or refight
-// Confrontation: Fight both the JP members and civilians and clear everyone out.
-// App and Muggers:
-// A Hard Choice: Defeat all the demons / Neko Shogun
-// Power Outage: Ronaldo survives fight as well
+// Delta Battle: Win the fight without clearing any Miasma.
 // Mystery Man
 // Need to decide if Dera-deka is being split up into two cheevos or one
 achievement(
     title = "A Mysterious Man Indeed",
     description = "Witness all of the events surrounding the Mystery Man.",
     points = 5,
-    trigger = day == 0x09, // TODO need more digging
+    trigger = DAY == 0x09, // TODO need more digging
     type = "missable"
 )
-// Delta Battle: Win the fight without clearing any Miasma.
 
 // no Free Battle progression
 achievement(
     title = "Sunday's Melancholy",
     description = "Reach the end of Day 1 without ever entering any Free Battle on a New Game file.",
     points = 5,
-    trigger = never(is_new_game_plus()) && !entered_free_battle() && in_game_clock == 0x4ec && day == 0x01 && prev(bit0(0x00284aec)) == 0x00 && bit0(0x00284aec) == 0x01,
+    trigger = never(is_new_game_plus()) && !entered_free_battle() && IN_GAME_CLOCK == 0x4ec && DAY == 0x01 && prev(bit0(0x00284aec)) == 0x00 && bit0(0x00284aec) == 0x01,
     type = "missable"
 )
 achievement(
     title = "Monday's Turmoil",
     description = "Reach the end of Day 2 without ever entering any Free Battle on a New Game file.",
     points = 10,
-    trigger = never(is_new_game_plus()) && !entered_free_battle() && in_game_clock == 0x4ec && day == 0x02 && prev(bit2(0x00284aef)) == 0x00 && bit2(0x00284aef) == 0x01,
+    trigger = never(is_new_game_plus()) && !entered_free_battle() && IN_GAME_CLOCK == 0x4ec && DAY == 0x02 && prev(bit2(0x00284aef)) == 0x00 && bit2(0x00284aef) == 0x01,
     type = "missable"
 )
 achievement(
     title = "Tuesday's Disquiet",
     description = "Reach the end of Day 3 without ever entering any Free Battle on a New Game file.",
     points = 10,
-    trigger = never(is_new_game_plus()) && !entered_free_battle() && in_game_clock == 0x4ec && day == 0x03 && prev(bit1(0x00284af2)) == 0x00 && bit1(0x00284af2) == 0x01,
+    trigger = never(is_new_game_plus()) && !entered_free_battle() && IN_GAME_CLOCK == 0x4ec && DAY == 0x03 && prev(bit1(0x00284af2)) == 0x00 && bit1(0x00284af2) == 0x01,
     type = "missable"
 )
 achievement(
     title = "Wednesday's Changes",
     description = "Reach the end of Day 4 without ever entering any Free Battle on a New Game file.",
     points = 10,
-    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x04) && day == 0x05,
+    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(IN_GAME_CLOCK == 0x4ec) && IN_GAME_CLOCK == 0x00 && prev(DAY == 0x04) && DAY == 0x05,
     type = "missable"
 )
 achievement(
     title = "[NEEDS DEV]Thursday",
     description = "Reach the end of Day 5 without ever entering any Free Battle on a New Game file.",
     points = 10,
-    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x05) && day == 0x06,
+    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(IN_GAME_CLOCK == 0x4ec) && IN_GAME_CLOCK == 0x00 && prev(DAY == 0x05) && DAY == 0x06,
     type = "missable"
 )
 achievement(
     title = "[NEEDS DEV]Friday",
     description = "Reach the end of Day 6 without ever entering any Free Battle on a New Game file.",
     points = 10,
-    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x06) && day == 0x07,
+    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(IN_GAME_CLOCK == 0x4ec) && IN_GAME_CLOCK == 0x00 && prev(DAY == 0x06) && DAY == 0x07,
     type = "missable"
 )
 achievement(
     title = "[NEEDS DEV]Saturday",
     description = "Reach the end of Day 7 without ever entering any Free Battle on a New Game file.",
     points = 10,
-    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x07) && day == 0x08,
+    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(IN_GAME_CLOCK == 0x4ec) && IN_GAME_CLOCK == 0x00 && prev(DAY == 0x07) && DAY == 0x08,
     type = "missable"
 )
 achievement(
     title = "[NEEDS DEV]Wait, You Can Just... Grind?",
     description = "Complete any ending without ever entering any Free Battle on a New Game file.",
     points = 25,
-    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(in_game_clock == 0x4ec) && in_game_clock == 0x00 && prev(day == 0x07) && day == 0x08,
+    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(IN_GAME_CLOCK == 0x4ec) && IN_GAME_CLOCK == 0x00 && prev(DAY == 0x07) && DAY == 0x08,
     type = "missable"
 )
 // FATE stages
@@ -2625,69 +2677,68 @@ achievement(
     trigger = char_fate_stage_maxed("Anguished One") 
 )
 // *** Auctions ***
-// Upgrade to Gold Rank
 achievement(
     "Blind Bidder",
     description = "In an auction with 3 other bidders, place a successful bid and pay for the demon before seeing any of the reactions from other bidders.",
     points = 2,
-    trigger = ptr_valid(full_auction_ptr) 
-        && (ptr_valid(dword(auction_ptr + 0x168)) && byte(auction_ptr + 0x185) == 0xff)
-        && (ptr_valid(dword(auction_ptr + 0x188)) && byte(auction_ptr + 0x1a5) == 0xff)
-        && (ptr_valid(dword(auction_ptr + 0x1a8)) && byte(auction_ptr + 0x1c5) == 0xff)
-        && byte(auction_ptr) == 0x1c
-        && prev(macca) > macca
+    trigger = ptr_valid(FULL_AUCTION_PTR) 
+        && (ptr_valid(dword(AUCTION_PTR + 0x168)) && byte(AUCTION_PTR + 0x185) == 0xff)
+        && (ptr_valid(dword(AUCTION_PTR + 0x188)) && byte(AUCTION_PTR + 0x1a5) == 0xff)
+        && (ptr_valid(dword(AUCTION_PTR + 0x1a8)) && byte(AUCTION_PTR + 0x1c5) == 0xff)
+        && byte(AUCTION_PTR) == 0x1c
+        && prev(MACCA) > MACCA
 )
 achievement(
     title = "Math Is Not its Strong Suit",
     description = "Have a demon give you back more Macca than the Extra it demanded.",
     points = 2,
-    trigger = ptr_valid(full_auction_ptr)
-        && macca < prev(macca)
-        && byte(auction_ptr) == 0x1c
-        // this has been consistently wrong, it's not a flag of "yeah it asked for extra" but is something else
-        && byte(auction_ptr + 0x214) == 0x01
-        && (dword(auction_ptr + 0x1cc) + dword(auction_ptr + 0x1e4) + macca) > prev(macca)
+    trigger = ptr_valid(FULL_AUCTION_PTR)
+        && MACCA < prev(MACCA)
+        && byte(AUCTION_PTR) == 0x1c
+        && byte(AUCTION_PTR + 0x214) == 0x02
+        && (dword(AUCTION_PTR + 0x1cc) + dword(AUCTION_PTR + 0x1e4) + MACCA) > prev(MACCA)
 )
 achievement(
     title = "Clearance Sale",
     description = "Win 3 bids during a single Special Auction.",
     points = 3,
-    trigger = never(!ptr_valid(full_auction_ptr))
-        && never(byte(auction_ptr) == 0x0c)
-        && repeated(3, (prev(byte(auction_ptr)) == 0x12 || prev(byte(auction_ptr)) == 0x14) && byte(auction_ptr) == 0x17)
+    trigger = never(!ptr_valid(FULL_AUCTION_PTR))
+        && never(byte(AUCTION_PTR) == 0x0c)
+        && repeated(3, (prev(byte(AUCTION_PTR)) == 0x12 || prev(byte(AUCTION_PTR)) == 0x14) && byte(AUCTION_PTR) == 0x17)
 )
 achievement(
     title="All That Glitters Is Macca, Actually",
     description = "Unlock the Gold tier of demon auctions.",
     points = 5,
-    trigger = bit5(auction_unlock_eligibility) == 0x01
-        && ptr_valid(full_auction_ptr)
-        && prev(bit2(auctions_unlocked) == 0x00) 
-        && bit2(auctions_unlocked) == 0x01
+    trigger = bit5(AUCTION_UNLOCK_ELIGIBILITY) == 0x01
+        && ptr_valid(FULL_AUCTION_PTR)
+        && prev(bit2(AUCTIONS_UNLOCKED) == 0x00) 
+        && bit2(AUCTIONS_UNLOCKED) == 0x01
 )
 achievement(
     title = "The Holy Grail of Demon Auctions",
     description = "Unlock the Platinum tier of demon auctions.",
     points = 5,
-    trigger = ptr_valid(full_auction_ptr)
-        && prev(bit3(auctions_unlocked) == 0x00) 
-        && bit3(auctions_unlocked) == 0x01
+    trigger = ptr_valid(FULL_AUCTION_PTR)
+        && prev(bit3(AUCTIONS_UNLOCKED) == 0x00) 
+        && bit3(AUCTIONS_UNLOCKED) == 0x01
 )
 achievement(
     title = "Embracing the Occult",
     description = "Unlock the Occult tier of demon auctions.",
     points = 5,
-    trigger = ptr_valid(full_auction_ptr)
-        && prev(bit4(auctions_unlocked) == 0x00) 
-        && bit4(auctions_unlocked) == 0x01
+    trigger = ptr_valid(FULL_AUCTION_PTR)
+        && prev(bit4(AUCTIONS_UNLOCKED) == 0x00) 
+        && bit4(AUCTIONS_UNLOCKED) == 0x01
 )
 
 achievement(
     title = "[NEEDS_DEV] 6x Technical",
     description = "Get a 6x Technical Bonus or higher in any combat.",
     points = 3,
+    // TODO need to detect menu coming up, it currently can pop if the req was met but player team is status'd
     trigger = word(0x001c9ff2) >= 0x06 && byte(0x001c9ff3) != 0xff
-        && ptr_valid(full_combat_ptr) 
+        && ptr_valid(FULL_COMBAT_PTR) 
         && prev(active_unit_in_combat()) 
         && !active_unit_in_combat()
 )
@@ -2695,7 +2746,7 @@ achievement(
     title = "Power Overwhelming",
     description = "Get both of No Damage and Overwhelm bonuses from a single combat.",
     points = 5,
-    trigger = ptr_valid(full_combat_ptr) 
+    trigger = ptr_valid(FULL_COMBAT_PTR) 
         && bit0(0x001c9ff8) == 0x01
         && bit1(0x001c9ff8) == 0x01
         && prev(active_unit_in_combat()) 
@@ -2703,93 +2754,84 @@ achievement(
 )
 
 // Anime Teams
-// General concept: Win any battle while including a team composed of <team leader>, <requiredDemon> and <any other demon || otherRequiredDemon> 
-
-// Protag + Byakko + Suzaku
-// However, in the actual game they have different names :)
 // If This Can Solve Things, I'll Do It
 achievement(
     title = "A Few Episodes Too Late",
-    description = "Win any battle while including a team composed of the protagonist and Baihu.",
+    description = "Win any battle while including a team composed of the protagonist and his anime signature demon Baihu.",
     points = 3,
     trigger = pairing_present("Hero", "Baihu") && prev(in_combat()) && !in_combat() 
 )
-// Makoto + Power => "Makoto": 0x0a, or Makoto + Pallas Athena
 // I'm Doing It, If It Will Help Us
 achievement(
     title = "\"If It Will Help Us...\"",
-    description = "Win any battle while including a team composed of Makoto and Power.",
+    description = "Win any battle while including a team composed of Makoto and her anime signature demon Power.",
     points = 3,
     trigger = pairing_present("Makoto", "Power") && prev(in_combat()) && !in_combat() 
 )
 achievement(
     title = "\"Don't Be Thankin' Me\"",
-    description = "Win any battle while including a team composed of Keita and Berserker.",
+    description = "Win any battle while including a team composed of Keita and his anime signature demon Berserker.",
     points = 3,
     trigger = pairing_present("Keita", "Berserker") && prev(in_combat()) && !in_combat() 
 )
 achievement(
     title = "\"You See... I Can't Just Sit Still\"",
-    description = "Win any battle while including a team composed of Hinako and Lilim.",
+    description = "Win any battle while including a team composed of Hinako and her anime signature demon Lilim.",
     points = 3,
     trigger = pairing_present("Hinako", "Lilim") && prev(in_combat()) && !in_combat() 
 )
 achievement(
     title = "\"Like You, I Want To Try Hard\"",
-    description = "Win any battle while including a team composed of Io and Kikuri-Hime.",
+    description = "Win any battle while including a team composed of Io and her anime signature demon Kikuri-Hime.",
     points = 3,
     trigger = pairing_present("Io", "Kikuri-Hime") && prev(in_combat()) && !in_combat() 
 )
-// Ronaldo + Hagen => "Ronaldo": 0x03,
 // "Kuze Hibiki... He's Our Hope"
 achievement(
     title = "\"Think About It. What Is Proper?\"",
-    description = "Win any battle while including a team composed of Ronaldo and Hagen.",
+    description = "Win any battle while including a team composed of Ronaldo and his anime signature demon Hagen.",
     points = 3,
     trigger = pairing_present("Ronaldo", "Hagen") && prev(in_combat()) && !in_combat() 
 )
-// Joe + Orcus => "Joe": 0x0d,
 achievement(
     title = "\"Well, This Has Gotten Crazy, Huh?\"",
-    description = "Win any battle while including a team composed of Joe and Orcus.",
+    description = "Win any battle while including a team composed of Joe and his anime signature demon Orcus.",
     points = 3,
     trigger = pairing_present("Joe", "Orcus") && prev(in_combat()) && !in_combat() 
 )
-// Otome + Sarasvati with Drain => "Otome": 0x08,
-// "I'm a mysterious woman, aren't I?"
 achievement(
-    title = "[NEEDS_DEV / ANIME TIE IN]Otome",
-    description = "Win any battle while including a team composed of Otome and Sarasvati.",
+    title = "\"I'm a Mysterious Woman, Aren't I?\"",
+    description = "Win any battle while including a team composed of Otome and her anime signature demon Sarasvati.",
     points = 3,
     trigger = pairing_present("Otome", "Sarasvati") && prev(in_combat()) && !in_combat() 
 )
 achievement(
     title = "\"Violence Is Not Good\"",
-    description = "Win any battle while including a team composed of Jungo and Neko Shogun.",
+    description = "Win any battle while including a team composed of Jungo and his anime signature demon Neko Shogun.",
     points = 3,
     trigger = pairing_present("Jungo", "Neko Shogun") && prev(in_combat()) && !in_combat() 
 )
 achievement(
     title = "\"Don't Make Me Do That Again\"",
-    description = "Win any battle while including a team composed of Yamato and Cerberus.",
+    description = "Win any battle while including a team composed of Yamato and his anime signature demon Cerberus.",
     points = 3,
     trigger = pairing_present("Yamato", "Cerberus") && prev(in_combat()) && !in_combat() 
 )
 achievement(
     title = "No Forgiveness",
-    description = "Win any battle while including a team composed of Airi and Lorelei.",
+    description = "Win any battle while including a team composed of Airi and his anime signature demon Lorelei.",
     points = 3,
     trigger = pairing_present("Airi", "Lorelei") && prev(in_combat()) && !in_combat() 
 )
 achievement(
     title = "Fighting Frequency with Frequency",
-    description = "Win any battle while including a team composed of Fumi and Trumpeter.",
+    description = "Win any battle while including a team composed of Fumi and her anime signature demon Trumpeter.",
     points = 3,
     trigger = pairing_present("Fumi", "Trumpeter") && prev(in_combat()) && !in_combat() 
 )
 achievement(
     title = "\"Hee. HO.\"",
-    description = "Win any battle while including a team composed of Daichi and Black Frost.",
+    description = "Win any battle while including a team composed of Daichi and his anime signature demon Black Frost.",
     points = 3,
     trigger = pairing_present("Daichi", "Black Frost") && prev(in_combat()) && !in_combat() 
 )
@@ -2800,10 +2842,10 @@ achievement(
     title = "[NEEDS_DEV]Unique Demons",
     description = "Win any battle with 8 active demons that all have the Unique attribute.",
     points = 5,
-    trigger = day == 0x09 // TODO.
+    trigger = DAY == 0x09 // TODO.
 )
 
-// get any advanced race skill
+// TODO get any advanced race skill
 
 achievement(
     title = "[IN DEV]25% Compendium",
@@ -2842,7 +2884,7 @@ achievement(
     title="Spirits of the Second Run",
     description="Register all four demons of the Mitama race in your compendium.",
     points = 5,
-    trigger = prev(mitamas_registered() == 0x03) && measured(mitamas_registered == 0x04, when=always_true(), format="raw")
+    trigger = prev(mitamas_registered() == 0x03) && measured(mitamas_registered() == 0x04, when=always_true(), format="raw")
 )
 
 // Skill-Adjacent Achievements
@@ -2850,6 +2892,7 @@ achievement(
     title = "Fast-tracked Learning",
     description = "Learn 4 different skills in a single combat.",
     points = 5,
+    // Note: This is bugged or needs a different description. If you crack 2 skills off the same enemy it won't pop 
     trigger = repeated(4, (num_learned_skills() - prev(num_learned_skills()) == 0x01 && never(!on_grid_map())))
 )
 
@@ -2879,7 +2922,7 @@ achievement(
     title = "[NEEDS_TEST]Super Fast Dubhe",
     description = "Defeat Dubhe before it enters its second phase.",
     points = 0,
-    trigger = most_recent_mission == 0x3f4
+    trigger = MOST_RECENT_MISSION == 0x3f4
         && ((attacker_leader_is("Dubhe (Whole)") && attacker_leader_defeated()) || defender_leader_is("Dubhe (Whole)") && defender_leader_defeated()) 
 )
 
@@ -2887,143 +2930,209 @@ achievement(
 leaderboard(
     title = "Biggest Chump", // please don't actually call it this.
     description = "Highest Extra you've ever agreed to pay during a Demon auction.",
-    start = ptr_valid(full_auction_ptr) 
-        && byte(auction_ptr) == 0x1c 
-        && prev(byte(auction_ptr + 0x214)) == 0x00 && byte(auction_ptr + 0x214) == 0x01,
-    cancel = byte(auction_ptr) == 0x04 && prev(macca) == macca,
-    submit = prev(dword(auction_ptr + 0x1ec) == 0x00) && dword(auction_ptr + 0x1ec) > dword(auction_ptr + 0x1cc),
-    value = dword(auction_ptr + 0x1e4),
+    start = ptr_valid(FULL_AUCTION_PTR) 
+        && byte(AUCTION_PTR) == 0x1c 
+        && prev(byte(AUCTION_PTR + 0x214)) == 0x00 && byte(AUCTION_PTR + 0x214) == 0x01,
+    cancel = byte(AUCTION_PTR) == 0x04 && prev(MACCA) == MACCA,
+    submit = prev(byte(AUCTION_PTR + 0x214) == 0x01) && (byte(AUCTION_PTR + 0x214) >= 0x02 && byte(AUCTION_PTR + 0x214) <= 0x03),
+    value = dword(AUCTION_PTR + 0x1e4),
     format="VALUE",
     lower_is_better=false
+)
+leaderboard(
+    title = "Turns Used on Dubhe (New Game)",
+    description = "Fewest number of allied unit turns used to defeat Dubhe on a New Game file.",
+    start = !loaded_from_suspend() &&
+        !is_new_game_plus() && 
+        on_mission("Daichi's Resolve") && 
+        active_mission_started(),
+    cancel = MOST_RECENT_MISSION != event_id_by_name["Daichi's Resolve"],
+    submit = ((attacker_leader_is("Dubhe (Half)") && attacker_leader_defeated()) || defender_leader_is("Dubhe (Half)") && defender_leader_defeated()),
+    value = tally(0, allied_turn_starts()),
+    format="VALUE",
+    lower_is_better=true
+)
+leaderboard(
+    title = "Turns Used on Merak (New Game)",
+    description = "Fewest number of allied unit turns used to defeat Merak on a New Game file.",
+    start = !loaded_from_suspend() &&
+        !is_new_game_plus() &&
+        on_mission("Merak Arrives") && 
+        active_mission_started(),
+    cancel = MOST_RECENT_MISSION != event_id_by_name["Merak Arrives"],
+    submit = ((attacker_leader_is("Merak") && attacker_leader_defeated()) || defender_leader_is("Merak") && defender_leader_defeated()),
+    value = tally(0, allied_turn_starts()),
+    format="VALUE",
+    lower_is_better=true
+)
+leaderboard(
+    title = "Turns Used on Phecda (New Game)",
+    description = "Fewest number of allied turns used to defeat both forms of Phecda on a New Game file.",
+    start = !loaded_from_suspend() && 
+        !is_new_game_plus() &&
+        on_mission("Man of Fury") && 
+        in_combat_mission("Man of Fury (Phecda") && 
+        prev(bit3(0x00284b5a)) == 0x00 && 
+        bit3(0x00284b5a) == 0x01,
+    cancel = MOST_RECENT_MISSION != event_id_by_name["Man of Fury"],
+    submit = 
+        // Phys already defeated, Magic being defeated
+        ((
+            bit0(0x00284b56) == 0x01 
+            && (attacker_leader_is("Phecda (Magic)") || defender_leader_is ("Phecda (Magic)")) 
+            && prev(bit6(0x00284b55) == 0x00) 
+            && bit6(0x00284b55) == 0x01
+        ) ||
+        // Magic already defeated, Phys being defeated
+        (
+            bit6(0x00284b55) == 0x01 
+            && (attacker_leader_is("Phecda (Phys)") || defender_leader_is("Phecda (Phys)")) 
+            && prev(bit0(0x00284b56)) == 0x00 
+            && bit0(0x00284b56) == 0x01
+        )),
+    value = tally(0, allied_turn_starts()),
+    format="VALUE",
+    lower_is_better=true
+)
+leaderboard(
+    title = "Turns Used on Megrez (New Game)",
+    description = "Fewest number of allied unit turns used to defeat Merak on a New Game file.",
+    start = !loaded_from_suspend() &&
+        !is_new_game_plus() &&
+        on_mission("Delta Attack") && 
+        active_mission_started(),
+    cancel = MOST_RECENT_MISSION != event_id_by_name["Delta Attack"],
+    submit = ((attacker_leader_is("Megrez") && attacker_leader_defeated()) || defender_leader_is("Megrez") && defender_leader_defeated()),\
+    value = tally(0, allied_turn_starts())
 )
 
 // *** Rich Presence ***
 
-rich_presence_conditional_display(day == 0x01 && in_game_clock == 0x00 && macca == 0x00, "On the title screen")
-rich_presence_conditional_display(ptr_valid(full_auction_ptr), "{0} {1} | Getting more Demons from the Auction",
-    rich_presence_lookup("Day", day, day_of_week),
-    rich_presence_value("Time", in_game_clock, "SECS")
+rich_presence_conditional_display(DAY == 0x01 && IN_GAME_CLOCK == 0x00 && MACCA == 0x00, "On the title screen")
+rich_presence_conditional_display(ptr_valid(FULL_AUCTION_PTR), "{0} {1} | Getting more Demons from the Auction",
+    rich_presence_lookup("Day", DAY, day_of_week),
+    rich_presence_value("Time", IN_GAME_CLOCK, "SECS")
 )
 
-rich_presence_conditional_display(in_combat() && ptr_valid(full_combat_ptr) && active_unit_in_combat(), "{0} {1} | At {2} | {3} ⚔️ {4} | Time on Mission={5}",
-    rich_presence_lookup("Day", day, day_of_week),
-    rich_presence_value("Time", in_game_clock, "SECS"),
-    rich_presence_lookup("Location", current_location, location),
-    rich_presence_lookup("Unit", word(attacker_team_ptr + 0x0a), enemy_name_by_id),
-    rich_presence_lookup("Unit", word(defender_ptr + 0x0a), enemy_name_by_id),
-    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+rich_presence_conditional_display(in_combat() && ptr_valid(FULL_COMBAT_PTR) && active_unit_in_combat(), "{0} {1} | At {2} | {3} ⚔️ {4} | Time on Mission={5}",
+    rich_presence_lookup("Day", DAY, day_of_week),
+    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
+    rich_presence_lookup("Location", CURRENT_LOCATION, location),
+    rich_presence_lookup("Unit", word(ATTACKER_TEAM_PTR + 0x0a), enemy_name_by_id),
+    rich_presence_lookup("Unit", word(DEFENDER_PTR + 0x0a), enemy_name_by_id),
+    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
 )
 
 // If we could do lookups based on dynamic values, this could be one condition. Alas, it's four.
 rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x00), "{0} {1} | {2} is moving around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", day, day_of_week),
-    rich_presence_value("Time", in_game_clock, "SECS"),
-    rich_presence_lookup("Unit", word(combat_ptr + 0x276), enemy_name_by_id),
-    rich_presence_lookup("Location", current_location, location),
-    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+    rich_presence_lookup("Day", DAY, day_of_week),
+    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
+    rich_presence_lookup("Unit", word(COMBAT_PTR + 0x276), enemy_name_by_id),
+    rich_presence_lookup("Location", CURRENT_LOCATION, location),
+    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
 )
 
 rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x01), "{0} {1} | {2} is moving around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", day, day_of_week),
-    rich_presence_value("Time", in_game_clock, "SECS"),
-    rich_presence_lookup("Unit", word(combat_ptr + 0x4f2), enemy_name_by_id),
-    rich_presence_lookup("Location", current_location, location),
-    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+    rich_presence_lookup("Day", DAY, day_of_week),
+    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
+    rich_presence_lookup("Unit", word(COMBAT_PTR + 0x4f2), enemy_name_by_id),
+    rich_presence_lookup("Location", CURRENT_LOCATION, location),
+    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
 )
 
 rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x02), "{0} {1} | {2} is moving around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", day, day_of_week),
-    rich_presence_value("Time", in_game_clock, "SECS"),
-    rich_presence_lookup("Unit", word(combat_ptr + 0x76e), enemy_name_by_id),
-    rich_presence_lookup("Location", current_location, location),
-    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+    rich_presence_lookup("Day", DAY, day_of_week),
+    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
+    rich_presence_lookup("Unit", word(COMBAT_PTR + 0x76e), enemy_name_by_id),
+    rich_presence_lookup("Location", CURRENT_LOCATION, location),
+    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
 )
 
 rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x03), "{0} {1} | {2} is moving around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", day, day_of_week),
-    rich_presence_value("Time", in_game_clock, "SECS"),
-    rich_presence_lookup("Unit", word(combat_ptr + 0x9ea), enemy_name_by_id),
-    rich_presence_lookup("Location", current_location, location),
-    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+    rich_presence_lookup("Day", DAY, day_of_week),
+    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
+    rich_presence_lookup("Unit", word(COMBAT_PTR + 0x9ea), enemy_name_by_id),
+    rich_presence_lookup("Location", CURRENT_LOCATION, location),
+    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
 )
 
 // Similar with these, if we could do lookups based on dynamic values, this could be one condition. Alas, it's eight.
 rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x04), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", day, day_of_week),
-    rich_presence_value("Time", in_game_clock, "SECS"),
-    rich_presence_lookup("Unit", word(combat_ptr + 0xc66), enemy_name_by_id),
-    rich_presence_lookup("Location", current_location, location),
-    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+    rich_presence_lookup("Day", DAY, day_of_week),
+    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
+    rich_presence_lookup("Unit", word(COMBAT_PTR + 0xc66), enemy_name_by_id),
+    rich_presence_lookup("Location", CURRENT_LOCATION, location),
+    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
 )
 
 rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x05), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", day, day_of_week),
-    rich_presence_value("Time", in_game_clock, "SECS"),
-    rich_presence_lookup("Unit", word(combat_ptr + 0xee2), enemy_name_by_id),
-    rich_presence_lookup("Location", current_location, location),
-    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+    rich_presence_lookup("Day", DAY, day_of_week),
+    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
+    rich_presence_lookup("Unit", word(COMBAT_PTR + 0xee2), enemy_name_by_id),
+    rich_presence_lookup("Location", CURRENT_LOCATION, location),
+    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
 )
 
 rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x06), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", day, day_of_week),
-    rich_presence_value("Time", in_game_clock, "SECS"),
-    rich_presence_lookup("Unit", word(combat_ptr + 0x115e), enemy_name_by_id),
-    rich_presence_lookup("Location", current_location, location),
-    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+    rich_presence_lookup("Day", DAY, day_of_week),
+    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
+    rich_presence_lookup("Unit", word(COMBAT_PTR + 0x115e), enemy_name_by_id),
+    rich_presence_lookup("Location", CURRENT_LOCATION, location),
+    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
 )
 
 rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x07), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", day, day_of_week),
-    rich_presence_value("Time", in_game_clock, "SECS"),
-    rich_presence_lookup("Unit", word(combat_ptr + 0x13da), enemy_name_by_id),
-    rich_presence_lookup("Location", current_location, location),
-    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+    rich_presence_lookup("Day", DAY, day_of_week),
+    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
+    rich_presence_lookup("Unit", word(COMBAT_PTR + 0x13da), enemy_name_by_id),
+    rich_presence_lookup("Location", CURRENT_LOCATION, location),
+    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
 )
 
 rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x08), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", day, day_of_week),
-    rich_presence_value("Time", in_game_clock, "SECS"),
-    rich_presence_lookup("Unit", word(combat_ptr + 0x1656), enemy_name_by_id),
-    rich_presence_lookup("Location", current_location, location),
-    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+    rich_presence_lookup("Day", DAY, day_of_week),
+    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
+    rich_presence_lookup("Unit", word(COMBAT_PTR + 0x1656), enemy_name_by_id),
+    rich_presence_lookup("Location", CURRENT_LOCATION, location),
+    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
 )
 
 rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x09), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", day, day_of_week),
-    rich_presence_value("Time", in_game_clock, "SECS"),
-    rich_presence_lookup("Unit", word(combat_ptr + 0x18d2), enemy_name_by_id),
-    rich_presence_lookup("Location", current_location, location),
-    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+    rich_presence_lookup("Day", DAY, day_of_week),
+    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
+    rich_presence_lookup("Unit", word(COMBAT_PTR + 0x18d2), enemy_name_by_id),
+    rich_presence_lookup("Location", CURRENT_LOCATION, location),
+    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
 )
 
 rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x0a), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", day, day_of_week),
-    rich_presence_value("Time", in_game_clock, "SECS"),
-    rich_presence_lookup("Unit", word(combat_ptr + 0x1b4e), enemy_name_by_id),
-    rich_presence_lookup("Location", current_location, location),
-    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+    rich_presence_lookup("Day", DAY, day_of_week),
+    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
+    rich_presence_lookup("Unit", word(COMBAT_PTR + 0x1b4e), enemy_name_by_id),
+    rich_presence_lookup("Location", CURRENT_LOCATION, location),
+    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
 )
 
 rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x0b), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", day, day_of_week),
-    rich_presence_value("Time", in_game_clock, "SECS"),
-    rich_presence_lookup("Unit", word(combat_ptr + 0x1dca), enemy_name_by_id),
-    rich_presence_lookup("Location", current_location, location),
-    rich_presence_value("Combat Timer", total_time_in_mission / 30, "SECS")
+    rich_presence_lookup("Day", DAY, day_of_week),
+    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
+    rich_presence_lookup("Unit", word(COMBAT_PTR + 0x1dca), enemy_name_by_id),
+    rich_presence_lookup("Location", CURRENT_LOCATION, location),
+    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
 )
 
 // Non-combat things
 rich_presence_conditional_display(actively_in_event(), "{0} {1} 💰 {2} | At {3} | IGT={4}",
-    rich_presence_lookup("Day", day, day_of_week),
-    rich_presence_value("Time", in_game_clock, "SECS"),
-    rich_presence_value("Macca", macca),
-    rich_presence_lookup("Location", current_location, location),
-    rich_presence_value("In-Game Time", in_game_time / 60, "SECS")
+    rich_presence_lookup("Day", DAY, day_of_week),
+    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
+    rich_presence_value("Macca", MACCA),
+    rich_presence_lookup("Location", CURRENT_LOCATION, location),
+    rich_presence_value("In-Game Time", IN_GAME_TIME / 60, "SECS")
 )
 
 rich_presence_display("{0} {1} 💰 {2} | Thinking about where to go next | IGT={3}",
-    rich_presence_lookup("Day", day, day_of_week),
-    rich_presence_value("Time", in_game_clock, "SECS"),
-    rich_presence_value("Macca", macca),
-    rich_presence_value("In-Game Time", in_game_time / 60, "SECS")
+    rich_presence_lookup("Day", DAY, day_of_week),
+    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
+    rich_presence_value("Macca", MACCA),
+    rich_presence_value("In-Game Time", IN_GAME_TIME / 60, "SECS")
 )

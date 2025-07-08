@@ -1,6 +1,7 @@
 // Devil Survivor 2
 // #ID=9483
 // md5: 4b1ee25404620aed63ee09f24a9a6db5
+// #MinimumVersion=1.3.1
 
 // General note for myself: DS pointers usually take the form of 0x02xxxxxx
 // However, the DS only has 4MB of RAM so with RA addressing you can just take the 24 bytes denoted by xxxxxx and deref that
@@ -243,26 +244,26 @@ function pairing_present(team_leader_name, demon_name) {
         return (left_demon(0x00) == enemy_id_by_name[demon_name] || right_demon(0x00) == enemy_id_by_name[demon_name])
     } else {
         return (
-            (team_leader(0x01) == chararacter_ids_by_name["Ronaldo"] && (left_demon(0x01) == enemy_id_by_name[demon_name] || right_demon(0x01) == enemy_id_by_name[demon_name])) ||
-            (team_leader(0x02) == chararacter_ids_by_name["Ronaldo"] && (left_demon(0x02) == enemy_id_by_name[demon_name] || right_demon(0x02) == enemy_id_by_name[demon_name])) ||
-            (team_leader(0x03) == chararacter_ids_by_name["Ronaldo"] && (left_demon(0x03) == enemy_id_by_name[demon_name] || right_demon(0x03) == enemy_id_by_name[demon_name]))
+            (team_leader(0x01) == enemy_id_by_name[team_leader_name] && (left_demon(0x01) == enemy_id_by_name[demon_name] || right_demon(0x01) == enemy_id_by_name[demon_name])) ||
+            (team_leader(0x02) == enemy_id_by_name[team_leader_name] && (left_demon(0x02) == enemy_id_by_name[demon_name] || right_demon(0x02) == enemy_id_by_name[demon_name])) ||
+            (team_leader(0x03) == enemy_id_by_name[team_leader_name] && (left_demon(0x03) == enemy_id_by_name[demon_name] || right_demon(0x03) == enemy_id_by_name[demon_name]))
         )
     }
 }
 
 // Get the ID of the leader of the given combat team.
 function team_leader(team_offset) {
-    return word(0x002844e4 + (team_offset * 0x24))
+    return word(COMBAT_PTR + 0x26c + 0x0a + (team_offset * 0x27c))
 }
 
 // Get the ID of the demon deployed on the left-hand side of the input team.
 function left_demon(team_offset) {
-    return word(0x00284700 + 0x02 + (team_offset * 0x20))
+    return word(COMBAT_PTR + 0x26c + 0xae + (team_offset * 0x27c))
 }
 
 // Get the ID of the demon deployed on the right-hand side of the input team.
 function right_demon(team_offset) {
-    return word(0x00284700 + 0x02 + (team_offset * 0x20) + 0x20)
+    return word(COMBAT_PTR + 0x26c + 0x152 + (team_offset * 0x27c))
 }
 
 // Calculates offered Macca + Extra that the demon demands
@@ -2693,10 +2694,10 @@ achievement(
     description = "Have a demon give you back more Macca than the Extra it demanded.",
     points = 2,
     trigger = ptr_valid(FULL_AUCTION_PTR)
-        && MACCA < prev(MACCA)
         && byte(AUCTION_PTR) == 0x1c
+        && dword(AUCTION_PTR + 0x1e4) < dword(AUCTION_PTR + 0x1e8) 
+        && prev(byte(AUCTION_PTR + 0x214)) == 0x01 
         && byte(AUCTION_PTR + 0x214) == 0x02
-        && (dword(AUCTION_PTR + 0x1cc) + dword(AUCTION_PTR + 0x1e4) + MACCA) > prev(MACCA)
 )
 achievement(
     title = "Clearance Sale",
@@ -2736,11 +2737,12 @@ achievement(
     title = "[NEEDS_DEV] 6x Technical",
     description = "Get a 6x Technical Bonus or higher in any combat.",
     points = 3,
-    // TODO need to detect menu coming up, it currently can pop if the req was met but player team is status'd
     trigger = word(0x001c9ff2) >= 0x06 && byte(0x001c9ff3) != 0xff
         && ptr_valid(FULL_COMBAT_PTR) 
-        && prev(active_unit_in_combat()) 
+        && prev(active_unit_in_combat())
         && !active_unit_in_combat()
+        // we will detect when the bonus macca changes
+        && prev(dword(0x001be774)) != dword(0x001be774)
 )
 achievement(
     title = "Power Overwhelming",
@@ -2754,86 +2756,88 @@ achievement(
 )
 
 // Anime Teams
+// For all of these, there is a bug: if a player enters combat and leaves it without winning, they get the achievement
+// Need to find a better way of identifying during any combat that the player team has won
 // If This Can Solve Things, I'll Do It
 achievement(
     title = "A Few Episodes Too Late",
-    description = "Win any battle while including a team composed of the protagonist and his anime signature demon Baihu.",
+    description = "Use a team composed of the protagonist and his anime signature demon Baihu to defeat any enemy team leader.",
     points = 3,
-    trigger = pairing_present("Hero", "Baihu") && prev(in_combat()) && !in_combat() 
+    trigger = pairing_present("Hero", "Baihu") && ((attacker_leader_is("Hero") && defender_leader_defeated()) || defender_leader_is("Hero") && attacker_leader_defeated())
 )
 // I'm Doing It, If It Will Help Us
 achievement(
     title = "\"If It Will Help Us...\"",
-    description = "Win any battle while including a team composed of Makoto and her anime signature demon Power.",
+    description = "Use a team composed of Makoto and her anime signature demon Power to defeat any enemy team leader.",
     points = 3,
-    trigger = pairing_present("Makoto", "Power") && prev(in_combat()) && !in_combat() 
+    trigger = pairing_present("Makoto", "Power") && ((attacker_leader_is("Makoto") && defender_leader_defeated()) || defender_leader_is("Makoto") && attacker_leader_defeated())
 )
 achievement(
     title = "\"Don't Be Thankin' Me\"",
-    description = "Win any battle while including a team composed of Keita and his anime signature demon Berserker.",
+    description = "Use a team composed of Keita and his anime signature demon Berserker to defeat any team leader.",
     points = 3,
-    trigger = pairing_present("Keita", "Berserker") && prev(in_combat()) && !in_combat() 
+    trigger = pairing_present("Keita", "Berserker") && ((attacker_leader_is("Keita") && defender_leader_defeated()) || defender_leader_is("Keita") && attacker_leader_defeated())
 )
 achievement(
     title = "\"You See... I Can't Just Sit Still\"",
-    description = "Win any battle while including a team composed of Hinako and her anime signature demon Lilim.",
+    description = "Use a team composed of Hinako and her anime signature demon Lilim to defeat any team leader.",
     points = 3,
-    trigger = pairing_present("Hinako", "Lilim") && prev(in_combat()) && !in_combat() 
+    trigger = pairing_present("Hinako", "Lilim") && ((attacker_leader_is("Hinako") && defender_leader_defeated()) || defender_leader_is("Hinako") && attacker_leader_defeated())
 )
 achievement(
     title = "\"Like You, I Want To Try Hard\"",
-    description = "Win any battle while including a team composed of Io and her anime signature demon Kikuri-Hime.",
+    description = "Use a team composed of Io and her anime signature demon Kikuri-Hime to defeat any team leader.",
     points = 3,
-    trigger = pairing_present("Io", "Kikuri-Hime") && prev(in_combat()) && !in_combat() 
+    trigger = pairing_present("Io", "Kikuri-Hime") && ((attacker_leader_is("Io") && defender_leader_defeated()) || defender_leader_is("Io") && attacker_leader_defeated())
 )
 // "Kuze Hibiki... He's Our Hope"
 achievement(
     title = "\"Think About It. What Is Proper?\"",
-    description = "Win any battle while including a team composed of Ronaldo and his anime signature demon Hagen.",
+    description = "Use a team composed of Ronaldo and his anime signature demon Hagen to defeat any team leader.",
     points = 3,
-    trigger = pairing_present("Ronaldo", "Hagen") && prev(in_combat()) && !in_combat() 
+    trigger = pairing_present("Ronaldo", "Hagen") && ((attacker_leader_is("Ronaldo") && defender_leader_defeated()) || defender_leader_is("Ronaldo") && attacker_leader_defeated())
 )
 achievement(
     title = "\"Well, This Has Gotten Crazy, Huh?\"",
-    description = "Win any battle while including a team composed of Joe and his anime signature demon Orcus.",
+    description = "Use a team composed of Joe and his anime signature demon Orcus to defeat any team leader.",
     points = 3,
-    trigger = pairing_present("Joe", "Orcus") && prev(in_combat()) && !in_combat() 
+    trigger = pairing_present("Joe", "Orcus") && ((attacker_leader_is("Joe") && defender_leader_defeated()) || defender_leader_is("Joe") && attacker_leader_defeated())
 )
 achievement(
     title = "\"I'm a Mysterious Woman, Aren't I?\"",
-    description = "Win any battle while including a team composed of Otome and her anime signature demon Sarasvati.",
+    description = "Use a team compoed of Otome and her anime signature demon Sarasvati to defeat any team leader.",
     points = 3,
-    trigger = pairing_present("Otome", "Sarasvati") && prev(in_combat()) && !in_combat() 
+    trigger = pairing_present("Otome", "Sarasvati") && ((attacker_leader_is("Otome") && defender_leader_defeated()) || defender_leader_is("Otome") && attacker_leader_defeated())
 )
 achievement(
     title = "\"Violence Is Not Good\"",
-    description = "Win any battle while including a team composed of Jungo and his anime signature demon Neko Shogun.",
+    description = "Use a team composed of Jungo and his anime signature demon Neko Shogun to defeat any team leader.",
     points = 3,
-    trigger = pairing_present("Jungo", "Neko Shogun") && prev(in_combat()) && !in_combat() 
+    trigger = pairing_present("Jungo", "Neko Shogun") && ((attacker_leader_is("Jungo") && defender_leader_defeated()) || defender_leader_is("Jungo") && attacker_leader_defeated())
 )
 achievement(
     title = "\"Don't Make Me Do That Again\"",
-    description = "Win any battle while including a team composed of Yamato and his anime signature demon Cerberus.",
+    description = "Use a team composed of Yamato and his anime signature demon Cerberus to defeat any team leader.",
     points = 3,
-    trigger = pairing_present("Yamato", "Cerberus") && prev(in_combat()) && !in_combat() 
+    trigger = pairing_present("Yamato", "Cerberus") && ((attacker_leader_is("Yamato") && defender_leader_defeated()) || defender_leader_is("Yamato") && attacker_leader_defeated())
 )
 achievement(
     title = "No Forgiveness",
-    description = "Win any battle while including a team composed of Airi and his anime signature demon Lorelei.",
+    description = "Use a team composed of Airi and her anime signature demon Lorelei to defeat any team leader.",
     points = 3,
-    trigger = pairing_present("Airi", "Lorelei") && prev(in_combat()) && !in_combat() 
+    trigger = pairing_present("Airi", "Lorelei") && ((attacker_leader_is("Airi") && defender_leader_defeated()) || defender_leader_is("Airi") && attacker_leader_defeated())
 )
 achievement(
     title = "Fighting Frequency with Frequency",
-    description = "Win any battle while including a team composed of Fumi and her anime signature demon Trumpeter.",
+    description = "Use a team composed of Fumi and her anime signature demon Trumpeter to defeat any team leader.",
     points = 3,
-    trigger = pairing_present("Fumi", "Trumpeter") && prev(in_combat()) && !in_combat() 
+    trigger = pairing_present("Fumi", "Trumpeter") && ((attacker_leader_is("Fumi") && defender_leader_defeated()) || defender_leader_is("Fumi") && attacker_leader_defeated())
 )
 achievement(
     title = "\"Hee. HO.\"",
-    description = "Win any battle while including a team composed of Daichi and his anime signature demon Black Frost.",
+    description = "Use a team composed of Daichi and his anime signature demon Black Frost to defeat any team leader.",
     points = 3,
-    trigger = pairing_present("Daichi", "Black Frost") && prev(in_combat()) && !in_combat() 
+    trigger = pairing_present("Daichi", "Black Frost") && ((attacker_leader_is("Daichi") && defender_leader_defeated()) || defender_leader_is("Daichi") && attacker_leader_defeated())
 )
 
 // Compendium and Demon Recruitment
@@ -2971,7 +2975,7 @@ leaderboard(
     start = !loaded_from_suspend() && 
         !is_new_game_plus() &&
         on_mission("Man of Fury") && 
-        in_combat_mission("Man of Fury (Phecda") && 
+        in_combat_mission("Man of Fury (Phecda)") && 
         prev(bit3(0x00284b5a)) == 0x00 && 
         bit3(0x00284b5a) == 0x01,
     cancel = MOST_RECENT_MISSION != event_id_by_name["Man of Fury"],
@@ -3002,7 +3006,7 @@ leaderboard(
         on_mission("Delta Attack") && 
         active_mission_started(),
     cancel = MOST_RECENT_MISSION != event_id_by_name["Delta Attack"],
-    submit = ((attacker_leader_is("Megrez") && attacker_leader_defeated()) || defender_leader_is("Megrez") && defender_leader_defeated()),\
+    submit = ((attacker_leader_is("Megrez") && attacker_leader_defeated()) || defender_leader_is("Megrez") && defender_leader_defeated()),
     value = tally(0, allied_turn_starts())
 )
 

@@ -1,0 +1,39 @@
+# Current Roadmap
+
+- make challenges for Thursday
+- progress through Friday
+- progress through Saturday
+- progress through Sunday
+- finish leaderboards
+- progress through NG+ day1
+- progress through NG+ day2
+- progress through NG+ day3
+- progress through NG+ day4
+- progress through NG+ day5
+- progress through NG+ day6
+- progress through NG+ day7
+- progress through NG+ day8
+- finish RP by here
+- challenges for Friday
+- challenges for Saturday
+- challenges for Sunday
+- challenges for NG+ day1
+- challenges for NG+ day2
+- challenges for NG+ day3
+- challenges for NG+ day4
+- challenges for NG+ day5
+- challenges for NG+ day6
+- challenges for NG+ day7
+- touch up badges so that everything is 100% consistent
+- touch up achievements so that everything:
+    - has a Measured that makes sense where applicable
+    - has a Trigger where applicable
+    - triggers apply and remove as needed
+- have someone look over writing for spoilers and other
+- test playthrough for no free battle
+- when testing during playthru, test:
+    - game over in each mission
+    - suspend in each mission
+    - winning without suspend in each mission
+    - winning with suspend in each mission
+- above tests a single ending path

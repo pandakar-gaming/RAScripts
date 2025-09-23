@@ -1316,13 +1316,8 @@ function char_fate_stage_maxed(char_name) {
         cond = cond || (word(char_addr) == chararacter_ids_by_name[char_name] 
             && prev(byte(char_addr + 0x21)) == 0x04 
             && byte(char_addr + 0x21) == 0x05)
-
     }
-    // for char_addr in array_positions {
-    //     cond = cond || (word(char_addr) == chararacter_ids_by_name[char_name] 
-    //             && prev(byte(char_addr + 0x21)) == 0x04 
-    //             && byte(char_addr + 0x21) == 0x05)
-    // }
+
     return cond
 }
 
@@ -1341,7 +1336,7 @@ location = {
     0x08: "Fukutoshin Line Platform",
     0x09: "Omotesando",
     0x0a: "Shinbashi Special Platform",
-    0x0b: "??? 0x0b",
+    0x0b: "Bugeikan",
     0x0c: "Sengakuji",
     0x0d: "Tokyo Tower",
     0x0e: "Shiba Park",
@@ -1382,7 +1377,7 @@ location = {
     0x31: "Shin-Osaka Special Platform",
     0x32: "Triangle Plaza",
     0x33: "the Festgate", // The real name is "Festival Gate" but one of the characters calls it Festgate
-    0x34: "??? 0x34",
+    0x34: "Tsuutenkaku",
     0x35: "Shinsekai",
     0x36: "??? 0x36",
     0x37: "Akasaka Mall",
@@ -1427,22 +1422,28 @@ combat_mission_by_name = {
 
 // This is for events selected on the map
 event_id_by_name = {
-    "Death Clip":       0x3e9,
-    "Daichi's Crisis":  0x3f1,
-    "A Man Named Joe":  0x3f3,
-    "Daichi's Resolve": 0x3f4,
-    "App Abuser":       0x7d4,
-    "Never Say Die":    0x7d8,
-    "Demon-Hacked":     0x7da,
-    "Osaka Soul":       0x7dc,
-    "Merak Arrives":    0x7e2,
-    "Vs. Q":            0xbbb,
-    "Girl in Pursuit":  0xbbd,
-    "Boy in Combat":    0xbbe,        
-    "Hacker Revealed":  0xbbf,
-    "Saving Daichi":    0xbc2,
-    "Man of Fury":      0xbc4,
-    "Megrez Meeting":   0xfa8
+    "Death Clip":           0x3e9,
+    "Daichi's Crisis":      0x3f1,
+    "A Man Named Joe":      0x3f3,
+    "Daichi's Resolve":     0x3f4,
+    "App Abuser":           0x7d4,
+    "Never Say Die":        0x7d8,
+    "Demon-Hacked":         0x7da,
+    "Osaka Soul":           0x7dc,
+    "Merak Arrives":        0x7e2,
+    "Vs. Q":                0xbbb,
+    "Girl in Pursuit":      0xbbd,
+    "Boy in Combat":        0xbbe,        
+    "Hacker Revealed":      0xbbf,
+    "Saving Daichi":        0xbc2,
+    "Man of Fury":          0xbc4,
+    "Megrez Meeting":       0xfa8,
+    "Delta Battle":         0xfb5,
+    "Poisonous Day":        0x1389,
+    "Nataraja":             0x1398,
+    "Ananga":               0x1399,
+    "Unexpected Hostility": 0x139d,
+    "Victim of Foul Play":  0x139e
 }
 
 missions_by_id = {
@@ -1616,7 +1617,7 @@ function active_mission_completed(mission_name) {
 // Helper while we're still mapping out mails.
 // For every mailbox address we don't know about, tell us when it flips from 0xff to anything else.
 function mailbox_hunt_helper() {
-    starting_addr = 0x00284cb0
+    starting_addr = 0x00284cb1
     ending_addr = 0x00284d83
 
     mapped_addrs = [
@@ -1625,6 +1626,8 @@ function mailbox_hunt_helper() {
         0x00284cb5,
         0x00284cb6,
         0x00284cb7,
+        0x00284cb8,
+        0x00284cb9,
         0x00284ccb,
         0x00284ccc,
         0x00284cce,
@@ -1657,7 +1660,6 @@ achievement(
     trigger = DAY <= 0x08 && (
         // 0x00284ad8
         (prev(bit1(0x00284ad8)) == 0x00 && bit1(0x00284ad8) == 0x01) ||
-        (prev(bit4(0x00284ad8)) == 0x00 && bit4(0x00284ad8) == 0x01) ||
         (prev(bit5(0x00284ad8)) == 0x00 && bit5(0x00284ad8) == 0x01) ||
         (prev(bit6(0x00284ad8)) == 0x00 && bit6(0x00284ad8) == 0x01) ||
         (prev(bit7(0x00284ad8)) == 0x00 && bit7(0x00284ad8) == 0x01) ||
@@ -1668,17 +1670,13 @@ achievement(
         (prev(bit4(0x00284ad9)) == 0x00 && bit4(0x00284ad9) == 0x01) ||
         // 0x00284ada
         (prev(bit1(0x00284ada)) == 0x00 && bit1(0x00284ada) == 0x01) ||
-        (prev(bit2(0x00284ada)) == 0x00 && bit2(0x00284ada) == 0x01) ||
-        (prev(bit3(0x00284ada)) == 0x00 && bit3(0x00284ada) == 0x01) ||
         (prev(bit4(0x00284ada)) == 0x00 && bit4(0x00284ada) == 0x01) ||
         (prev(bit5(0x00284ada)) == 0x00 && bit5(0x00284ada) == 0x01) ||
         (prev(bit6(0x00284ada)) == 0x00 && bit6(0x00284ada) == 0x01) ||
         // 0x00284adb
         (prev(bit2(0x00284adb)) == 0x00 && bit2(0x00284adb) == 0x01) ||
         (prev(bit6(0x00284adb)) == 0x00 && bit6(0x00284adb) == 0x01) ||
-        (prev(bit7(0x00284adb)) == 0x00 && bit7(0x00284adb) == 0x01) ||
         // 0x00284adc
-        (prev(bit0(0x00284adc)) == 0x00 && bit0(0x00284adc) == 0x01) ||
         (prev(bit1(0x00284adc)) == 0x00 && bit1(0x00284adc) == 0x01) ||
         (prev(bit2(0x00284adc)) == 0x00 && bit2(0x00284adc) == 0x01) ||
         (prev(bit3(0x00284adc)) == 0x00 && bit3(0x00284adc) == 0x01) ||
@@ -1713,7 +1711,6 @@ achievement(
         (prev(bit3(0x00284ae1)) == 0x00 && bit3(0x00284ae1) == 0x01) ||
         (prev(bit4(0x00284ae1)) == 0x00 && bit4(0x00284ae1) == 0x01) ||
         (prev(bit6(0x00284ae1)) == 0x00 && bit6(0x00284ae1) == 0x01) ||
-        (prev(bit7(0x00284ae1)) == 0x00 && bit7(0x00284ae1) == 0x01) ||
         // 0x00284ae2 needs a sign of anything being there before we commit
         (prev(bit0(0x00284ae2)) == 0x00 && bit0(0x00284ae2) == 0x01) ||
         (prev(bit1(0x00284ae2)) == 0x00 && bit1(0x00284ae2) == 0x01) ||
@@ -1726,17 +1723,13 @@ achievement(
         // 0x00284ae3
         (prev(bit0(0x00284ae3)) == 0x00 && bit0(0x00284ae3) == 0x01) ||
         (prev(bit4(0x00284ae3)) == 0x00 && bit4(0x00284ae3) == 0x01) ||
-        (prev(bit5(0x00284ae3)) == 0x00 && bit5(0x00284ae3) == 0x01) ||
         (prev(bit6(0x00284ae3)) == 0x00 && bit6(0x00284ae3) == 0x01) ||
         (prev(bit7(0x00284ae3)) == 0x00 && bit7(0x00284ae3) == 0x01) ||
         // 0x00284ae4
         (prev(bit0(0x00284ae4)) == 0x00 && bit0(0x00284ae4) == 0x01) ||
         (prev(bit2(0x00284ae4)) == 0x00 && bit2(0x00284ae4) == 0x01) ||
         (prev(bit3(0x00284ae4)) == 0x00 && bit3(0x00284ae4) == 0x01) ||
-        (prev(bit6(0x00284ae4)) == 0x00 && bit6(0x00284ae4) == 0x01) ||
-        (prev(bit7(0x00284ae4)) == 0x00 && bit7(0x00284ae4) == 0x01) ||
         // 0x00284ae5
-        (prev(bit0(0x00284ae5)) == 0x00 && bit0(0x00284ae5) == 0x01) ||
         (prev(bit1(0x00284ae5)) == 0x00 && bit1(0x00284ae5) == 0x01) ||
         (prev(bit2(0x00284ae5)) == 0x00 && bit2(0x00284ae5) == 0x01) ||
         (prev(bit3(0x00284ae5)) == 0x00 && bit3(0x00284ae5) == 0x01) ||
@@ -1760,7 +1753,6 @@ achievement(
         (prev(bit4(0x00284ae7)) == 0x00 && bit4(0x00284ae7) == 0x01) ||
         (prev(bit5(0x00284ae7)) == 0x00 && bit5(0x00284ae7) == 0x01) ||
         (prev(bit6(0x00284ae7)) == 0x00 && bit6(0x00284ae7) == 0x01) ||
-        (prev(bit7(0x00284ae7)) == 0x00 && bit7(0x00284ae7) == 0x01) ||
         // 0x00284ae8
         (prev(bit0(0x00284ae8)) == 0x00 && bit0(0x00284ae8) == 0x01) ||
         (prev(bit1(0x00284ae8)) == 0x00 && bit1(0x00284ae8) == 0x01) ||
@@ -1770,13 +1762,10 @@ achievement(
         (prev(bit6(0x00284ae8)) == 0x00 && bit6(0x00284ae8) == 0x01) ||
         (prev(bit7(0x00284ae8)) == 0x00 && bit7(0x00284ae8) == 0x01) ||
         // 0x00284ae9
-        (prev(bit0(0x00284ae9)) == 0x00 && bit0(0x00284ae9) == 0x01) ||
         (prev(bit1(0x00284ae9)) == 0x00 && bit1(0x00284ae9) == 0x01) ||
         (prev(bit2(0x00284ae9)) == 0x00 && bit2(0x00284ae9) == 0x01) ||
         (prev(bit3(0x00284ae9)) == 0x00 && bit3(0x00284ae9) == 0x01) ||
         (prev(bit4(0x00284ae9)) == 0x00 && bit4(0x00284ae9) == 0x01) ||
-        (prev(bit5(0x00284ae9)) == 0x00 && bit5(0x00284ae9) == 0x01) ||
-        (prev(bit6(0x00284ae9)) == 0x00 && bit6(0x00284ae9) == 0x01) ||
         (prev(bit7(0x00284ae9)) == 0x00 && bit7(0x00284ae9) == 0x01) ||
         // 0x00284aea
         (prev(bit0(0x00284aea)) == 0x00 && bit0(0x00284aea) == 0x01) ||
@@ -1807,7 +1796,6 @@ achievement(
         (prev(bit6(0x00284af5)) == 0x00 && bit6(0x00284af5) == 0x01) ||
         (prev(bit7(0x00284af5)) == 0x00 && bit7(0x00284af5) == 0x01) ||
         // 0x00284af6
-        (prev(bit0(0x00284af6)) == 0x00 && bit0(0x00284af6) == 0x01) ||
         (prev(bit1(0x00284af6)) == 0x00 && bit1(0x00284af6) == 0x01) ||
         (prev(bit2(0x00284af6)) == 0x00 && bit2(0x00284af6) == 0x01) ||
         (prev(bit3(0x00284af6)) == 0x00 && bit3(0x00284af6) == 0x01) ||
@@ -1819,34 +1807,12 @@ achievement(
         (prev(bit1(0x00284af7)) == 0x00 && bit1(0x00284af7) == 0x01) ||
         (prev(bit2(0x00284af7)) == 0x00 && bit2(0x00284af7) == 0x01) ||
         (prev(bit3(0x00284af7)) == 0x00 && bit3(0x00284af7) == 0x01) ||
-        (prev(bit4(0x00284af7)) == 0x00 && bit4(0x00284af7) == 0x01) ||
-        (prev(bit5(0x00284af7)) == 0x00 && bit5(0x00284af7) == 0x01) ||
         (prev(bit6(0x00284af7)) == 0x00 && bit6(0x00284af7) == 0x01) ||
-        (prev(bit7(0x00284af7)) == 0x00 && bit7(0x00284af7) == 0x01) ||
         // 0x00284af8
-        (prev(bit0(0x00284af8)) == 0x00 && bit0(0x00284af8) == 0x01) ||
-        (prev(bit1(0x00284af8)) == 0x00 && bit1(0x00284af8) == 0x01) ||
-        (prev(bit2(0x00284af8)) == 0x00 && bit2(0x00284af8) == 0x01) ||
         (prev(bit3(0x00284af8)) == 0x00 && bit3(0x00284af8) == 0x01) ||
-        (prev(bit4(0x00284af8)) == 0x00 && bit4(0x00284af8) == 0x01) ||
-        (prev(bit5(0x00284af8)) == 0x00 && bit5(0x00284af8) == 0x01) ||
-        (prev(bit6(0x00284af8)) == 0x00 && bit6(0x00284af8) == 0x01) ||
-        (prev(bit7(0x00284af8)) == 0x00 && bit7(0x00284af8) == 0x01) ||
-        // 0x00284af9
-        (prev(bit0(0x00284af9)) == 0x00 && bit0(0x00284af9) == 0x01) ||
-        (prev(bit1(0x00284af9)) == 0x00 && bit1(0x00284af9) == 0x01) ||
-        (prev(bit2(0x00284af9)) == 0x00 && bit2(0x00284af9) == 0x01) ||
-        (prev(bit3(0x00284af9)) == 0x00 && bit3(0x00284af9) == 0x01) ||
-        (prev(bit4(0x00284af9)) == 0x00 && bit4(0x00284af9) == 0x01) ||
-        (prev(bit5(0x00284af9)) == 0x00 && bit5(0x00284af9) == 0x01) ||
-        (prev(bit6(0x00284af9)) == 0x00 && bit6(0x00284af9) == 0x01) ||
-        (prev(bit7(0x00284af9)) == 0x00 && bit7(0x00284af9) == 0x01) ||
+        // 0x00284af9 fully covered
         // 0x00284afa
-        (prev(bit0(0x00284afa)) == 0x00 && bit0(0x00284afa) == 0x01) ||
-        (prev(bit1(0x00284afa)) == 0x00 && bit1(0x00284afa) == 0x01) || 
-        (prev(bit2(0x00284afa)) == 0x00 && bit2(0x00284afa) == 0x01) || 
         (prev(bit3(0x00284afa)) == 0x00 && bit3(0x00284afa) == 0x01) || 
-        (prev(bit4(0x00284afa)) == 0x00 && bit4(0x00284afa) == 0x01) || 
         (prev(bit5(0x00284afa)) == 0x00 && bit5(0x00284afa) == 0x01) || 
         (prev(bit6(0x00284afa)) == 0x00 && bit6(0x00284afa) == 0x01) || 
         (prev(bit7(0x00284afa)) == 0x00 && bit7(0x00284afa) == 0x01) || 
@@ -2062,16 +2028,11 @@ achievement(
         (prev(bit1(0x00284b12)) == 0x00 && bit1(0x00284b12) == 0x01) ||
         (prev(bit2(0x00284b12)) == 0x00 && bit2(0x00284b12) == 0x01) ||
         (prev(bit3(0x00284b12)) == 0x00 && bit3(0x00284b12) == 0x01) ||
-        (prev(bit4(0x00284b12)) == 0x00 && bit4(0x00284b12) == 0x01) ||
         (prev(bit5(0x00284b12)) == 0x00 && bit5(0x00284b12) == 0x01) ||
         (prev(bit6(0x00284b12)) == 0x00 && bit6(0x00284b12) == 0x01) ||
-        (prev(bit7(0x00284b12)) == 0x00 && bit7(0x00284b12) == 0x01) ||
         // 0x00284b13
         (prev(bit0(0x00284b13)) == 0x00 && bit0(0x00284b13) == 0x01) ||
         (prev(bit1(0x00284b13)) == 0x00 && bit1(0x00284b13) == 0x01) ||
-        (prev(bit4(0x00284b13)) == 0x00 && bit4(0x00284b13) == 0x01) ||
-        (prev(bit5(0x00284b13)) == 0x00 && bit5(0x00284b13) == 0x01) ||
-        (prev(bit6(0x00284b13)) == 0x00 && bit6(0x00284b13) == 0x01) ||
         (prev(bit7(0x00284b13)) == 0x00 && bit7(0x00284b13) == 0x01) ||
         // 0x00284b14
         (prev(bit0(0x00284b14)) == 0x00 && bit0(0x00284b14) == 0x01) ||
@@ -2087,7 +2048,6 @@ achievement(
         (prev(bit1(0x00284b15)) == 0x00 && bit1(0x00284b15) == 0x01) ||
         (prev(bit2(0x00284b15)) == 0x00 && bit2(0x00284b15) == 0x01) ||
         (prev(bit3(0x00284b15)) == 0x00 && bit3(0x00284b15) == 0x01) ||
-        (prev(bit4(0x00284b15)) == 0x00 && bit4(0x00284b15) == 0x01) ||
         (prev(bit5(0x00284b15)) == 0x00 && bit5(0x00284b15) == 0x01) ||
         (prev(bit6(0x00284b15)) == 0x00 && bit6(0x00284b15) == 0x01) ||
         (prev(bit7(0x00284b15)) == 0x00 && bit7(0x00284b15) == 0x01) ||
@@ -2198,7 +2158,8 @@ achievement(
     description = "Avert the crisis shown in your death clip.",
     points = 1,
     trigger =  DAY == 0x01 && on_mission("Death Clip") && all_allied_teams_last_standing(3),
-    type = "progression"
+    type = "progression",
+    id=530957
 )
 achievement(
     title = "Just Needed Moral Support",
@@ -2209,21 +2170,24 @@ achievement(
             (attacker_leader_is("Daichi") && defender_leader_is("Bai Suzhen") && defender_leader_defeated()) || 
             (defender_leader_is("Daichi") && attacker_leader_is("Bai Suzhen") && attacker_leader_defeated())
         ),
-    type = "missable"
+    type = "missable",
+    id=530986
 )
 achievement(
     title = "She's Sealed Away for a Reason",
     description = "Avert the crisis shown in the second death clip on Sunday.",
     points = 1,
     trigger = on_mission("Daichi's Crisis") && active_mission_completed("Daichi's Crisis"),
-    type = "progression"
+    type = "progression",
+    id=530958
 )
 achievement(
     title = "Taking on Troublesome Contracts",
     description = "Help Joe resolve his outstanding contract.",
     points = 2,
     trigger = on_mission("A Man Named Joe") && active_mission_completed("A Man Named Joe"),
-    type = "progression"
+    type = "progression",
+    id=530959
 )
 achievement(
     title = "No Demon Left Behind",
@@ -2243,15 +2207,17 @@ achievement(
         // I'm observing that the game does not use a separate pointer to access teams when the game loads from suspend in this mission
         // which means that the validity check for the FULL_TEAM_ARRAY_PTR is actually doing work
         && disable_when(loaded_from_suspend(), until=MOST_RECENT_MISSION != 0x3f4),
-    type = "missable"
+    type = "missable",
+    id=530960
 )
 achievement(
     title = "Dubious Dubhe",
     description = "Defeat Dubhe.",
-    points = 3,
+    points = 5,
     trigger = on_mission("Daichi's Resolve")
         && ((attacker_leader_is("Dubhe (Half)") && attacker_leader_defeated()) || defender_leader_is("Dubhe (Half)") && defender_leader_defeated()),
-    type = "progression"
+    type = "progression",
+    id=530961
 )
 achievement(
     title = "I Take My Volunteer Work Seriously",
@@ -2300,7 +2266,8 @@ achievement(
     description = "Recruit Hinako to the party.",
     points = 3,
     trigger = on_mission("Never Say Die") && character_recruited("Hinako"),
-    type = "progression"
+    type = "progression",
+    id=530962
 )
 achievement(
     title = "Miasma Maestro",
@@ -2321,7 +2288,8 @@ achievement(
     description = "Prevent the death foretold by Monday's death clip.",
     points = 3,
     trigger = bit1(0x00284aee) == 0x01 && on_mission("Osaka Soul") && character_alive("Keita") && character_recruited("Keita"),
-    type = "missable"
+    type = "missable",
+    id=530963
 )
 achievement(
     title = "Treading Carefully",
@@ -2333,7 +2301,8 @@ achievement(
             && trigger_when((attacker_leader_is("Merak") && attacker_leader_defeated()) 
             || defender_leader_is("Merak") && defender_leader_defeated())
             && disable_when(prev(byte(TEAM_ARRAY_PTR + 0xc3b)) == 0x00 && byte(TEAM_ARRAY_PTR + 0xc3b) == 0x0a, until=MOST_RECENT_MISSION != 0x7e2),
-    type = "missable"
+    type = "missable",
+    id=530964
 )
 achievement(
     title = "Meticulous Merak",
@@ -2341,7 +2310,8 @@ achievement(
     points = 5,
     trigger = on_mission("Merak Arrives")  
         && ((attacker_leader_is("Merak") && attacker_leader_defeated()) || defender_leader_is("Merak") && defender_leader_defeated()),
-    type = "progression"
+    type = "progression",
+    id=530965
 )
 achievement(
     title = "A Fun-Filled Q...!",
@@ -2349,7 +2319,8 @@ achievement(
     points = 10,
     trigger = DAY == 0x03 && on_mission("Vs. Q")
         && ((defender_leader_is("Ghost Q") && defender_leader_defeated()) || (attacker_leader_is("Ghost Q") && attacker_leader_defeated())),
-    type = "missable"
+    type = "missable",
+    id=530966
 )
 achievement(
     title = "Hands Off The Food, Bud",
@@ -2365,7 +2336,8 @@ achievement(
     trigger = bit4(0x00284af2) == 0x01 && bit5(0x00284af2) == 0x01
         && (MOST_RECENT_MISSION == event_id_by_name["Girl in Pursuit"] || MOST_RECENT_MISSION == event_id_by_name["Boy in Combat"])
         && prev(actively_in_event()) && !actively_in_event(),
-    type = "progression"
+    type = "progression",
+    id=530967
 )
 achievement(
     title = "Second Time's the Charm",
@@ -2373,14 +2345,16 @@ achievement(
     points = 5,
     trigger = on_mission("Hacker Revealed") &&
         ((defender_leader_is("Botis") && defender_leader_defeated()) || (attacker_leader_is("Botis") && attacker_leader_defeated())),
-    type = "missable"
+    type = "missable",
+    id=530968
 )
 achievement(
     title = "Hmm... Mm?",
     description = "Complete 'Hacker Revealed.'",
     points = 3,
     trigger = on_mission("Hacker Revealed") && active_mission_completed("Hacker Revealed"),
-    type = "progression"
+    type = "progression",
+    id=530969
 )
 achievement(
     title = "Solid Snake Would Be Proud",
@@ -2389,14 +2363,16 @@ achievement(
     trigger = on_mission("Saving Daichi") && bit4(0x00284b1f) == 0x01 
         && trigger_when(prev(bit5(0x00284b56)) == 0x00) 
         && trigger_when(bit5(0x00284b56) == 0x01),
-    type = "missable"
+    type = "missable",
+    id=530970
 )
 achievement(
     title = "Savior of the Strong",
     description = "Prevent the death foretold by Tuesday's death clip.",
     points = 5,
     trigger = bit2(0x00284af1) == 0x01 && on_mission("Saving Daichi") && character_alive("Jungo") && character_recruited("Jungo"),
-    type = "missable"
+    type = "missable",
+    id=530971
 )
 achievement(
     title = "Brutal Efficiency",
@@ -2460,7 +2436,8 @@ achievement(
     // This will actually need a pair of clauses
     // There's multiple Phecda forms and you can defeat one or the other
     // This will also need to make sure that regardless of session, both Phecdas are defeated
-    type = "progression"
+    type = "progression",
+    id=530972
 )
 
 // Megrez missions: Have only the team leader on any team get hit when Megrez's Bud uses its Diastrophism skill.
@@ -2471,17 +2448,29 @@ achievement(
 // Power Outage: Ronaldo survives fight as well
 
 achievement(
-    title = "[NEEDS_DEV]Having Wings Seems Pretty Cool",
-    description = "On any team, have only the team leader get hit by Diastrophism.",
+    title = "I Have the High Ground Now",
+    description = "When Megrez uses Diastrophism in Bud of Malice, have only the team leader be damaged on any team.",
     points = 5,
-    trigger = DAY == 0x09,
+    trigger = day == 0x04 && on_mission("Bud of Malice") && ptr_valid(COMBAT_PTR) && byte(COMBAT_PTR + 0xc61) == 0x40 &&
+        (
+            // team 0
+            // combat_ptr + offset + team_lead_curr_hp > 0 && prev(team_lead_curr_hp) > team_lead_curr_hp && prev(team_lead_lhs_demon_curr_hp) == team_lead_lhs_demon_hp_curr_hp && prev(team_lead_rhs_demon_curr_hp) == team_lead_rhs_demon_curr_hp
+            () ||
+            // team 1
+            () ||
+            // team 2
+            () ||
+            // team 3
+            ()
+        )
+    ,
     type = "missable"
 )
 achievement(
-    title = "[NEEDS_DEV]Truly a Hard Choice",
+    title = "Truly a Hard Choice",
     description = "Defeat Neko Shogun in A Hard Choice",
     points = 5,
-    trigger = DAY == 0x09
+    trigger = on_mission("A Hard Choice") && ((attacker_leader_is("Neko Shogun") && attacker_leader_defeated()) || (defender_leader_is("Neko Shogun") && defender_leader_defeated()))
     // unsure if progression or missable, needs more testing
 )
 achievement(
@@ -2497,13 +2486,7 @@ achievement(
     trigger = DAY == 0x09,
     type = "missable"
 )
-achievement(
-    title = "[NEEDS_DEV]Don't Work Him Too Hard",
-    description = "Ensure Ronaldo lives through the Power Outage mission.",
-    points = 0,
-    trigger = DAY == 0x09
-)
-// Badge should be picture of Pyro Jack
+
 achievement(
     title = "[NEEDS_DEV]Savior of the Aloof",
     description = "Prevent the death foretold by Wednesday's death clip.",
@@ -2511,32 +2494,91 @@ achievement(
     trigger = MOST_RECENT_MISSION == 0xfb0 && character_alive("Joe") && prev(on_grid_map()) && !on_grid_map(),
     type = "missable"
 )
+
 achievement(
     title = "[NEEDS_DEV]No Time To Mess Around On My Phone",
     description = "Win the Delta Battle mission without clearing any of the miasma.",
     points = 5,
-    trigger = DAY == 0x09,
+    trigger = DAY == 0x09 && on_mission("Delta Battle") && ((attacker_leader_is("Megrez") && attacker_leader_defeated()) || (defender_leader_is("Megrez") && defender_leader_defeated())),
     type = "missable"
 )
 achievement(
-    title = "[NEEDS_DEV]Marooned Megrez",
+    title = "Who's Ya Daddy",
     description = "Defeat Megrez.",
-    points = 5,
-    trigger = DAY == 0x09,
+    points = 10,
+    trigger = on_mission("Delta Battle") && ((attacker_leader_is("Megrez") && attacker_leader_defeated()) || (defender_leader_is("Megrez") && defender_leader_defeated())),
     type = "progression"
 )
 
+// Thursday Missions
+achievement(
+    title = "It's Showtime",
+    description = "Complete the 'Poisonous Day' mission.",
+    points = 5,
+    trigger = on_mission("Poisonous Day") && prev(byte(0x00284cb8)) == 0x89 && byte(0x00284cb8) == 0x09,
+    type = "progression"
+)
+
+achievement(
+    title = "Recreating the Legend of Pasaputa",
+    description = "Successfully recruit two of your teammates to help recreate the legend of Pasaputa before JPs reconvenes.",
+    points = 1,
+    trigger = DAY == 0x05 && bit0(0x00284af9) == 0x01 && bit1(0x00284af9) == 0x01 && bit4(0x00284b12) == 0x01 && prev(IN_GAME_CLOCK) == 0x276 && IN_GAME_CLOCK == 0x294, 
+    type= "missable"
+)
+
+// Ananga Mission: win with Airi as an active and alive team
+// kama reduces to 1hp in this mission as the win
+achievement(
+    title ="I'm Bringing Sexy Ban",
+    description = "Complete the 'Ananga' mission with Airi as an active and alive team leader.",
+    points = 3,
+    trigger = DAY == 0x09,
+    type = "missable"
+)
+
+achievement(
+    title = "(Bifrons Actually Required)",
+    description = "Defeat Bifrons in either of 'Unexpected Hostility' or 'Victim of Foul Play'.",
+    points = 10,
+    trigger = (on_mission("Unexpected Hostility") || on_mission("Victim of Foul Play")) &&
+        (attacker_leader_is("Bifrons") || defender_leader_is("Bifrons")) && 
+        prev(bit4(0x00284b15)) == 0x00 && bit4(0x00284b15) == 0x01,
+    type = "missable"
+)
+
+achievement(
+    title = "The Savior's Savior",
+    description = "Prevent the death shown by Thursday's death clip.",
+    points = 5,
+    trigger = bit1(0x00284afa) == 0x01 && on_mission("Unexpected Hostility") && character_alive("Otome") && character_recruited("Otome"),
+    type = "missable"
+)
+
+// A White Lie for A Nation: Witness the conclusion of Kama and Shiva's legend.
+// just a one pointer to throw the player an extra point, but it's kind of bloat
+
+// alioth: 
+
 // *** Avoidable Deaths to Cover ***
-// Otome
 // Makoto
 // Delta Battle: Win the fight without clearing any Miasma.
 // Mystery Man
 // Need to decide if Dera-deka is being split up into two cheevos or one
+// executive decision: it's 1 achievement
 achievement(
-    title = "A Mysterious Man Indeed",
+    title = "Dera-Deka's Fate",
     description = "Witness all of the events surrounding the Mystery Man.",
     points = 5,
     trigger = DAY == 0x09, // TODO need more digging
+    // Mystery Man
+    // The Victim?
+    // A Family
+    // Identity
+    // Dera-Deka
+    // TO FIND: The Promise (17:00 - 18:00 Friday)
+    // loose logic idea: Measured 6/6
+    // triggers upon completing the combat 
     type = "missable"
 )
 
@@ -2546,31 +2588,35 @@ achievement(
     description = "Reach the end of Day 1 without ever entering any Free Battle on a New Game file.",
     points = 5,
     trigger = never(is_new_game_plus()) && !entered_free_battle() && IN_GAME_CLOCK == 0x4ec && DAY == 0x01 && prev(bit0(0x00284aec)) == 0x00 && bit0(0x00284aec) == 0x01,
-    type = "missable"
+    type = "missable",
+    id=530973
 )
 achievement(
     title = "Monday's Turmoil",
     description = "Reach the end of Day 2 without ever entering any Free Battle on a New Game file.",
     points = 10,
     trigger = never(is_new_game_plus()) && !entered_free_battle() && IN_GAME_CLOCK == 0x4ec && DAY == 0x02 && prev(bit2(0x00284aef)) == 0x00 && bit2(0x00284aef) == 0x01,
-    type = "missable"
+    type = "missable",
+    id=530974
 )
 achievement(
     title = "Tuesday's Disquiet",
     description = "Reach the end of Day 3 without ever entering any Free Battle on a New Game file.",
     points = 10,
     trigger = never(is_new_game_plus()) && !entered_free_battle() && IN_GAME_CLOCK == 0x4ec && DAY == 0x03 && prev(bit1(0x00284af2)) == 0x00 && bit1(0x00284af2) == 0x01,
-    type = "missable"
+    type = "missable",
+    id=530975
 )
 achievement(
     title = "Wednesday's Changes",
     description = "Reach the end of Day 4 without ever entering any Free Battle on a New Game file.",
     points = 10,
     trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(IN_GAME_CLOCK == 0x4ec) && IN_GAME_CLOCK == 0x00 && prev(DAY == 0x04) && DAY == 0x05,
-    type = "missable"
+    type = "missable",
+    id=530976
 )
 achievement(
-    title = "[NEEDS DEV]Thursday",
+    title = "Thursday's Shock",
     description = "Reach the end of Day 5 without ever entering any Free Battle on a New Game file.",
     points = 10,
     trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(IN_GAME_CLOCK == 0x4ec) && IN_GAME_CLOCK == 0x00 && prev(DAY == 0x05) && DAY == 0x06,
@@ -2687,7 +2733,8 @@ achievement(
         && (ptr_valid(dword(AUCTION_PTR + 0x188)) && byte(AUCTION_PTR + 0x1a5) == 0xff)
         && (ptr_valid(dword(AUCTION_PTR + 0x1a8)) && byte(AUCTION_PTR + 0x1c5) == 0xff)
         && byte(AUCTION_PTR) == 0x1c
-        && prev(MACCA) > MACCA
+        && prev(MACCA) > MACCA,
+    id=530977
 )
 achievement(
     title = "Math Is Not its Strong Suit",
@@ -2697,7 +2744,8 @@ achievement(
         && byte(AUCTION_PTR) == 0x1c
         && dword(AUCTION_PTR + 0x1e4) < dword(AUCTION_PTR + 0x1e8) 
         && prev(byte(AUCTION_PTR + 0x214)) == 0x01 
-        && byte(AUCTION_PTR + 0x214) == 0x02
+        && byte(AUCTION_PTR + 0x214) == 0x02,
+    id=530978
 )
 achievement(
     title = "Clearance Sale",
@@ -2705,7 +2753,8 @@ achievement(
     points = 3,
     trigger = never(!ptr_valid(FULL_AUCTION_PTR))
         && never(byte(AUCTION_PTR) == 0x0c)
-        && repeated(3, (prev(byte(AUCTION_PTR)) == 0x12 || prev(byte(AUCTION_PTR)) == 0x14) && byte(AUCTION_PTR) == 0x17)
+        && repeated(3, (prev(byte(AUCTION_PTR)) == 0x12 || prev(byte(AUCTION_PTR)) == 0x14) && byte(AUCTION_PTR) == 0x17),
+    id=530979
 )
 achievement(
     title="All That Glitters Is Macca, Actually",
@@ -2714,7 +2763,8 @@ achievement(
     trigger = bit5(AUCTION_UNLOCK_ELIGIBILITY) == 0x01
         && ptr_valid(FULL_AUCTION_PTR)
         && prev(bit2(AUCTIONS_UNLOCKED) == 0x00) 
-        && bit2(AUCTIONS_UNLOCKED) == 0x01
+        && bit2(AUCTIONS_UNLOCKED) == 0x01,
+    id=530980
 )
 achievement(
     title = "The Holy Grail of Demon Auctions",
@@ -2722,7 +2772,8 @@ achievement(
     points = 5,
     trigger = ptr_valid(FULL_AUCTION_PTR)
         && prev(bit3(AUCTIONS_UNLOCKED) == 0x00) 
-        && bit3(AUCTIONS_UNLOCKED) == 0x01
+        && bit3(AUCTIONS_UNLOCKED) == 0x01,
+    id=530981
 )
 achievement(
     title = "Embracing the Occult",
@@ -2730,7 +2781,8 @@ achievement(
     points = 5,
     trigger = ptr_valid(FULL_AUCTION_PTR)
         && prev(bit4(AUCTIONS_UNLOCKED) == 0x00) 
-        && bit4(AUCTIONS_UNLOCKED) == 0x01
+        && bit4(AUCTIONS_UNLOCKED) == 0x01,
+    id=530982
 )
 
 achievement(
@@ -2744,6 +2796,7 @@ achievement(
         // we will detect when the bonus macca changes
         && prev(dword(0x001be774)) != dword(0x001be774)
 )
+// TODO needs badge before upload
 achievement(
     title = "Power Overwhelming",
     description = "Get both of No Damage and Overwhelm bonuses from a single combat.",
@@ -2756,8 +2809,6 @@ achievement(
 )
 
 // Anime Teams
-// For all of these, there is a bug: if a player enters combat and leaves it without winning, they get the achievement
-// Need to find a better way of identifying during any combat that the player team has won
 // If This Can Solve Things, I'll Do It
 achievement(
     title = "A Few Episodes Too Late",
@@ -2765,7 +2816,6 @@ achievement(
     points = 3,
     trigger = pairing_present("Hero", "Baihu") && ((attacker_leader_is("Hero") && defender_leader_defeated()) || defender_leader_is("Hero") && attacker_leader_defeated())
 )
-// I'm Doing It, If It Will Help Us
 achievement(
     title = "\"If It Will Help Us...\"",
     description = "Use a team composed of Makoto and her anime signature demon Power to defeat any enemy team leader.",
@@ -2852,7 +2902,7 @@ achievement(
 // TODO get any advanced race skill
 
 achievement(
-    title = "[IN DEV]25% Compendium",
+    title = "[NEEDS BADGE]25% Compendium",
     description = "Complete 25% of the Demon compendium.",
     points = 5,
     trigger = prev(num_registered_compendium() == 0x37) && measured(num_registered_compendium() == 0x38, when=always_true(), format="raw")
@@ -2878,12 +2928,14 @@ achievement(
     points = 50,
     trigger = prev(num_registered_compendium() == 0xdc) && measured(num_registered_compendium() == 0xdd, when=always_true(), format="raw")
 )
+// TODO needs badge before upload
 achievement(
     title = "The Purest of Form",
     description = "Register all four demons of the Element race in your compendium.",
     points = 5,
     trigger = prev(elements_registered() == 0x03) && measured(elements_registered() == 0x04, when=always_true(), format="raw") 
 )
+// TODO needs badge before upload
 achievement(
     title="Spirits of the Second Run",
     description="Register all four demons of the Mitama race in your compendium.",
@@ -2904,21 +2956,24 @@ achievement(
     title = "The Power to Do Anything",
     description = "Learn all Command skills from Skill Break.",
     points = 25,
-    trigger = prev(num_learned_command_skills()) == 0x42 && measured(num_learned_command_skills() == 0x43, when=always_true(), format="raw")
+    trigger = prev(num_learned_command_skills()) == 0x42 && measured(num_learned_command_skills() == 0x43, when=always_true(), format="raw"),
+    id=530983
 )
 
 achievement(
     title = "Sedentary Strength",
     description = "Learn all Passive Skills from Skill Break.",
     points = 25,
-    trigger = prev(num_learned_passive_skills()) == 0x4b && measured(num_learned_passive_skills() == 0x4c, when=always_true(), format="raw")
+    trigger = prev(num_learned_passive_skills()) == 0x4b && measured(num_learned_passive_skills() == 0x4c, when=always_true(), format="raw"),
+    id=530984
 )
 
 achievement(
     title = "Automating the Helpful Things",
     description = "Learn all Auto Skills from Skill Break.",
     points = 25,
-    trigger = prev(num_learned_auto_skills()) == 0x1f && measured(num_learned_auto_skills() == 0x20, when=always_true(), format="raw")
+    trigger = prev(num_learned_auto_skills()) == 0x1f && measured(num_learned_auto_skills() == 0x20, when=always_true(), format="raw"),
+    id=530985
 )
 
 // New Game + Stuff
@@ -3003,11 +3058,22 @@ leaderboard(
     description = "Fewest number of allied unit turns used to defeat Merak on a New Game file.",
     start = !loaded_from_suspend() &&
         !is_new_game_plus() &&
-        on_mission("Delta Attack") && 
+        on_mission("Delta Battle") && 
         active_mission_started(),
-    cancel = MOST_RECENT_MISSION != event_id_by_name["Delta Attack"],
+    cancel = MOST_RECENT_MISSION != event_id_by_name["Delta Battle"],
     submit = ((attacker_leader_is("Megrez") && attacker_leader_defeated()) || defender_leader_is("Megrez") && defender_leader_defeated()),
     value = tally(0, allied_turn_starts())
+)
+leaderboard(
+    title = "Turns Used on Alioth",
+    description="Fewest allied unit turns used to defeat Alioth.",
+    start = !loaded_from_suspend() &&
+        !is_new_game_plus() &&
+        on_mission("") &&
+        active_mission_started(),
+        cancel = MOST_RECENT_MISSION != event_id_by_name[""],
+        submit = (),
+        value = tally(0, allied_turn_starts())
 )
 
 // *** Rich Presence ***

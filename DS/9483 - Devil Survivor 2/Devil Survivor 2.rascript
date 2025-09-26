@@ -1437,6 +1437,7 @@ event_id_by_name = {
     "Hacker Revealed":      0xbbf,
     "Saving Daichi":        0xbc2,
     "Man of Fury":          0xbc4,
+    "A Hard Choice":        0xfa7,
     "Megrez Meeting":       0xfa8,
     "Delta Battle":         0xfb5,
     "Poisonous Day":        0x1389,
@@ -1628,6 +1629,7 @@ function mailbox_hunt_helper() {
         0x00284cb7,
         0x00284cb8,
         0x00284cb9,
+        0x00284cbb,
         0x00284ccb,
         0x00284ccc,
         0x00284cce,
@@ -2257,7 +2259,9 @@ achievement(
     title = "I Hate Escorting People",
     description = "In 'Never Say Die', defeat all enemy demons with the civilians at full HP.",
     points = 5,
-    trigger = on_mission("Never Say Die") && team_leader_hp_full(0x0a) && team_leader_hp_full(0x0b)
+    trigger = on_mission("Never Say Die") 
+        && team_leader_hp_full(0x0a) 
+        && team_leader_hp_full(0x0b)
         && trigger_when(active_mission_completed("Never Say Die")),
     type = "missable"
 )
@@ -2414,6 +2418,9 @@ achievement(
         disable_when(repeated(0x08, bit3(0x00284b5a) == 0x01 && allied_turn_starts()), until=MOST_RECENT_MISSION != event_id_by_name["Man of Fury"]),
     type = "missable"
 )
+
+
+
 achievement(
     title = "Partitioned Phecda",
     description = "Defeat Phecda.",
@@ -2441,17 +2448,14 @@ achievement(
 )
 
 // Megrez missions: Have only the team leader on any team get hit when Megrez's Bud uses its Diastrophism skill.
-// ^ above can be either Megrez bud or refight
-// Confrontation: Fight both the JP members and civilians and clear everyone out.
-// App and Muggers: idk just clear it, throw the player a prog achievement
-// A Hard Choice: Defeat all the demons / Neko Shogun
-// Power Outage: Ronaldo survives fight as well
 
 achievement(
     title = "I Have the High Ground Now",
-    description = "When Megrez uses Diastrophism in Bud of Malice, have only the team leader be damaged on any team.",
+    description = "When Megrez uses Diastrophism, have only the team leader be damaged on any team.",
     points = 5,
-    trigger = day == 0x04 && on_mission("Bud of Malice") && ptr_valid(COMBAT_PTR) && byte(COMBAT_PTR + 0xc61) == 0x40 &&
+    trigger = day == 0x04 && 
+        (on_mission("Bud of Malice") || on_mission("Delta Battle")) && 
+        ptr_valid(COMBAT_PTR) && byte(COMBAT_PTR + 0xc61) == 0x40 &&
         (
             // team 0
             // combat_ptr + offset + team_lead_curr_hp > 0 && prev(team_lead_curr_hp) > team_lead_curr_hp && prev(team_lead_lhs_demon_curr_hp) == team_lead_lhs_demon_hp_curr_hp && prev(team_lead_rhs_demon_curr_hp) == team_lead_rhs_demon_curr_hp
@@ -2470,28 +2474,23 @@ achievement(
     title = "Truly a Hard Choice",
     description = "Defeat Neko Shogun in A Hard Choice",
     points = 5,
-    trigger = on_mission("A Hard Choice") && ((attacker_leader_is("Neko Shogun") && attacker_leader_defeated()) || (defender_leader_is("Neko Shogun") && defender_leader_defeated()))
-    // unsure if progression or missable, needs more testing
+    trigger = on_mission("A Hard Choice") && ((attacker_leader_is("Neko Shogun") && attacker_leader_defeated()) || (defender_leader_is("Neko Shogun") && defender_leader_defeated())),
+    type = "missable",
+    id=546531
 )
 achievement(
     title="Can I Go to Timor With This?",
     description="Unlock the ability to use the Terminal.",
     points = 1,
-    trigger = MOST_RECENT_MISSION == event_id_by_name["Megrez Meeting"] && prev(actively_in_event()) && !(actively_in_event())
+    trigger = MOST_RECENT_MISSION == event_id_by_name["Megrez Meeting"] && prev(actively_in_event()) && !(actively_in_event()),
+    type = "progression",
+    id=546532
 )
 achievement(
-    title = "[NEEDS_DEV]Y'all Gotta Cool It",
-    description = "Fight both the civilians and JP members in Confrontation and win.",
-    points = 3,
-    trigger = DAY == 0x09,
-    type = "missable"
-)
-
-achievement(
-    title = "[NEEDS_DEV]Savior of the Aloof",
+    title = "Savior of the Aloof",
     description = "Prevent the death foretold by Wednesday's death clip.",
-    points = 0,
-    trigger = MOST_RECENT_MISSION == 0xfb0 && character_alive("Joe") && prev(on_grid_map()) && !on_grid_map(),
+    points = 5,
+    trigger = MOST_RECENT_MISSION == 0xfb0 && character_alive("Joe") && character_recruited("Joe"),
     type = "missable"
 )
 
@@ -2513,7 +2512,7 @@ achievement(
 // Thursday Missions
 achievement(
     title = "It's Showtime",
-    description = "Complete the 'Poisonous Day' mission.",
+    description = "Complete the 'Poisonous Day' mission and unlock Hitokotonusi.",
     points = 5,
     trigger = on_mission("Poisonous Day") && prev(byte(0x00284cb8)) == 0x89 && byte(0x00284cb8) == 0x09,
     type = "progression"
@@ -2786,18 +2785,6 @@ achievement(
 )
 
 achievement(
-    title = "[NEEDS_DEV] 6x Technical",
-    description = "Get a 6x Technical Bonus or higher in any combat.",
-    points = 3,
-    trigger = word(0x001c9ff2) >= 0x06 && byte(0x001c9ff3) != 0xff
-        && ptr_valid(FULL_COMBAT_PTR) 
-        && prev(active_unit_in_combat())
-        && !active_unit_in_combat()
-        // we will detect when the bonus macca changes
-        && prev(dword(0x001be774)) != dword(0x001be774)
-)
-// TODO needs badge before upload
-achievement(
     title = "Power Overwhelming",
     description = "Get both of No Damage and Overwhelm bonuses from a single combat.",
     points = 5,
@@ -2805,11 +2792,11 @@ achievement(
         && bit0(0x001c9ff8) == 0x01
         && bit1(0x001c9ff8) == 0x01
         && prev(active_unit_in_combat()) 
-        && !active_unit_in_combat()
+        && !active_unit_in_combat(),
+    id=546537
 )
 
 // Anime Teams
-// If This Can Solve Things, I'll Do It
 achievement(
     title = "A Few Episodes Too Late",
     description = "Use a team composed of the protagonist and his anime signature demon Baihu to defeat any enemy team leader.",
@@ -2902,38 +2889,40 @@ achievement(
 // TODO get any advanced race skill
 
 achievement(
-    title = "[NEEDS BADGE]25% Compendium",
+    title = "Quarter-Filled Compendium",
     description = "Complete 25% of the Demon compendium.",
     points = 5,
-    trigger = prev(num_registered_compendium() == 0x37) && measured(num_registered_compendium() == 0x38, when=always_true(), format="raw")
+    trigger = prev(num_registered_compendium() == 0x37) && measured(num_registered_compendium() == 0x38, when=always_true(), format="raw"),
+    id = 546538
 )
-
 achievement(
-    title = "[IN DEV]50% Compendium",
+    title = "Halfway There",
     description = "Complete 50% of the Demon compendium.",
     points = 10,
-    trigger = prev(num_registered_compendium() == 0x6e) && measured(num_registered_compendium() == 0x6f, when=always_true(), format="raw")
+    trigger = prev(num_registered_compendium() == 0x6e) && measured(num_registered_compendium() == 0x6f, when=always_true(), format="raw"),
+    id = 546539
 )
-
 achievement(
-    title = "[IN DEV]75% Compendium",
+    title = "That's a Lot of Demons",
     description = "Complete 75% of the Demon compendium.",
     points = 25,
-    trigger = prev(num_registered_compendium() == 0xa6) && measured(num_registered_compendium() == 0xa7, when=always_true(), format="raw")
+    trigger = prev(num_registered_compendium() == 0xa6) && measured(num_registered_compendium() == 0xa7, when=always_true(), format="raw"),
+    id = 546540
 )
-
 achievement(
-    title = "[IN DEV]100% Compendium",
+    title = "Finally, Fully Filled",
     description = "Complete 100% of the Demon compendium.",
     points = 50,
-    trigger = prev(num_registered_compendium() == 0xdc) && measured(num_registered_compendium() == 0xdd, when=always_true(), format="raw")
+    trigger = prev(num_registered_compendium() == 0xdc) && measured(num_registered_compendium() == 0xdd, when=always_true(), format="raw"),
+    id = 546541
 )
-// TODO needs badge before upload
 achievement(
     title = "The Purest of Form",
     description = "Register all four demons of the Element race in your compendium.",
     points = 5,
-    trigger = prev(elements_registered() == 0x03) && measured(elements_registered() == 0x04, when=always_true(), format="raw") 
+    trigger = prev(elements_registered() == 0x03) && measured(elements_registered() == 0x04, when=always_true(), format="raw"),
+    id = 546534
+
 )
 // TODO needs badge before upload
 achievement(
@@ -2946,9 +2935,8 @@ achievement(
 // Skill-Adjacent Achievements
 achievement(
     title = "Fast-tracked Learning",
-    description = "Learn 4 different skills in a single combat.",
+    description = "Learn 4 skills, all from different enemies, in the same mission.",
     points = 5,
-    // Note: This is bugged or needs a different description. If you crack 2 skills off the same enemy it won't pop 
     trigger = repeated(4, (num_learned_skills() - prev(num_learned_skills()) == 0x01 && never(!on_grid_map())))
 )
 

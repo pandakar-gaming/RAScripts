@@ -67,8 +67,6 @@ function actively_in_event() => byte(0x00284ab8) == 0x1e
 // @param mission_name the String name of the mission that the player would see.
 function on_mission(mission_name) => actively_in_event() && MOST_RECENT_MISSION == event_id_by_name[mission_name]
 
-function on_any_mission(candidates) => actively_in_event() && any_of(candidates, c => MOST_RECENT_MISSION == event_id_by_name[c])
-
 // Check if the team taking their turn is engaged in combat.
 function active_unit_in_combat() => bit0(COMBAT_PTR + 0x1c) == 0
 

@@ -110,6 +110,15 @@ function check_on_main_menu(region) {
     }
 }
 
+// Inverse of #check_on_main_menu so that it doesn't get alt group'd when I negate it.
+function is_in_game(region) {
+    if (region == "PAL") {
+
+    } else if (region == "NTSC") {
+        return dword_be(0x00da70c4) != 0xffffffff && dword_be(0x00da70c8) != 0xffffffff
+    }
+}
+
 // $DA70C4: [32-bit BE] Current Map ID
 ZoneLookup = {
     0x0: "Blue Monk",
@@ -190,6 +199,8 @@ function sword_acquired(region, sword) {
     }
 }
 
+// Check that any blade broke during the active combat.
+// 
 function any_blade_broke(region) {
     if (region == "PAL") {
 
@@ -208,11 +219,114 @@ function current_level(region) {
 // Static array ranging [$0x00da758d, $0x00da75f8]
 // Every flag here is 0x00 = Not acquired, 0x01 = Acquired
 sword_flags_ntsc = {
-    "Kagura Muramasa": 0x00da758d,
-    "Shinmei": 0x00da758e,
-    "Yakumo": 0x00da758f,
-    "Hasebe Kunishige": 0x00da75be,
-    "Kashagiri Hiromitsu": 0x00da75c3,
+    "Kagura Muramasa":      0x00da758d,
+    "Shinmei":              0x00da758e,
+    "Yakumo":               0x00da758f,
+    "Hayate Muramasa":      0x00da7590,
+    "Kagero Muramasa":      0x00da7591,
+    "Nasagone Kotetsu":     0x00da7592,
+    "Natsumame Muramasa":   0x00da7593,
+    "Yunagi Muramasa":      0x00da7594,
+    "Edauchi Muramasa":     0x00da7595,
+    "Yoiyami Muramasa":     0x00da7596,
+    "Iganokami Kanemichi":  0x00da7597,
+    "Fumitsuki Muramasa":   0x00da7598,
+    "Hazuki Muramasa":      0x00da7599,
+    "Nagatsuki Muramasa":   0x00da759a,
+    "Magoroku Kanemoto":    0x00da759b,
+    "Kirisame Muramasa":    0x00da759c,
+    "Asaarashi Muramasa":   0x00da759d,
+    "Shigure Muramasa":     0x00da759e,
+    "Amagiri Muramasa":     0x00da759f,
+    "Kogarasumaru":         0x00da75a0,
+    "Yogetsu Muramasa":     0x00da75a1,
+    "Shimotsuki Muramasa":  0x00da75a2,    
+    "Gokugetsu Muramasa":   0x00da75a3,
+    "Kumokiri":             0x00da75a4,
+    "Hibashiri Muramasa":   0x00da75a5,
+    "Ishizuki Muramasa":    0x00da75a6,
+    "Kazanami Muramasa":    0x00da75a7,
+    "Suiran Muramasa":      0x00da75a8,
+    "Osafune Kanemitsu":    0x00da75a9,
+    "Hisame Muramasa":      0x00da75aa,
+    "Mizutachi Muramasa":   0x00da75ab,
+    "Tanahashi Muramasa":   0x00da75ac,
+    "Goro Masamune":        0x00da75ad,
+    "Tasogare Muramasa":    0x00da75ae,
+    "Reimei Muramasa":      0x00da75af,
+    "Gyoko Muramasa":       0x00da75b0,
+    "Tsubamegaeshi Muramasa": 0x00da75b1,
+    "Mumei Tamonoo":        0x00da75b2,
+    "Iwatoshi Muramasa":    0x00da75b3,
+    "Hiten Muramasa":       0x00da75b4,
+    "Meikyo Muramasa":      0x00da75b5,
+    "Sasanoyuki Muramasa":  0x00da75b6,
+    "Shusui Muramasa":      0x00da75b7,
+    "Nukehishaku Muramasa": 0x00da75b8,
+    "Chizuru Muramasa":     0x00da75b9,
+    "Hisui":                0x00da75ba,
+    "Sazanami":             0x00da75bb,
+    "Botan Muramasa":       0x00da75bc,
+    "Ayame Muramasa":       0x00da75bd,
+    "Hasebe Kunishige":     0x00da75be,
+    "Umitsubame Muramasa":  0x00da75bf,
+    "Getsuei Muramasa":     0x00da75c0,
+    "Hibari Muramasa":      0x00da75c1,
+    "Tachigesa Muramasa":   0x00da75c2,
+    "Kashagiri Hiromitsu":  0x00da75c3,
+    "Mutsuki Muramasa":     0x00da75c4,
+    "Kisaragi Muramasa":    0x00da75c5,
+    "Kagetsu Muramasa":     0x00da75c6,
+    "Izumokami Naganori":   0x00da75c7,
+    "Tamatsubaki Muramasa": 0x00da75c8,
+    "Yamabuki Muramasa":    0x00da75c9,
+    "Kuchinawa Muramasa":   0x00da75ca,
+    "Asazakura Muramasa":   0x00da75cb,
+    "Ichimonji Norimune":   0x00da75cc,
+    "Uzuki Muramasa":       0x00da75cd,
+    "Satsuki Muramasa":     0x00da75ce,
+    "Suigetsu Muramasa":    0x00da75cf,
+    "Shishiou":             0x00da75d0,
+    "Seika Muramasa":       0x00da75d1,
+    "Maidori Muramasa":     0x00da75d2,
+    "Midarekaze Muramasa":  0x00da75d3,
+    "Tsukimigiri Muramasa": 0x00da75d4,
+    "Onikiri":              0x00da75d5,
+    "Shiden Muramasa":      0x00da75d6,
+    "Hiei Muramasa":        0x00da75d7,
+    "Chisuberi Muramasa":   0x00da75d8,
+    "Mutsunokami Yoshiyuki": 0x00da75d9,
+    "Suiren Muramasa":      0x00da75da,
+    "Muhyo Muramasa":       0x00da75db,
+    "Shiratsuyu Muramasa":  0x00da75dc,
+    "Tsuyuharai Muramasa":  0x00da75dd,
+    "Tsukiotoshi":          0x00da75de,
+    "Setsugekka Muramasa":  0x00da75df,
+    "Kasai Muramasa":       0x00da75e0,
+    "Takinomizu Muramasa":  0x00da75e1,
+    "Oka Muramasa":         0x00da75e2,
+    "Chizakura Muramasa":   0x00da75e3,
+    "Torinuke Muramasa":    0x00da75e4,
+    "Tsukuyomi Muramasa":   0x00da75e5,
+    "Mikazuki Munechika":   0x00da75e6,
+    "Amatsu Muramasa":      0x00da75e7,
+    "Onimaru Kunitsuna":    0x00da75e8,
+    "Seiryu Muramasa":      0x00da75e9,
+    "Byakko Muramasa":      0x00da75ea,
+    "Jyuzumaru Tsunetsugu": 0x00da75eb,
+    "Suzaku Muramasa":      0x00da75ec,
+    "Kamikazu Muramasa":    0x00da75ed,
+    "Genbu Muramasa":       0x00da75ee,
+    "Ouryu Muramasa":       0x00da75ef,
+    "Mugen Muramasa":       0x00da75f0,
+    "Kagotsurube Muramasa":  0x00da75f1,
+    "Otenta Mitsuyo":       0x00da75f2,
+    "Okanehira":            0x00da75f3,
+    "Kyoshu Muramasa":      0x00da75f4,
+    "Suisei Muramasa":      0x00da75f5,
+    "Dojigiri Yasutsuna":   0x00da75f6,
+    "Tokiwatari Murasa":    0x00da75f7,
+    "Oboro Muramasa":       0x00da75f8
 }
 
 function num_current_swords(region) {
@@ -222,6 +336,86 @@ function num_current_swords(region) {
         cond = 0
         for i in range(0, 108) {
             cond = cond + byte(0x00da758d + i)
+        }
+        return cond
+    }
+}
+
+function num_momohime_swords(region) {
+    exclusive_swords = [
+        "Chizuru Muramasa",
+        "Hisui",
+        "Sazanami",
+        "Botan Muramasa",
+        "Ayame Muramasa",
+        "Hasebe Kunishige",
+        "Umitsubame Muramasa",
+        "Getsuei Muramasa",
+        "Hibari Muramasa",
+        "Tachigesa Muramasa",
+        "Kashagiri Hiromitsu",
+        "Mutsuki Muramasa",
+        "Kisaragi Muramasa",
+        "Kagetsu Muramasa",
+        "Izumokami Naganori",
+        "Tamatsubaki Muramasa",
+        "Yamabuki Muramasa",
+        "Kuchinawa Muramasa",
+        "Asazakura Muramasa",
+        "Ichimonji Norimune",
+        "Uzuki Muramasa",
+        "Satsuki Muramasa",
+        "Suigetsu Muramasa",
+        "Shishiou",
+        "Seika Muramasa",
+        "Maidori Muramasa",
+        "Midarekaze Muramasa",
+        "Tsukimigiri Muramasa",
+        "Onikiri",
+        "Shiden Muramasa",
+        "Hiei Muramasa",
+        "Chisuberi Muramasa",
+        "Mutsunokami Yoshiyuki",
+        "Suiren Muramasa",
+        "Muhyo Muramasa",
+        "Shiratsuyu Muramasa",
+        "Tsuyuharai Muramasa",
+        "Tsukiotoshi",
+        "Setsugekka Muramasa",
+        "Kasai Muramasa",
+        "Takinomizu Muramasa",
+        "Oka Muramasa",
+        "Chizakura Muramasa",
+        "Torinuke Muramasa",
+        "Onimaru Kunitsuna",
+        "Byakko Muramasa",
+        "Suzaku Muramasa",
+        "Genbu Muramasa"
+    ]
+    cond = 0
+    if (region == "PAL") {
+
+    } else if (region == "NTSC") {
+        for sword in exclusive_swords {
+            cond = cond + byte(sword_flags_ntsc[sword])
+        }
+        return cond
+    }
+
+    return cond
+}
+
+function num_kisuke_swords(region) {
+
+}
+
+function num_current_recipes(region) {
+    if (region == "PAL") {
+
+    } else if (region == "NTSC") {
+        cond = 0
+        for i in range(0, 19) {
+            cond = cond + byte(0x00da753c + i)
         }
         return cond
     }
@@ -254,6 +448,8 @@ ActiveSwordLookup = {
     0x13: "Umitsubame Muramasa",
     0x17: "Getsuei Muramasa",
     0x1e: "Hibari Muramasa",
+    0x21: "Tachigesa Muramasa",
+    0x29: "Mutsuki Muramasa",
 }
 
 // can do Blue Monk boss trigger on blade get
@@ -261,7 +457,9 @@ ActiveSwordLookup = {
 achievement(
     title = "[TEST] Active Combo", points = 0,
     description = "x50 plz",
-    trigger = dword_be(combat_pointer("NTSC")) + 0x6c == 0x31 &&
+    trigger =  is_in_game("NTSC") &&
+            dword_be(combat_pointer("NTSC") + 0x6c) == 0x31 &&
+            dword_be(combat_pointer("NTSC") + 0x7c) < 0x3e8 &&
             prev(dword_be(combat_pointer("NTSC") + 0x7c)) < 0x32 &&
             dword_be(combat_pointer("NTSC") + 0x7c) >= 0x32
 )
@@ -271,7 +469,8 @@ achievement(
     description = "Bring Momohime to Jinkuro and defend her body from the Blue Monk's assault.",
     points = 5,
     type = "progression",
-    trigger = is_ntsc() 
+    trigger = is_ntsc()
+            && is_in_game("NTSC")
             && active_character("NTSC") == 0x01 
             && active_zone("NTSC") == 0x00
             && prev(sword_acquired("NTSC", "Hasebe Kunishige") == 0x00) 
@@ -283,6 +482,7 @@ achievement(
     description = "Defeat Blue Monk as Momohime on Shura or Shigurui and achieve a combo of 100 or higher.",
     points = 5,
     trigger = is_ntsc() 
+            && is_in_game("NTSC")
             && active_character("NTSC") == 0x01 
             && __ornext((ntsc_difficulty() == 0x01 || ntsc_difficulty() == 0x02))
             && never(active_zone("NTSC") != 0x00)
@@ -297,6 +497,7 @@ achievement(
     description = "Defeat Blue Monk as Momohime on Shura or Shigurui without any blades breaking.",
     points = 5,
     trigger = is_ntsc() 
+            && is_in_game("NTSC")
             && active_character("NTSC") == 0x01 
             && __ornext(ntsc_difficulty() == 0x01 || ntsc_difficulty() == 0x02)
             && disable_when(any_blade_broke("NTSC"))
@@ -312,21 +513,69 @@ achievement(
     points = 5,
     type = "progression",
     trigger = is_ntsc() 
+            && is_in_game("NTSC")
             && active_character("NTSC") == 0x01 
             && active_zone("NTSC") == 0x27
             && prev(sword_acquired("NTSC", "Kashagiri Hiromitsu") == 0x00) 
             && sword_acquired("NTSC", "Kashagiri Hiromitsu") == 0x01
 )
 
+achievement(
+    title = "",
+    description = "ch3 boss",
+    points = 5,
+    type = "progression",
+    trigger = always_false()
+)
+
+achievement(
+    title = "Deadly Oboro Arts",
+    description = "Forge and collect every blade that only Momohime can equip.",
+    points = 25,
+    trigger = is_ntsc()
+        && prev(num_momohime_swords("NTSC")) == 0x2f
+        && measured(num_momohime_swords("NTSC") == 0x30, when=always_true(), format="raw")
+)
+
+achievement(
+    title = "",
+    description = "Forge and collect every blade that only Kisuke can equip.",
+    points = 25,
+    trigger = always_false()
+)
+
+achievement(
+    title = "",
+    description = "Collect every accessory across both characters.",
+    points = 10,
+    trigger = always_false()
+)
+
+achievement(
+    title = "Master Chef",
+    description = "Learn every recipe.",
+    points = 10,
+    trigger = always_false()
+)
+
+achievement(
+    title = "Unlimited Muramasa Works",
+    description = "Forge and collect all 108 blades.",
+    points = 25,
+    trigger = is_ntsc()
+        && prev(num_current_swords("NTSC")) == 0x6b
+        && measured(num_current_swords("NTSC") == 0x6c, when=always_true(), format="raw")
+)
+
 rich_presence_conditional_display(check_on_main_menu("NTSC"), "On the title screen")
 
-rich_presence_display("[{0}] lv. {1} {2} is tearing through {3} equipped with {4} | {5} / 108 ⚔️ | {6} ryo, {7} mon",
+rich_presence_display("[{0}] lv. {1} {2} is tearing through {3} | {4} / 108 ⚔️ | {5} / 19 📖 | {6} ryo, {7} mon",
     rich_presence_lookup("Difficulty", ntsc_difficulty(), DifficultyLookup),
     rich_presence_value("CurrLevel", current_level("NTSC"), "VALUE"),
     rich_presence_lookup("Character", active_character("NTSC"), CharacterLookup),
     rich_presence_lookup("Zone", active_zone("NTSC"), ZoneLookup),
-    rich_presence_lookup("ActiveSword", active_sword("NTSC"), ActiveSwordLookup),
     rich_presence_value("NumCurrentSwords", num_current_swords("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentBooks", num_current_recipes("NTSC"), "VALUE"),
     rich_presence_value("Ryo", current_ryo("NTSC"), "VALUE"),
     rich_presence_value("Mon", current_mon("NTSC"), "VALUE")
 )

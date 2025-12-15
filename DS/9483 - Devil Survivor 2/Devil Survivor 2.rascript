@@ -80,6 +80,7 @@ function unit_moving() => ptr_valid(FULL_COMBAT_PTR) && bit0(COMBAT_PTR + 0x1c) 
 
 // This is checking if the player *ever* entered a free battle, not if they're currently in one.
 // This is done by seeing if the player ever saw the tutorials for how Free Combat works.
+// TODO match how the game checks it, I tried unflagging these before beating Polaris and it didn't take
 function entered_free_battle() => bit0(0x00284ad7) == 0x01 || bit1(0x00284ad7) == 0x01
 
 // Check if the enemy we're looking for is the defending team in this active combat.
@@ -93,6 +94,8 @@ function attacker_leader_is(enemy_name) => ptr_valid(FULL_ATTACKER_TEAM_PTR) && 
 // See if the attacking leader was defeated in this particular combat.
 function attacker_leader_defeated() => ptr_valid(FULL_ATTACKER_TEAM_PTR)  && unit_defeated(ATTACKER_TEAM_PTR + 0x18)
 
+function attacker_leader_reduced_to_1hp() => ptr_valid(FULL_ATTACKER_TEAM_PTR)  && unit_soft_defeated(ATTACKER_TEAM_PTR + 0x18)
+
 // See if the unit on the left side of the attacker's team was defeated in this particular combat.
 function attacker_left_unit_defeated() => ptr_valid(FULL_ATTACKER_TEAM_PTR) && unit_defeated(ATTACKER_TEAM_PTR + 0xbc)
 
@@ -101,6 +104,8 @@ function attacker_right_unit_defeated() => ptr_valid(FULL_ATTACKER_TEAM_PTR) && 
 
 // See if the defending leader was defeated in this particular combat.
 function defender_leader_defeated() => ptr_valid(FULL_DEFENDER_TEAM_PTR) && unit_defeated(DEFENDER_PTR + 0x18)
+
+function defender_leader_reduced_to_1hp() => ptr_valid(FULL_DEFENDER_TEAM_PTR) && unit_soft_defeated(DEFENDER_PTR + 0x18)
 
 // See if the unit on the left side of the defender's team was defeated in this combat.
 function defender_left_unit_defeated() => ptr_valid(FULL_DEFENDER_TEAM_PTR) && unit_defeated(DEFENDER_PTR + 0xbc)
@@ -163,6 +168,10 @@ function game_over() => ptr_valid(dword(0x001beac8))
 // See: Man of Fury, Ronaldo for a specific example of this
 function unit_defeated(addr_unit_current_health) {
     return prev(word(addr_unit_current_health)) <= word(addr_unit_current_health + 0x02) && word(addr_unit_current_health) == 0x00
+}
+
+function unit_soft_defeated(addr_unit_current_health) {
+    return prev(word(addr_unit_current_health)) <= word(addr_unit_current_health + 0x02) && word(addr_unit_current_health) == 0x01
 }
 // Check if a character is still alive according to plot flags.
 // Some characters can permanently die if you meet (or fail to meet) certain conditions.
@@ -271,6 +280,16 @@ function true_auction_cost() => dword(FULL_AUCTION_PTR + 0x1cc) + dword(FULL_AUC
 
 // Stub for now until I have logic for this.
 function is_new_game_plus() => always_false()
+
+// Confirm we're on the ending path we intend to be on.
+// @param one of ["Anguished One", "Daichi (Real)", "Daichi", "Ronaldo", "Yamato"]
+function ending_selected(ending) {
+    if (ending == "Anguished One") {
+        return bit4(0x00284b10) == 0x01
+    } else if (ending == "Yamato") {
+        return bit2(0x00284b10) == 0x01
+    }
+}
 
 // The game offers a Suspend feature. This is very similar to using a Save State.
 // This doesn't work for some of the achievements being coded, so we get to detect if someone actually hopped on a mission
@@ -737,6 +756,7 @@ enemy_id_by_name = {
     "Phecda (Whole)": 0xce,
     "Megrez":         0xcf,
     "Alioth Core":    0xd0,
+    "Polaris":        0xd4,
     "Satan":          0xd5,
     "Beelzebub":      0xd6,
     "Belial":         0xd7,
@@ -782,8 +802,11 @@ enemy_id_by_name = {
     "Mizar Tentacle (2R)": 0x128,
     "Mizar Tentacle (2L)": 0x129,
     "Mizar Tentacle (3L)": 0x12a,
+    "Polaris A":        0x131,
     "Tall Woman":     0x134, // Makoto in Daichi's Crisis
     "Salaryman Carrying Food": 0x146, // in Girl in Pursuit. No, do not fix the indentation.
+    "Polaris B":        0x15f,
+    "Polaris (Complete)": 0x163, // the actual fr fr final boss
     "Vacant Woman":   0x164, // Fumi in Demon-Hacked
 }
 
@@ -997,6 +1020,7 @@ enemy_name_by_id = {
     0xce: "Phecda",
     0xcf: "Megrez",
     0xd0: "Alioth Core",
+    0xd4: "Polaris",
     0xd5: "Satan",
     0xd6: "Beelzebub",
     0xd7: "Belial",
@@ -1026,6 +1050,7 @@ enemy_name_by_id = {
     0xfc: "Yakuza",
     0xff: "Phecda",
     0x100: "Phecda",
+    0x103: "Dragon",
     0x10a: "Worker",
     0x10b: "Student",
     0x10c: "Young Man",
@@ -1053,11 +1078,22 @@ enemy_name_by_id = {
     0x128: "Tentacle",
     0x129: "Tentacle",
     0x12a: "Tentacle",
+    0x12c: "Benetsnach",
+    0x12d: "Benetsnach",
+    0x12e: "Benetsnach",
+    0x12f: "Benetsnach",
+    0x131: "Polaris A",
     0x134: "Tall Woman",  // Makoto in Daichi's Crisis
     0x137: "Daichi (Tied Up)", // Daichi in Saving Daichi / Goodbye Jungo
+    0x13f: "Guardian",
+    0x140: "Guardian",
+    0x141: "Guardian",
+    0x143: "Guardian",
     0x146: "Salaryman Carrying Food", // in Girl in Pursuit
     0x149: "Student",
+    0x15f: "Polaris B",
     0x161: "Fumi",        // in Hacker Revealed
+    0x163: "Polaris",
     0x164: "Vacant Woman" // Fumi in Demon-Hacked
 }
 
@@ -1358,10 +1394,10 @@ function char_fate_stage_maxed(char_name) {
 // This is the location you enter the event at; it's not the actual location your character might be at plot wise 
 // because sometimes characters move around to different spots mid event.
 location = {
-    0x00: "??? 0x00",
+    0x00: "Aoyama Cemetary",
     0x01: "??? 0x01",
-    0x02: "??? 0x02",
-    0x03: "??? 0x03",
+    0x02: "Akasaka Tunnel",
+    0x03: "Akihabara Street",
     0x04: "Sensouji",
     0x05: "Toyo Anzu",
     0x06: "Sunset Blvd",
@@ -1401,9 +1437,9 @@ location = {
     0x28: "Room ",
     0x29: "??? 0x29",
     0x2a: "Roppongi Hills",
-    0x2b: "??? 0x2b",
-    0x2c: "??? 0x2c",
-    0x2d: "??? 0x2d",
+    0x2b: "Akasaka Palace",
+    0x2c: "Nagata-cho, Tokyo Branch",
+    0x2d: "Asakusa Sensouji",
     0x2e: "Sankyu Line",
     0x2f: "Bickman",
     0x30: "Sankyu 3rd District",
@@ -1420,9 +1456,9 @@ location = {
     0x3b: "Tennouji Station Turnstile",
     0x3c: "??? 0x3c",
     0x3d: "Osaka Castle Park Square",
-    0x3e: "??? 0x3e",
+    0x3e: "Shinsekai Terminal Mk. 2",
     0x3f: "??? 0x3f", 
-    0x41: "??? 0x41",
+    0x41: "Shinsekai Terminal",
     0x42: "Centering Park",
     0x43: "Gold Clock",
     0x44: "Mei Station, Special Platform",
@@ -1487,6 +1523,8 @@ event_id_by_name = {
     "Food Chain":           0x1784,
     "Ronaldo Rises":        0x1785,
     "Vs. Tokyo":            0x1c85,
+    "Strong Breaker":       0x2072,
+    "New Tomorrow":         0x2073,
     "The Promise":          0x2432
 }
 
@@ -1627,7 +1665,7 @@ day_of_week = {
     0x05: "Thursday",
     0x06: "Friday",
     0x07: "Saturday",
-    0x08: "Final Day"
+    0x08: "Last Day"
 }
 
 // Game keeps a separate byte stored to indicate which unit is taking their turn.
@@ -1716,6 +1754,8 @@ function mail_triggered(mail_name) {
         addr = 0x00284cba
     } else if (mail_name == "Re: Hitokotonusi") {
         addr = 0x00284cb8
+    } else if (mail_name == "Re: Trumpeter") {
+        addr = 0x00284cc0
     }
 
     return byte(addr) != 0xff && prev(bit7(addr)) == 0x01 && bit7(addr) == 0x00
@@ -1734,8 +1774,6 @@ achievement(
     points = 0,
     trigger = IN_GAME_CLOCK != 0000 && (
         CURRENT_LOCATION == 0x01 ||
-        CURRENT_LOCATION == 0x02 ||
-        CURRENT_LOCATION == 0x03 ||
         CURRENT_LOCATION == 0x13 ||
         CURRENT_LOCATION == 0x14 ||
         CURRENT_LOCATION == 0x15 ||
@@ -1743,16 +1781,10 @@ achievement(
         CURRENT_LOCATION == 0x1f ||
         CURRENT_LOCATION == 0x22 ||
         CURRENT_LOCATION == 0x26 ||
-        CURRENT_LOCATION == 0x27 ||
         CURRENT_LOCATION == 0x29 ||
-        CURRENT_LOCATION == 0x2b ||
-        CURRENT_LOCATION == 0x2c ||
-        CURRENT_LOCATION == 0x2d ||
         CURRENT_LOCATION == 0x36 ||
         CURRENT_LOCATION == 0x3c ||
-        CURRENT_LOCATION == 0x3e ||
         CURRENT_LOCATION == 0x3f ||
-        CURRENT_LOCATION == 0x41 ||
         CURRENT_LOCATION == 0x52
     )
 )
@@ -1765,16 +1797,12 @@ achievement(
         // 0x00284ad8
         (prev(bit1(0x00284ad8)) == 0x00 && bit1(0x00284ad8) == 0x01) ||
         (prev(bit5(0x00284ad8)) == 0x00 && bit5(0x00284ad8) == 0x01) ||
-        (prev(bit7(0x00284ad8)) == 0x00 && bit7(0x00284ad8) == 0x01) ||
         // 0x00284ad9
-        (prev(bit0(0x00284ad9)) == 0x00 && bit0(0x00284ad9) == 0x01) ||
         (prev(bit1(0x00284ad9)) == 0x00 && bit1(0x00284ad9) == 0x01) ||
         (prev(bit3(0x00284ad9)) == 0x00 && bit3(0x00284ad9) == 0x01) ||
         (prev(bit4(0x00284ad9)) == 0x00 && bit4(0x00284ad9) == 0x01) ||
         // 0x00284ada
         (prev(bit1(0x00284ada)) == 0x00 && bit1(0x00284ada) == 0x01) ||
-        (prev(bit5(0x00284ada)) == 0x00 && bit5(0x00284ada) == 0x01) ||
-        (prev(bit6(0x00284ada)) == 0x00 && bit6(0x00284ada) == 0x01) ||
         // 0x00284adb
         (prev(bit2(0x00284adb)) == 0x00 && bit2(0x00284adb) == 0x01) ||
         (prev(bit6(0x00284adb)) == 0x00 && bit6(0x00284adb) == 0x01) ||
@@ -1798,7 +1826,6 @@ achievement(
         (prev(bit0(0x00284ae0)) == 0x00 && bit0(0x00284ae0) == 0x01) ||
         (prev(bit5(0x00284ae0)) == 0x00 && bit5(0x00284ae0) == 0x01) ||
         // 0x00284ae1
-        (prev(bit0(0x00284ae1)) == 0x00 && bit0(0x00284ae1) == 0x01) ||
         (prev(bit1(0x00284ae1)) == 0x00 && bit1(0x00284ae1) == 0x01) ||
         (prev(bit3(0x00284ae1)) == 0x00 && bit3(0x00284ae1) == 0x01) ||
         (prev(bit4(0x00284ae1)) == 0x00 && bit4(0x00284ae1) == 0x01) ||
@@ -1818,9 +1845,6 @@ achievement(
         (prev(bit2(0x00284ae4)) == 0x00 && bit2(0x00284ae4) == 0x01) ||
         (prev(bit3(0x00284ae4)) == 0x00 && bit3(0x00284ae4) == 0x01) ||
         // 0x00284ae5
-        (prev(bit1(0x00284ae5)) == 0x00 && bit1(0x00284ae5) == 0x01) ||
-        (prev(bit2(0x00284ae5)) == 0x00 && bit2(0x00284ae5) == 0x01) ||
-        (prev(bit3(0x00284ae5)) == 0x00 && bit3(0x00284ae5) == 0x01) ||
         // bit4 is likely Jungo's Find
         (prev(bit4(0x00284ae5)) == 0x00 && bit4(0x00284ae5) == 0x01) ||
         (prev(bit5(0x00284ae5)) == 0x00 && bit5(0x00284ae5) == 0x01) ||
@@ -1829,7 +1853,6 @@ achievement(
         // 0x00284ae6
         (prev(bit2(0x00284ae6)) == 0x00 && bit2(0x00284ae6) == 0x01) ||
         (prev(bit3(0x00284ae6)) == 0x00 && bit3(0x00284ae6) == 0x01) ||
-        (prev(bit7(0x00284ae6)) == 0x00 && bit7(0x00284ae6) == 0x01) ||
         // 0x00284ae7
         (prev(bit1(0x00284ae7)) == 0x00 && bit1(0x00284ae7) == 0x01) ||
         (prev(bit2(0x00284ae7)) == 0x00 && bit2(0x00284ae7) == 0x01) ||
@@ -1843,9 +1866,7 @@ achievement(
         (prev(bit2(0x00284ae8)) == 0x00 && bit2(0x00284ae8) == 0x01) ||
         (prev(bit3(0x00284ae8)) == 0x00 && bit3(0x00284ae8) == 0x01) ||
         (prev(bit4(0x00284ae8)) == 0x00 && bit4(0x00284ae8) == 0x01) ||
-        // 0x00284ae9
-        (prev(bit3(0x00284ae9)) == 0x00 && bit3(0x00284ae9) == 0x01) ||
-        (prev(bit4(0x00284ae9)) == 0x00 && bit4(0x00284ae9) == 0x01) ||
+        // 0x00284ae9 is fully covered
         // 0x00284aea is fully covered
         // 0x00284aeb is fully covered
         // 0x00284aec is fully covered
@@ -1979,21 +2000,8 @@ achievement(
         (prev(bit1(0x00284b08)) == 0x00 && bit1(0x00284b08) == 0x01) ||
         (prev(bit2(0x00284b08)) == 0x00 && bit2(0x00284b08) == 0x01) ||
         (prev(bit3(0x00284b08)) == 0x00 && bit3(0x00284b08) == 0x01) ||
-        // 0x00284b09
-        (prev(bit2(0x00284b09)) == 0x00 && bit2(0x00284b09) == 0x01) ||
-        (prev(bit3(0x00284b09)) == 0x00 && bit3(0x00284b09) == 0x01) ||
-        (prev(bit4(0x00284b09)) == 0x00 && bit4(0x00284b09) == 0x01) ||
-        (prev(bit5(0x00284b09)) == 0x00 && bit5(0x00284b09) == 0x01) ||
-        (prev(bit6(0x00284b09)) == 0x00 && bit6(0x00284b09) == 0x01) ||
-        (prev(bit7(0x00284b09)) == 0x00 && bit7(0x00284b09) == 0x01) ||
+        // 0x00284b09 fully covered
         // 0x00284b0a
-        (prev(bit0(0x00284b0a)) == 0x00 && bit0(0x00284b0a) == 0x01) ||
-        (prev(bit1(0x00284b0a)) == 0x00 && bit1(0x00284b0a) == 0x01) ||
-        (prev(bit2(0x00284b0a)) == 0x00 && bit2(0x00284b0a) == 0x01) ||
-        (prev(bit3(0x00284b0a)) == 0x00 && bit3(0x00284b0a) == 0x01) ||
-        (prev(bit4(0x00284b0a)) == 0x00 && bit4(0x00284b0a) == 0x01) ||
-        (prev(bit5(0x00284b0a)) == 0x00 && bit5(0x00284b0a) == 0x01) ||
-        (prev(bit6(0x00284b0a)) == 0x00 && bit6(0x00284b0a) == 0x01) ||
         (prev(bit7(0x00284b0a)) == 0x00 && bit7(0x00284b0a) == 0x01) ||
         // 0x00284b0b
         (prev(bit0(0x00284b0b)) == 0x00 && bit0(0x00284b0b) == 0x01) ||
@@ -2019,14 +2027,8 @@ achievement(
         (prev(bit2(0x00284b0d)) == 0x00 && bit2(0x00284b0d) == 0x01) ||
         (prev(bit3(0x00284b0d)) == 0x00 && bit3(0x00284b0d) == 0x01) ||
         (prev(bit4(0x00284b0d)) == 0x00 && bit4(0x00284b0d) == 0x01) ||
-        (prev(bit5(0x00284b0d)) == 0x00 && bit5(0x00284b0d) == 0x01) ||
-        (prev(bit6(0x00284b0d)) == 0x00 && bit6(0x00284b0d) == 0x01) ||
         (prev(bit7(0x00284b0d)) == 0x00 && bit7(0x00284b0d) == 0x01) ||
         // 0x00284b0e
-        (prev(bit0(0x00284b0e)) == 0x00 && bit0(0x00284b0e) == 0x01) ||
-        (prev(bit1(0x00284b0e)) == 0x00 && bit1(0x00284b0e) == 0x01) ||
-        (prev(bit2(0x00284b0e)) == 0x00 && bit2(0x00284b0e) == 0x01) ||
-        (prev(bit3(0x00284b0e)) == 0x00 && bit3(0x00284b0e) == 0x01) ||
         (prev(bit4(0x00284b0e)) == 0x00 && bit4(0x00284b0e) == 0x01) ||
         (prev(bit5(0x00284b0e)) == 0x00 && bit5(0x00284b0e) == 0x01) ||
         (prev(bit6(0x00284b0e)) == 0x00 && bit6(0x00284b0e) == 0x01) ||
@@ -2046,7 +2048,6 @@ achievement(
         // 0x00284b11
         (prev(bit0(0x00284b11)) == 0x00 && bit0(0x00284b11) == 0x01) ||
         (prev(bit1(0x00284b11)) == 0x00 && bit1(0x00284b11) == 0x01) ||
-        (prev(bit2(0x00284b11)) == 0x00 && bit2(0x00284b11) == 0x01) ||
         (prev(bit3(0x00284b11)) == 0x00 && bit3(0x00284b11) == 0x01) ||
         (prev(bit4(0x00284b11)) == 0x00 && bit4(0x00284b11) == 0x01) ||
         (prev(bit5(0x00284b11)) == 0x00 && bit5(0x00284b11) == 0x01) ||
@@ -2054,13 +2055,10 @@ achievement(
         (prev(bit7(0x00284b11)) == 0x00 && bit7(0x00284b11) == 0x01) ||
         // it goes down to here :(
         (prev(bit0(0x00284b12)) == 0x00 && bit0(0x00284b12) == 0x01) ||
-        (prev(bit1(0x00284b12)) == 0x00 && bit1(0x00284b12) == 0x01) ||
         (prev(bit2(0x00284b12)) == 0x00 && bit2(0x00284b12) == 0x01) ||
         (prev(bit3(0x00284b12)) == 0x00 && bit3(0x00284b12) == 0x01) ||
         (prev(bit5(0x00284b12)) == 0x00 && bit5(0x00284b12) == 0x01) ||
-        // 0x00284b13
-        (prev(bit1(0x00284b13)) == 0x00 && bit1(0x00284b13) == 0x01) ||
-        (prev(bit7(0x00284b13)) == 0x00 && bit7(0x00284b13) == 0x01) ||
+        // 0x00284b13 fully covered
         // 0x00284b14
         (prev(bit0(0x00284b14)) == 0x00 && bit0(0x00284b14) == 0x01) ||
         (prev(bit1(0x00284b14)) == 0x00 && bit1(0x00284b14) == 0x01) ||
@@ -2073,12 +2071,7 @@ achievement(
         (prev(bit2(0x00284b15)) == 0x00 && bit2(0x00284b15) == 0x01) ||
         (prev(bit3(0x00284b15)) == 0x00 && bit3(0x00284b15) == 0x01) ||
         (prev(bit5(0x00284b15)) == 0x00 && bit5(0x00284b15) == 0x01) ||
-        (prev(bit6(0x00284b15)) == 0x00 && bit6(0x00284b15) == 0x01) ||
         // 0x00284b16
-        (prev(bit0(0x00284b16)) == 0x00 && bit0(0x00284b16) == 0x01) ||
-        (prev(bit2(0x00284b16)) == 0x00 && bit2(0x00284b16) == 0x01) ||
-        (prev(bit3(0x00284b16)) == 0x00 && bit3(0x00284b16) == 0x01) ||
-        (prev(bit4(0x00284b16)) == 0x00 && bit4(0x00284b16) == 0x01) ||
         (prev(bit5(0x00284b16)) == 0x00 && bit5(0x00284b16) == 0x01) ||
         (prev(bit6(0x00284b16)) == 0x00 && bit6(0x00284b16) == 0x01) ||
         (prev(bit7(0x00284b16)) == 0x00 && bit7(0x00284b16) == 0x01) ||
@@ -2103,12 +2096,10 @@ achievement(
         // 0x00284b19
         (prev(bit0(0x00284b19)) == 0x00 && bit0(0x00284b19) == 0x01) ||
         (prev(bit2(0x00284b19)) == 0x00 && bit2(0x00284b19) == 0x01) ||
-        (prev(bit3(0x00284b19)) == 0x00 && bit3(0x00284b19) == 0x01) ||
         (prev(bit4(0x00284b19)) == 0x00 && bit4(0x00284b19) == 0x01) ||
         (prev(bit5(0x00284b19)) == 0x00 && bit5(0x00284b19) == 0x01) ||
         (prev(bit6(0x00284b19)) == 0x00 && bit6(0x00284b19) == 0x01) ||
         // 0x00284b1a
-        (prev(bit1(0x00284b1a)) == 0x00 && bit1(0x00284b1a) == 0x01) ||
         (prev(bit2(0x00284b1a)) == 0x00 && bit2(0x00284b1a) == 0x01) ||
         (prev(bit3(0x00284b1a)) == 0x00 && bit3(0x00284b1a) == 0x01) ||
         (prev(bit4(0x00284b1a)) == 0x00 && bit4(0x00284b1a) == 0x01) ||
@@ -2346,6 +2337,7 @@ achievement(
     id=530962
 )
 // likely cutting this, but still mulling it over
+// if we keep it, allow mission that isn't Osaka Soul
 achievement(
     title = "Miasma Maestro",
     description = "Clear all of the miasma in 'Osaka Soul' before any additional enemy teams are summoned and complete the mission without using the Suspend feature.",
@@ -2648,23 +2640,24 @@ achievement(
 )
 // A White Lie for A Nation: Witness the conclusion of Kama and Shiva's legend. just a one pointer to throw the player an extra point, but it's kind of bloat
 
-// this is a lot of damage, like a lot a lot
-// 25 pointer easily, but also be 100% sure you want this in and that YOU can get it on your dev file before pushing others to do the same
 achievement(
     title = "Epsilon Ursae Majoris",
     description = "Defeat Alioth without usage of the neutralizing agent.",
-    points = 25,
-    // have 1 of 3 flags for neutralizing agent
-    // need middle and right
-    trigger = DAY == 0x09,
-    type = "missable"
+    // in consideration: 25 pointer, if set is underscored by end of dev
+    points = 10,
+    trigger = on_mission("Alioth Core") 
+        && bit2(0x00284b58) != 0x01 
+        && trigger_when((attacker_leader_is("Alioth Core") && attacker_leader_defeated()) || defender_leader_is("Alioth Core") && defender_leader_defeated()),
+    type = "missable",
+    id = 547508
 )
 achievement(
     title = "Antagonizing Alioth",
     description = "Defeat Alioth Core.",
     points = 10,
     trigger = on_mission("Alioth Core") && ((attacker_leader_is("Alioth Core") && attacker_leader_defeated()) || defender_leader_is("Alioth Core") && defender_leader_defeated()),
-    type = "progression"
+    type = "progression",
+    id = 546585
 )
 // under consideration still
 // achievement(
@@ -2680,14 +2673,16 @@ achievement(
     description = "Complete the 'God of Luck' mission and receive mail about Bilikin afterward.",
     points = 10,
     trigger = MOST_RECENT_MISSION == event_id_by_name["God of Luck"] && mail_triggered("Re: Bilikin"), //byte(0x00284cba) != 0xff && prev(bit7(0x00284cba)) == 0x01 && bit7(0x00284cba) == 0x00,
-    type = "missable"
+    type = "missable",
+    id = 546680
 )
 achievement(
     title = "Chilly Crater Combat",
     description = "Complete the 'Barrier Failure' mission and witness the ensuing events.",
     points = 5,
     trigger = on_mission("Barrier Failure") && prev(bit5(0x00284b00)) == 0x00 && bit5(0x00284b00) == 0x01,
-    type = "progression"
+    type = "progression",
+    id = 547006
 )
 
 // Lamhfhada: Win; potential points if set is underscored
@@ -2751,6 +2746,7 @@ achievement(
     ) && MOST_RECENT_MISSION == event_id_by_name["The Promise"] && mail_triggered("Re: Jikoku"),
     type = "missable"
 )
+// ** Shared Saturday Missions **
 achievement(
     title = "The Destroyer",
     description = "Defeat Shiva in Vs. Tokyo.",
@@ -2759,13 +2755,118 @@ achievement(
     type = "missable",
     id = 547044
 )
+// Benetsnach 1: Complete 'Unknown Threat.'
+achievement(
+    title = ""
+)
+// Persuade Trumpeter
+achievement(
+    title = "Percussive Persuasion",
+    description = "Have Trumpeter agree to aid you in the battle against Benetsnach."
+)
+achievement(
+    title = "The Last of the Seven",
+    description = "Defeat Benetsnach.",
+    points = 25,
+    trigger = on_mission("Seven Down") && mail_triggered("Re: Trumpeter"),
+    type = "progression"
+)
+achievement(
+    title = "Eta Ursae Majoris",
+    description = "Defeat Benetsnach without using the Suspend feature and without Trumpeter being hurt.",
+    points = 25,
+    trigger = on_mission("Seven Down")
+        // pseudologic: 
+        // - enemy slot where Trumpeter is, is actually Trumpeter && never curr_hp < max_hp
+        // - main Benetsnach defeated
+        // - each child Benetsnach defeated
+        && once(
+        
+        ),
+    type = "missable"
+)
+achievement(
+    title = "Dragon Tamer",
+    description = "Defeat the Dragon.",
+    points = 5,
+    trigger = on_mission("Reared Head") && ((attacker_leader_is("Dragon") && attacker_leader_defeated()) || (defender_leader_is("Dragon") && defender_leader_defeated())),
+    type = "progression"
+)
+achievement(
+    title = "Alpha Ursae Minoris",
+    description = "Defeat Polaris without using the Suspend feature.",
+    points = 25,
+    trigger = on_mission("New Tomorrow")
+        && !loaded_from_suspend()
+        && (
+            (defender_leader_is("Polaris A") && defender_leader_defeated()) 
+            || (attacker_leader_is("Polaris A") && attacker_leader_defeated())
+        )    
+)
+achievement(
+    title = "At Trial's End",
+    description = "Defeat Polaris.",
+    points = 25,
+    trigger = on_mission("New Tomorrow") 
+        && (
+            (defender_leader_is("Polaris A") && defender_leader_defeated()) 
+            || (attacker_leader_is("Polaris A") && attacker_leader_defeated())
+        ),
+    type = "win_condition"
+)
+
+// ** Daichi's Way **
+// ** A New World **
+achievement(
+    title = "The World vs. Team Tokyo",
+    description = "Defeat Team Tokyo as Al Saiduq's team."
+)
+achievement(
+    title = "The World vs. Team Osaka",
+    description = "Defeat Team Osaka as Al Saiduq's team.",
+    points = 5,
+    trigger = ending_selected("Anguished One") && DAY == 0x09
+)
+achievement(
+    title = "The World vs. Team Nagoya",
+    description = "Defeat Team Nagoya as Al Saiduq's team.",
+    points = 5,
+    trigger = ending_selected("Anguished One") && DAY == 0x09
+)
+achievement(
+    title = "Dream's End",
+    description = "Defeat Ronaldo as Al Saiduq's team",
+    trigger = on_mission("Dream's End")
+    // the trigger here will be ronaldo dying of his own volition
+        && ending_selected("Anguished One")
+        && prev(bit1(0x00284dc2)) == 0x00
+        && bit1(0x00284dc2) == 0x01,
+    points = 5
+)
+achievement(
+    title = "Loose Ends",
+    description = "Defeat Yamato as Al Saiduq's team.",
+    points = 5,
+    trigger = on_mission("Strong Breaker")
+        && ending_selected("Anguished One")
+        && prev(bit1(0x00284de2)) == 0x00
+        && bit1(0x00284de2) == 0x01
+)
+achievement(
+    title = "Starting Fresh",
+    description = "Defeat Polaris and establish your new world order.",
+    points = 25,
+    trigger = on_mission("New Tomorrow")
+        && ending_selected("Anguished One")
+        && ((defender_leader_is("Polaris (Complete)") && defender_leader_defeated()) || (attacker_leader_is("Polaris (Complete)") && attacker_leader_defeated())),
+)
+// ** Yamato's Way **
+// ** Ronaldo's Way **
 // Settling Things: use Lugh mail as indicator
 achievement(
     title = ""
 )
-achievement(
-    title = ""
-)
+
 achievement(
     title = ""
 )
@@ -2822,14 +2923,18 @@ achievement(
     title = "A Saturday Towards Polaris",
     description = "Reach the end of Day 7 without ever entering any Free Battle on a New Game file.",
     points = 25,
-    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(IN_GAME_CLOCK == 0x4ec) && IN_GAME_CLOCK == 0x00 && prev(DAY == 0x07) && DAY == 0x08,
+    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(IN_GAME_CLOCK == 0x582) && IN_GAME_CLOCK == 0x00 && prev(DAY == 0x07) && DAY == 0x08,
     type = "missable"
 )
 achievement(
-    title = "[NEEDS DEV]Wait, You Can Just... Grind?",
+    title = "Wait, You Can Just... Grind?",
     description = "Complete any ending without ever entering any Free Battle on a New Game file.",
     points = 25,
-    trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(IN_GAME_CLOCK == 0x4ec) && IN_GAME_CLOCK == 0x00 && prev(DAY == 0x07) && DAY == 0x08,
+    trigger = never(is_new_game_plus()) && !entered_free_battle() 
+        && (
+            (defender_leader_is("Polaris A") && defender_leader_defeated()) 
+            || (attacker_leader_is("Polaris A") && attacker_leader_defeated())
+        ),
     type = "missable"
 )
 // FATE stages
@@ -2878,6 +2983,7 @@ achievement(
     trigger = actively_in_event() && char_fate_stage_maxed("Daichi"),
     id = 547050
 )
+// 
 achievement(
     title = "Otome's Best Friend",
     description = "Reach FATE stage 5 with Otome.",
@@ -3213,7 +3319,7 @@ leaderboard(
 )
 leaderboard(
     title = "Turns Used on Dubhe (New Game)",
-    description = "Fewest number of allied unit turns used to defeat Dubhe on a New Game file.",
+    description = "Fewest number of allied unit turns used to defeat Dubhe on New Game.",
     start = !loaded_from_suspend() &&
         !is_new_game_plus() && 
         on_mission("Daichi's Resolve") && 
@@ -3226,7 +3332,7 @@ leaderboard(
 )
 leaderboard(
     title = "Turns Used on Merak (New Game)",
-    description = "Fewest number of allied unit turns used to defeat Merak on a New Game file.",
+    description = "Fewest number of allied unit turns used to defeat Merak on New Game.",
     start = !loaded_from_suspend() &&
         !is_new_game_plus() &&
         on_mission("Merak Arrives") && 
@@ -3239,7 +3345,7 @@ leaderboard(
 )
 leaderboard(
     title = "Turns Used on Phecda (New Game)",
-    description = "Fewest number of allied turns used to defeat both forms of Phecda on a New Game file.",
+    description = "Fewest number of allied turns used to defeat both forms of Phecda on New Game.",
     start = !loaded_from_suspend() && 
         !is_new_game_plus() &&
         on_mission("Man of Fury") && 
@@ -3268,7 +3374,7 @@ leaderboard(
 )
 leaderboard(
     title = "Turns Used on Megrez (New Game)",
-    description = "Fewest number of allied unit turns used to defeat Merak on a New Game file.",
+    description = "Fewest number of allied unit turns used to defeat Merak on New Game.",
     start = !loaded_from_suspend() &&
         !is_new_game_plus() &&
         on_mission("Delta Battle") && 
@@ -3279,13 +3385,13 @@ leaderboard(
 )
 leaderboard(
     title = "Turns Used on Alioth",
-    description="Fewest allied unit turns used to defeat Alioth.",
+    description="Fewest allied unit turns used to defeat Alioth on New Game.",
     start = !loaded_from_suspend() &&
         !is_new_game_plus() &&
-        on_mission("") &&
+        on_mission("Alioth Core") &&
         active_mission_started(),
-        cancel = MOST_RECENT_MISSION != event_id_by_name[""],
-        submit = (),
+        cancel = MOST_RECENT_MISSION != event_id_by_name["Alioth Core"],
+        submit = ((attacker_leader_is("Alioth Core") && attacker_leader_defeated()) || defender_leader_is("Alioth Core") && defender_leader_defeated()),
         value = tally(0, allied_turn_starts())
 )
 leaderboard(
@@ -3293,10 +3399,13 @@ leaderboard(
     description = "Fewest allied turn units used to defeat Mizar.",
     start = !loaded_from_suspend() &&
         !is_new_game_plus() &&
-        on_mission("") &&
+        on_mission("Food Chain") &&
         active_mission_started(),
-        cancel = MOST_RECENT_MISSION != event_id_by_name[""],
-        submit = (),
+        cancel = MOST_RECENT_MISSION != event_id_by_name["Food Chain"],
+        submit = (
+            once(((defender_leader_is("Mizar Tentacle (3R)") && defender_leader_defeated()) || (attacker_leader_is("Mizar Tentacle (3R)") && attacker_leader_defeated())))
+            && once(((defender_leader_is("Mizar Tentacle (3L)") && defender_leader_defeated()) || (attacker_leader_is("Mizar Tentacle (3L)") && attacker_leader_defeated())))
+        ),
         value = tally(0, allied_turn_starts())
 )
 

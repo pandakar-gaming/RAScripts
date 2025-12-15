@@ -209,84 +209,200 @@ ZeroPadLookup = {
     9: "0",
 }
 
+current_calendar_week = byte(0x0e6e48)
+breeder_rank = byte(0x0e8544)
+// 0x00 = E
+// 0x01 = D
+// 0x02 = C
+// 0x03 = B
+// 0x04 = A
+// 0x05 = S
+monster_rank = byte(0x0b8888)
+// This is BCD. 
+current_month = byte(0x0e6e4c)
+
+current_tournament = byte(0x0e8b74)
+tournament_prize_rank = byte(0x0f6ecc)
+// This is really "monster 1 in tournament" but it's always you!
+function player_in_tournament() => word(0x0f6efc) == 0x0100
+tournament_phase = byte(0x0f6f48)
+
+player_masters_s_cup_wins = byte(0x0e86aa)
+player_monsters_cup_wins = byte(0x0e86ab)
+player_disk_cup_wins = byte(0x0e86ac)
+player_all_star_cup_wins = byte(0x0e86ad)
+
+function big4_monster_flag(tournament_name) {
+    if (tournament_name == "Masters S Cup") {
+        return bit0(0x0b88a0)
+    } else if (tournament_name == "Monsters Cup") {
+        return bit1(0x0b88a0)
+    } else if (tournament_name == "Disk Cup") {
+        return bit2(0x0b88a0)
+    } else if (tournament_name == "All-Star Cup") {
+        return bit3(0x0b88a0)
+    }
+}
+
 achievement(
     title = "Official E Win", points = 3, type="progression",
     description = "Win your first Official Tournament at Rank E and get to R-1 breeder rank.",
     id = 418990, badge = "496004", published = "4/19/2024 1:55:34 AM", modified = "9/2/2024 5:15:27 PM",
-    trigger = prior(byte(0x0E6E48)) == 0x04 && byte(0x0E6E48) == 0x01 && prev(byte(0x0E8544)) == 0x00 &&
-              byte(0x0E8544) == 0x01 && prior(byte(0x0F6F48)) == 0x04
+    trigger = current_calendar_week == 0x04 
+        && breeder_rank == 0x00 
+        && monster_rank == 0x00
+        && current_tournament == 0x00
+        && player_in_tournament()
+        && tournament_prize_rank == 0x00
+        && prev(tournament_phase) == 0x02
+        && tournament_phase == 0x03
 )
 
 achievement(
     title = "Official D Win", points = 3, type="progression",
     description = "Win your first Official Tournament at Rank D and get to R-2 breeder rank.",
     id = 419006, badge = "496005", published = "4/19/2024 3:01:13 AM", modified = "9/2/2024 5:15:28 PM",
-    trigger = prior(byte(0x0E6E48)) == 0x04 && byte(0x0E6E48) == 0x01 && prev(byte(0x0E8544)) == 0x01 &&
-              byte(0x0E8544) == 0x02
+    trigger = current_calendar_week == 0x04 
+        && breeder_rank == 0x01 
+        && monster_rank == 0x01
+        && current_tournament == 0x01
+        && player_in_tournament()
+        && tournament_prize_rank == 0x00
+        && prev(tournament_phase) == 0x02
+        && tournament_phase == 0x03
 )
 
 achievement(
     title = "Official C Win", points = 5, type="progression",
     description = "Win your first Official Tournament at Rank C and get to R-3 breeder rank.",
     id = 419307, badge = "496006", published = "4/20/2024 4:55:16 PM", modified = "9/2/2024 5:15:28 PM",
-    trigger = prior(byte(0x0E6E48)) == 0x04 && byte(0x0E6E48) == 0x01 && prev(byte(0x0E8544)) == 0x02 &&
-              byte(0x0E8544) == 0x03
+    trigger = current_calendar_week == 0x04 
+        && breeder_rank == 0x02 
+        && monster_rank == 0x02
+        && current_tournament == 0x02
+        && player_in_tournament()
+        && tournament_prize_rank == 0x00
+        && prev(tournament_phase) == 0x02
+        && tournament_phase == 0x03
 )
 
 achievement(
     title = "Official B Win", points = 5, type="progression",
     description = "Win your first Official Tournament at Rank B and get to R-4 breeder rank.",
     id = 419308, badge = "496007", published = "4/20/2024 4:55:16 PM", modified = "9/2/2024 5:15:29 PM",
-    trigger = prior(byte(0x0E6E48)) == 0x04 && byte(0x0E6E48) == 0x01 && prev(byte(0x0E8544)) == 0x03 &&
-              byte(0x0E8544) == 0x04
+    trigger = current_calendar_week == 0x04 
+        && breeder_rank == 0x03 
+        && monster_rank == 0x03
+        && current_tournament == 0x03
+        && player_in_tournament()
+        && tournament_prize_rank == 0x00
+        && prev(tournament_phase) == 0x02
+        && tournament_phase == 0x03
 )
 
 achievement(
     title = "Official A Win", points = 10, type="progression",
     description = "Win your first Official Tournament at Rank A and get to R-5 breeder rank.",
     id = 419309, badge = "496008", published = "4/20/2024 4:55:16 PM", modified = "9/2/2024 5:15:29 PM",
-    trigger = prior(byte(0x0E6E48)) == 0x04 && byte(0x0E6E48) == 0x01 && prev(byte(0x0E8544)) == 0x04 &&
-              byte(0x0E8544) == 0x05
+    trigger = current_calendar_week == 0x04 
+        && breeder_rank == 0x04 
+        && monster_rank == 0x04
+        && current_tournament == 0x04
+        && player_in_tournament()
+        && tournament_prize_rank == 0x00
+        && prev(tournament_phase) == 0x02
+        && tournament_phase == 0x03
 )
 
+// needs to be tested
 achievement(
     title = "We're Done, Right? ...Right?", points = 10, type="progression",
     description = "Win your first Official Tournament at Rank S and get to R-6 breeder rank.",
     id = 419310, badge = "496009", published = "4/20/2024 4:55:17 PM", modified = "9/2/2024 5:15:30 PM",
-    trigger = prior(byte(0x0E6E48)) == 0x04 && byte(0x0E6E48) == 0x01 && prev(byte(0x0E8544)) == 0x05 &&
-              byte(0x0E8544) == 0x06
+    trigger = current_calendar_week == 0x04 
+        && breeder_rank == 0x05 
+        && monster_rank == 0x05
+        && current_tournament == 0x05
+        && player_in_tournament()
+        && tournament_prize_rank == 0x00
+        && prev(tournament_phase) == 0x02
+        && tournament_phase == 0x03
 )
 
-// Needs an update to only look at tournament win
 achievement(
     title = "All-Star Cup Champion", points = 10, type="progression",
-    description = "Defeat Gureb of the Big 4.",
+    description = "Win the All-Star Cup for the first time.",
     id = 419311, badge = "495684", published = "4/20/2024 4:55:17 PM", modified = "9/2/2024 5:15:30 PM",
-    trigger = byte(0x0F6F00) == 0x5F && prev(byte(0x0F6F56)) == 0xFF && byte(0x0F6F56) == 0x01
+    trigger = byte(0x0F6F00) == 0x5F 
+        && breeder_rank >= 0x06 
+        && breeder_rank <= 0x0a
+        && monster_rank == 0x05
+        && current_tournament == 0x39
+        && player_in_tournament()
+        && tournament_prize_rank == 0x00
+        && prev(tournament_phase) == 0x02
+        && tournament_phase == 0x03
+        && prev(big4_monster_flag("All-Star Cup")) == 0x00
+        && big4_monster_flag("All-Star Cup") == 0x01
+        && prev(player_all_star_cup_wins) == 0x00
+        && player_all_star_cup_wins == 0x01
 )
 
-// Needs an update to only look at tournament win
 achievement(
     title = "Monsters Cup Champion", points = 10, type="progression",
-    description = "Defeat Redondo of the Big 4.",
+    description = "Win the Monsters Cup for the first time.",
     id = 419312, badge = "495685", published = "4/20/2024 4:55:17 PM", modified = "9/2/2024 5:15:30 PM",
-    trigger = byte(0x0F6F00) == 0x5D && prev(byte(0x0F6F56)) == 0xFF && byte(0x0F6F56) == 0x01
+    trigger = byte(0x0F6F00) == 0x5D 
+        && breeder_rank >= 0x06 
+        && breeder_rank <= 0x0a
+        && monster_rank == 0x05
+        && current_tournament == 0x37
+        && player_in_tournament()
+        && tournament_prize_rank == 0x00
+        && prev(tournament_phase) == 0x02
+        && tournament_phase == 0x03
+        && prev(big4_monster_flag("Monsters Cup")) == 0x00
+        && big4_monster_flag("Monsters Cup") == 0x01
+        && prev(player_monsters_cup_wins) == 0x00
+        && player_monsters_cup_wins == 0x01
 )
 
-// Needs an update to only look at tournament win
 achievement(
-    title = "Master S Cup Champion", points = 10, type="progression",
-    description = "Defeat Gabarn of the Big 4.",
+    title = "Masters S Cup Champion", points = 10, type="progression",
+    description = "Win the Masters S Cup for the first time.",
     id = 419313, badge = "495686", published = "4/20/2024 4:55:17 PM", modified = "9/2/2024 5:15:31 PM",
-    trigger = byte(0x0F6F00) == 0x5C && prev(byte(0x0F6F56)) == 0xFF && byte(0x0F6F56) == 0x01
+    trigger = byte(0x0F6F00) == 0x5C 
+        && breeder_rank >= 0x06 
+        && breeder_rank <= 0x0a
+        && monster_rank == 0x05
+        && current_tournament == 0x36
+        && player_in_tournament()
+        && tournament_prize_rank == 0x00
+        && prev(tournament_phase) == 0x02
+        && tournament_phase == 0x03
+        && prev(big4_monster_flag("Masters S Cup")) == 0x00
+        && big4_monster_flag("Masters S Cup") == 0x01
+        && prev(player_masters_s_cup_wins) == 0x00
+        && player_masters_s_cup_wins == 0x01
 )
 
-// Needs an update to only look at tournament win
 achievement(
     title = "Disk Cup Champion", points = 10, type="progression",
-    description = "Defeat Arbar of the Big 4.",
+    description = "Win the Disk Cup for the first time.",
     id = 419314, badge = "495687", published = "4/20/2024 4:55:18 PM", modified = "9/2/2024 5:15:31 PM",
-    trigger = byte(0x0F6F00) == 0x5E && prev(byte(0x0F6F56)) == 0xFF && byte(0x0F6F56) == 0x01
+    trigger = byte(0x0F6F00) == 0x5E
+        && breeder_rank >= 0x06 
+        && breeder_rank <= 0x0a
+        && monster_rank == 0x05
+        && current_tournament == 0x38
+        && player_in_tournament()
+        && tournament_prize_rank == 0x00
+        && prev(tournament_phase) == 0x02
+        && tournament_phase == 0x03
+        && prev(big4_monster_flag("Disk Cup")) == 0x00
+        && big4_monster_flag("Disk Cup") == 0x01
+        && prev(player_disk_cup_wins) == 0x00
+        && player_disk_cup_wins == 0x01
 )
 
 achievement(

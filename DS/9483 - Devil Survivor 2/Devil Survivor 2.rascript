@@ -279,7 +279,7 @@ function right_demon(team_offset) {
 function true_auction_cost() => dword(FULL_AUCTION_PTR + 0x1cc) + dword(FULL_AUCTION_PTR + 0x1e4)
 
 // Stub for now until I have logic for this.
-function is_new_game_plus() => always_false()
+function is_new_game_plus() => byte(0x00287074) > 0x00 || byte(0x00287075) > 0x00 || bit6(0x00284b1f) == 0x01 || bit7(0x00284b1f) == 0x01 || bit0(0x00284b20) == 0x01
 
 // Confirm we're on the ending path we intend to be on.
 // @param one of ["Anguished One", "Daichi (Real)", "Daichi", "Ronaldo", "Yamato"]
@@ -1420,7 +1420,7 @@ location = {
     0x17: "Cine City Plaza",
     0x18: "Kannagi-cho",
     0x19: "SL Plaza",
-    0x1a: "??? 0x1a",
+    0x1a: "Shinbashi Platform",
     0x1b: "Stadium",
     0x1c: "Diet Building",
     0x1d: "Nagata-cho, Tokyo Branch",
@@ -1487,6 +1487,8 @@ location = {
 combat_mission_by_name = {
     "Man of Fury (Ronaldo)": 0x0020,
     "Man of Fury (Phecda)": 0x0021,
+    "Father Time": 0x00b7, // This is the "Sage of Time" encounter
+    "Necromancer": 0x00b8, // Nebiros
 }
 
 // This is for events selected on the map
@@ -1856,7 +1858,6 @@ achievement(
         // 0x00284ae7
         (prev(bit1(0x00284ae7)) == 0x00 && bit1(0x00284ae7) == 0x01) ||
         (prev(bit2(0x00284ae7)) == 0x00 && bit2(0x00284ae7) == 0x01) ||
-        (prev(bit3(0x00284ae7)) == 0x00 && bit3(0x00284ae7) == 0x01) ||
         (prev(bit4(0x00284ae7)) == 0x00 && bit4(0x00284ae7) == 0x01) ||
         (prev(bit5(0x00284ae7)) == 0x00 && bit5(0x00284ae7) == 0x01) ||
         (prev(bit6(0x00284ae7)) == 0x00 && bit6(0x00284ae7) == 0x01) ||
@@ -2069,7 +2070,6 @@ achievement(
         // 0x00284b15
         (prev(bit1(0x00284b15)) == 0x00 && bit1(0x00284b15) == 0x01) ||
         (prev(bit2(0x00284b15)) == 0x00 && bit2(0x00284b15) == 0x01) ||
-        (prev(bit3(0x00284b15)) == 0x00 && bit3(0x00284b15) == 0x01) ||
         (prev(bit5(0x00284b15)) == 0x00 && bit5(0x00284b15) == 0x01) ||
         // 0x00284b16
         (prev(bit5(0x00284b16)) == 0x00 && bit5(0x00284b16) == 0x01) ||
@@ -2112,9 +2112,6 @@ achievement(
         (prev(bit2(0x00284b1b)) == 0x00 && bit2(0x00284b1b) == 0x01) ||
         (prev(bit3(0x00284b1b)) == 0x00 && bit3(0x00284b1b) == 0x01) ||
         (prev(bit4(0x00284b1b)) == 0x00 && bit4(0x00284b1b) == 0x01) ||
-        (prev(bit5(0x00284b1b)) == 0x00 && bit5(0x00284b1b) == 0x01) ||
-        (prev(bit6(0x00284b1b)) == 0x00 && bit6(0x00284b1b) == 0x01) ||
-        (prev(bit7(0x00284b1b)) == 0x00 && bit7(0x00284b1b) == 0x01) ||
         // 0x00284b1c
         (prev(bit0(0x00284b1c)) == 0x00 && bit0(0x00284b1c) == 0x01) ||
         (prev(bit1(0x00284b1c)) == 0x00 && bit1(0x00284b1c) == 0x01) ||
@@ -2414,6 +2411,8 @@ achievement(
     title = "Hmm... Mm?",
     description = "Complete 'Hacker Revealed.'",
     points = 3,
+    // Misfired when a miasma was dropped
+    // New logic: only up to 5 units left on map (fumi and at least one player controlled unit) and fumi reduced to 1hp
     trigger = on_mission("Hacker Revealed") && active_mission_completed("Hacker Revealed"),
     type = "progression",
     id=530969
@@ -2422,7 +2421,9 @@ achievement(
     title = "Solid Snake Would Be Proud",
     description = "Escort Daichi to the rescue point in Saving Daichi.",
     points = 5,
-    trigger = on_mission("Saving Daichi") && bit4(0x00284b1f) == 0x01 
+    trigger = on_mission("Saving Daichi")
+        && in_combat() // todo test this again
+        && bit4(0x00284b1f) == 0x01 
         && trigger_when(prev(bit5(0x00284b56)) == 0x00) 
         && trigger_when(bit5(0x00284b56) == 0x01),
     type = "missable",
@@ -3102,6 +3103,7 @@ achievement(
     id=530982
 )
 
+// false pop on ng+ sunday 1900 save state on beginning mission
 achievement(
     title = "Power Overwhelming",
     description = "Get both of No Damage and Overwhelm bonuses from a single combat.",
@@ -3211,15 +3213,6 @@ achievement(
 // Compendium and Demon Recruitment
 // *** Unique Teams and Fusion Things ***
 achievement(
-    title = "[NEEDS_DEV]Unique Demons",
-    description = "Win any battle with 8 active demons that all have the Unique attribute.",
-    points = 5,
-    trigger = DAY == 0x09 // TODO.
-)
-
-// TODO get any advanced race skill
-
-achievement(
     title = "Quarter-Filled Compendium",
     description = "Complete 25% of the Demon compendium.",
     points = 5,
@@ -3237,7 +3230,7 @@ achievement(
     title = "That's a Lot of Demons",
     description = "Complete 75% of the Demon compendium.",
     points = 25,
-    trigger = prev(num_registered_compendium() == 0xa6) && measured(num_registered_compendium() == 0xa7, when=always_true(), format="raw"),
+    trigger = prev(num_registered_compendium() == 0xa5) && measured(num_registered_compendium() == 0xa6, when=always_true(), format="raw"),
     id = 546540
 )
 achievement(
@@ -3257,7 +3250,7 @@ achievement(
 )
 // TODO needs badge before upload
 achievement(
-    title="Spirits of the Second Run",
+    title="Honorable Spirits",
     description="Register all four demons of the Mitama race in your compendium.",
     points = 5,
     trigger = prev(mitamas_registered() == 0x03) && measured(mitamas_registered() == 0x04, when=always_true(), format="raw")
@@ -3302,6 +3295,31 @@ achievement(
     points = 0,
     trigger = MOST_RECENT_MISSION == 0x3f4
         && ((attacker_leader_is("Dubhe (Whole)") && attacker_leader_defeated()) || defender_leader_is("Dubhe (Whole)") && defender_leader_defeated()) 
+)
+achievement(
+    title = "",
+    description = "Defeat Phecda in its complete form.",
+    points = 5,
+    trigger = in_combat_mission("Man of Fury (Phecda)") 
+        && ((attacker_leader_is("")))
+)
+achievement(
+    title = "New World, Same Old Geezer",
+    description = "In New Game Plus, defeat the Sage of Time on Monday.",
+    points = 5,
+    trigger = is_new_game_plus()
+        && DAY == 0x02 
+        && in_combat_mission("Father Time")
+        && ((attacker_leader_is("Sage of Time") && attacker_leader_defeated()) || defender_leader_is("Sage of Time") && defender_leader_defeated())
+)
+achievement(
+    title = "All For Her",
+    description = "Defeat Nebiros on Tuesday on a New Game Plus run.",
+    points = 10,
+    trigger = is_new_game_plus()
+        && DAY == 0x03
+        && in_combat_mission("Necromancer")
+        && ((attacker_leader_is("Nebiros") && attacker_leader_defeated()) || defender_leader_is("Nebiros") && defender_leader_defeated())
 )
 
 // *** Leaderboards ***

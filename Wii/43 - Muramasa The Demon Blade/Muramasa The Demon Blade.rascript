@@ -152,7 +152,7 @@ ZoneLookup = {
     0x1c: "Tsuchigumo",
     0x1d: "Giant Centipede",
     0x1e: "Musashi Shin-Yoshiwara, Nihonzutsumi",
-    0x1f: "Mino, In Front of Ote Gate, Narukami Castle",
+    0x1f: "Narukami Castle", // Full name is Mino, In Front of Gate Ote, Narukami Castle
     0x20: "Hell, Tokatsu Eight Views of Hell",
     0x21: "Shinano, Hachimanbara, Kawanakajima Battle Field",
     0x22: "Kurozaru",
@@ -516,13 +516,66 @@ achievement(
             && is_in_game("NTSC")
             && active_character("NTSC") == 0x01 
             && active_zone("NTSC") == 0x27
-            && prev(sword_acquired("NTSC", "Kashagiri Hiromitsu") == 0x00) 
+            && prev(sword_acquired("NTSC", "Kashagiri Hiromitsu")) == 0x00 
             && sword_acquired("NTSC", "Kashagiri Hiromitsu") == 0x01
 )
 
 achievement(
-    title = "",
-    description = "ch3 boss",
+    title = "The Princess' Plea",
+    description = "Ask Yukinoyjo about the Kuromitsu blade and demonstrate the weaknesses of his Shinkage Style.",
+    points = 5,
+    type = "progression",
+    trigger = is_ntsc()
+        && is_in_game("NTSC")
+        && active_character("NTSC") == 0x01
+        && active_zone("NTSC") == 0x26
+        && prev(sword_acquired("NTSC", "Izumokami Naganori")) == 0x00
+        && sword_acquired("NTSC", "Izumokami Naganori") == 0x01
+)
+
+achievement(
+    title = "The Foot of a Mystic Boar",
+    description = "Travel through the mountains of Takayama and defeat Ippondatara to learn a well-guarded secret.",
+    points = 5,
+    type = "progression",
+    trigger = is_ntsc()
+        && is_in_game("NTSC")
+        && active_character("NTSC") == 0x01
+        && active_zone("NTSC") == 0x07
+        && prev(sword_acquired("NTSC", "Ichimonji Norimune")) == 0x00
+        && sword_acquired("NTSC", "Ichimonji Norimune") == 0x01
+)
+
+achievement(
+    title = "Disgraced Traitor Exposed",
+    description = "Infiltrate Narukami Castle and defeat Shikami Danjo and his chimera.",
+    points = 5,
+    type = "progression",
+    trigger = is_ntsc()
+        && is_in_game("NTSC")
+        && active_character("NTSC") == 0x01
+        && active_zone("NTSC") == 0x06
+        && prev(sword_acquired("NTSC", "Shishiou")) == 0x00
+        && sword_acquired("NTSC", "Shishiou") == 0x01
+)
+
+achievement(
+    title = "Served Fresh",
+    description = "Descend into hell and get yourself out of trouble.",
+    points = 5,
+    type = "progression",
+    trigger = always_false()
+)
+achievement(
+    title = "Knockin' on Heaven's Door",
+    description = "Seek a way into heaven and entertain the gatekeeper.",
+    points = 5,
+    type = "progression",
+    trigger = always_false()
+)
+achievement(
+    title = "<Momohime A Finale>",
+    description = "Climb the Buddha Hall Statue and free Momohime of possession.",
     points = 5,
     type = "progression",
     trigger = always_false()
@@ -567,8 +620,12 @@ achievement(
         && measured(num_current_swords("NTSC") == 0x6c, when=always_true(), format="raw")
 )
 
-rich_presence_conditional_display(check_on_main_menu("NTSC"), "On the title screen")
+// todo achievement defeat a pheasant
+// it's just acquiring a pheasant while in kai??
+// boar in hida
 
+rich_presence_conditional_display(check_on_main_menu("NTSC"), "On the title screen")
+rich_presence_conditional_display(check_on_main_menu("PAL"), "On the title screen")
 rich_presence_display("[{0}] lv. {1} {2} is tearing through {3} | {4} / 108 ⚔️ | {5} / 19 📖 | {6} ryo, {7} mon",
     rich_presence_lookup("Difficulty", ntsc_difficulty(), DifficultyLookup),
     rich_presence_value("CurrLevel", current_level("NTSC"), "VALUE"),

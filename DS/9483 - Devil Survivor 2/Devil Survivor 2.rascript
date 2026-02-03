@@ -173,6 +173,16 @@ function unit_defeated(addr_unit_current_health) {
 function unit_soft_defeated(addr_unit_current_health) {
     return prev(word(addr_unit_current_health)) <= word(addr_unit_current_health + 0x02) && word(addr_unit_current_health) == 0x01
 }
+
+function all_characters_alive() {
+    cond = always_true()
+    for character in chararacter_ids_by_name {
+        cond = cond && character_alive(character)
+    }
+
+    return cond
+}
+
 // Check if a character is still alive according to plot flags.
 // Some characters can permanently die if you meet (or fail to meet) certain conditions.
 function character_alive(char_name) {
@@ -780,6 +790,7 @@ enemy_id_by_name = {
     "Punk":           0xf9,  // Specifically from App Abuser Snipe/Mana Bonus/Hustle
     "Phecda (Magic)": 0xff,
     "Phecda (Phys)":  0x100,
+    "Dragon":         0x103,
     "Young Man":      0x10c, // Specifically from App Abuser Extra Cancel/Extra Bonus/Hustle
     "Dubhe (Whole)":  0x114, // Dubhe that can reflect phys and null others
     "Dubhe (Half)":   0x115, 
@@ -1078,10 +1089,10 @@ enemy_name_by_id = {
     0x128: "Tentacle",
     0x129: "Tentacle",
     0x12a: "Tentacle",
-    0x12c: "Benetsnach",
-    0x12d: "Benetsnach",
-    0x12e: "Benetsnach",
-    0x12f: "Benetsnach",
+    0x12c: "Benetnasch",
+    0x12d: "Benetnasch",
+    0x12e: "Benetnasch",
+    0x12f: "Benetnasch",
     0x131: "Polaris A",
     0x134: "Tall Woman",  // Makoto in Daichi's Crisis
     0x137: "Daichi (Tied Up)", // Daichi in Saving Daichi / Goodbye Jungo
@@ -1525,6 +1536,9 @@ event_id_by_name = {
     "Food Chain":           0x1784,
     "Ronaldo Rises":        0x1785,
     "Vs. Tokyo":            0x1c85,
+    "Seven Down":           0x1c96,
+    "Dream's End":          0x206e,
+    "Reared Head":          0x2071,
     "Strong Breaker":       0x2072,
     "New Tomorrow":         0x2073,
     "The Promise":          0x2432
@@ -1613,6 +1627,7 @@ missions_by_id = {
     0x13a6: "Normality Gone",
     // Fri
     // Sat
+    0x1c96:    "Seven Down",
     // Misc (side plots to world build or build FATE)
     0x2329: "Tokyo in Ruins",
     0x232a: "An Idle Man",
@@ -2756,34 +2771,48 @@ achievement(
     type = "missable",
     id = 547044
 )
-// Benetsnach 1: Complete 'Unknown Threat.'
+// Benetnasch 1: Complete 'Unknown Threat.'
 achievement(
     title = ""
 )
-// Persuade Trumpeter
+// TODO convince everyone to come back
 achievement(
-    title = "Percussive Persuasion",
-    description = "Have Trumpeter agree to aid you in the battle against Benetsnach."
+    title = "The Band's Back Together",
+    description = "With all death clips averted, persuade all possible party members to aid your cause on Saturday.",
+    points = 10,
+    trigger = all_characters_alive() 
+        && DAY == 0x07
+        // if anguished one's ending
+        // if daichi's way
+        // if ronaldo's way
+        // if yamato's way
 )
 achievement(
     title = "The Last of the Seven",
-    description = "Defeat Benetsnach.",
+    description = "Defeat Benetnasch.",
     points = 25,
     trigger = on_mission("Seven Down") && mail_triggered("Re: Trumpeter"),
     type = "progression"
 )
 achievement(
     title = "Eta Ursae Majoris",
-    description = "Defeat Benetsnach without using the Suspend feature and without Trumpeter being hurt.",
-    points = 25,
+    description = "Defeat Benetnasch while Trumpeter is at full HP.",
+    points = 10,
     trigger = on_mission("Seven Down")
         // pseudologic: 
         // - enemy slot where Trumpeter is, is actually Trumpeter && never curr_hp < max_hp
-        // - main Benetsnach defeated
-        // - each child Benetsnach defeated
-        && once(
-        
-        ),
+        // - main Benetnasch defeated
+        // - each child Benetnasch defeated
+        && word(COMBAT_PTR + 0xef0) == word(COMBAT_PTR + 0xef2)
+        && word(COMBAT_PTR + 0xee2) == 0xbe
+        && trigger_when(__ornext(byte(COMBAT_PTR + 0x250) <= 0x03 || byte(COMBAT_PTR + 0x250) == 0x05))
+        && trigger_when(__ornext(byte(COMBAT_PTR + 0x251) <= 0x03 || byte(COMBAT_PTR + 0x251) == 0x05))
+        && trigger_when(__ornext(byte(COMBAT_PTR + 0x252) <= 0x03 || byte(COMBAT_PTR + 0x252) == 0x05 || byte(COMBAT_PTR + 0x252) == 0xff))
+        && trigger_when(__ornext(byte(COMBAT_PTR + 0x253) <= 0x03 || byte(COMBAT_PTR + 0x253) == 0x05 || byte(COMBAT_PTR + 0x253) == 0xff))
+        && trigger_when(__ornext(byte(COMBAT_PTR + 0x254) <= 0x03 || byte(COMBAT_PTR + 0x254) == 0x05 || byte(COMBAT_PTR + 0x254) == 0xff))
+        && trigger_when(prev(byte(COMBAT_PTR + 0x255)) <= 0x08)
+        && trigger_when(byte(COMBAT_PTR + 0x255) == 0xff),
+
     type = "missable"
 )
 achievement(
@@ -2795,10 +2824,16 @@ achievement(
 )
 achievement(
     title = "Alpha Ursae Minoris",
-    description = "Defeat Polaris without using the Suspend feature.",
+    description = "Deploy 4 leaders to fight Polaris and win with all team leaders alive.",
     points = 25,
     trigger = on_mission("New Tomorrow")
-        && !loaded_from_suspend()
+        && word(COMBAT_PTR + 0x284) > 0x00
+        && word(COMBAT_PTR + 0x4f2) > 0x00
+        && word(COMBAT_PTR + 0x500) > 0x00
+        && word(COMBAT_PTR + 0x76e) > 0x00
+        && word(COMBAT_PTR + 0x77c) > 0x00
+        && word(COMBAT_PTR + 0x9ea) > 0x00
+        && word(COMBAT_PTR + 0x9f8) > 0x00 
         && (
             (defender_leader_is("Polaris A") && defender_leader_defeated()) 
             || (attacker_leader_is("Polaris A") && attacker_leader_defeated())
@@ -2817,6 +2852,8 @@ achievement(
 )
 
 // ** Daichi's Way **
+
+
 // ** A New World **
 achievement(
     title = "The World vs. Team Tokyo",
@@ -2855,21 +2892,41 @@ achievement(
 )
 achievement(
     title = "Starting Fresh",
-    description = "Defeat Polaris and establish your new world order.",
-    points = 25,
+    description = "Defeat Polaris and establish your new free world.",
+    points = 10,
     trigger = on_mission("New Tomorrow")
         && ending_selected("Anguished One")
         && ((defender_leader_is("Polaris (Complete)") && defender_leader_defeated()) || (attacker_leader_is("Polaris (Complete)") && attacker_leader_defeated())),
+    
 )
 // ** Yamato's Way **
-// ** Ronaldo's Way **
-// Settling Things: use Lugh mail as indicator
 achievement(
-    title = ""
+    title = "Might Shall Make Right",
+    description = "Defeat Polaris and establish your meritocracy.",
+    points = 10,
+    trigger = on_mission("New Tomorrow")
+        && ending_selected("Yamato")
+        && ((defender_leader_is("Polaris (Complete)") && defender_leader_defeated()) || (attacker_leader_is("Polaris (Complete)") && attacker_leader_defeated())),
+)
+// ** Ronaldo's Way **
+achievement(
+    title = "Our Egalitarian Order",
+    description = "Defeat Polaris and establish your meritocracy.",
+    points = 10,
+    trigger = on_mission("New Tomorrow")
+        && ending_selected("Ronaldo")
+        && ((defender_leader_is("Polaris (Complete)") && defender_leader_defeated()) || (attacker_leader_is("Polaris (Complete)") && attacker_leader_defeated())),
 )
 
+// True Ending
 achievement(
-    title = ""
+    title = "By the Voices of the People",
+    description = "Defeat Polaris with all demon users alive.",
+    points = 25,
+    trigger = on_mission("New Tomorrow")
+        && ending_selected("Daichi")
+        && all_characters_alive()
+        && ((defender_leader_is("Polaris (Complete)") && defender_leader_defeated()) || (attacker_leader_is("Polaris (Complete)") && attacker_leader_defeated())),
 )
 
 // no Free Battle progression
@@ -2921,7 +2978,7 @@ achievement(
     type = "missable"
 )
 achievement(
-    title = "A Saturday Towards Polaris",
+    title = "A Saturday Towards A New World",
     description = "Reach the end of Day 7 without ever entering any Free Battle on a New Game file.",
     points = 25,
     trigger = never(is_new_game_plus()) && !entered_free_battle() && prev(IN_GAME_CLOCK == 0x582) && IN_GAME_CLOCK == 0x00 && prev(DAY == 0x07) && DAY == 0x08,
@@ -3402,7 +3459,7 @@ leaderboard(
     value = tally(0, allied_turn_starts())
 )
 leaderboard(
-    title = "Turns Used on Alioth",
+    title = "Turns Used on Alioth (New Game)",
     description="Fewest allied unit turns used to defeat Alioth on New Game.",
     start = !loaded_from_suspend() &&
         !is_new_game_plus() &&
@@ -3413,18 +3470,22 @@ leaderboard(
         value = tally(0, allied_turn_starts())
 )
 leaderboard(
-    title = "Turns used on Mizar",
-    description = "Fewest allied turn units used to defeat Mizar.",
+    title = "Turns used on Mizar (New Game)",
+    description = "Fewest allied turn units used to defeat Mizar on New Game.",
     start = !loaded_from_suspend() &&
         !is_new_game_plus() &&
         on_mission("Food Chain") &&
         active_mission_started(),
         cancel = MOST_RECENT_MISSION != event_id_by_name["Food Chain"],
         submit = (
-            once(((defender_leader_is("Mizar Tentacle (3R)") && defender_leader_defeated()) || (attacker_leader_is("Mizar Tentacle (3R)") && attacker_leader_defeated())))
-            && once(((defender_leader_is("Mizar Tentacle (3L)") && defender_leader_defeated()) || (attacker_leader_is("Mizar Tentacle (3L)") && attacker_leader_defeated())))
+            once((defender_leader_is("Mizar Tentacle (3R)") && defender_leader_defeated()) || (attacker_leader_is("Mizar Tentacle (3R)") && attacker_leader_defeated()))
+            && once((defender_leader_is("Mizar Tentacle (3L)") && defender_leader_defeated()) || (attacker_leader_is("Mizar Tentacle (3L)") && attacker_leader_defeated()))
         ),
         value = tally(0, allied_turn_starts())
+)
+leaderboard(
+    title = "Turns Used on Benetnasch (New Game)",
+    description = "Fewest allied unit turns used to defeat Benetnasch on New Game"
 )
 
 

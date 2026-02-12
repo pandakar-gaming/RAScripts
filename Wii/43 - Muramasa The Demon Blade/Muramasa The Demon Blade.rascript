@@ -50,18 +50,63 @@ function is_shigurui(region) {
             && dword_be(ptr_character_details_ntsc() + 0x1dc) == 0x01
             && dword_be(ptr_character_details_ntsc() + 0x1d8) <= 0x01
     }
-} 
+}
 
-// $474DB0: [32-bit BE Pointer] Pointer to combat
-//          +0x14 Pointer to active combat [32-bit BE Pointer]
-//          ++0x6c Unsure what it is for, but it's 0x00000031 when combat is rolling [32-bit BE]
-//          ++0x7c Active Combo [32-bit BE]
-function combat_pointer(region) {
+// Not to be confused with "active combat."
+// This pointer leads you to the current combat timer and the rewards screen.
+// [32-bit BE Pointer] [NTSC] Pointer to combat
+// +0x14 Pointer to active combat [32-bit BE Pointer]
+// ++0x3c Combat timer in frames [32-bit BE]
+// -- When combat is rolling, this will be incrementing. The frame combat is done, this gets copied somewhere for the results screen and resets to 0.
+// ++0x6c Unsure what it is for, but it's 0x00000031 when combat is rolling [32-bit BE]
+// ++0x7c Active Combo [32-bit BE]
+function current_encounter_pointer(region) {
     if (region == "PAL") {
         return mask_ptr(mask_ptr(0x004eaef0) + 0x14)
     } else if (region == "NTSC") {
+        // return mask_ptr(0x00474da8)
         return mask_ptr(mask_ptr(0x474DB0) + 0x14)
     }
+}
+
+// $0x00474da8: [32-bit BE] Base pointer to boss HP
+//          +0x80=[32-bit BE] Current combo on boss
+//          +0x84=[32-bit BE] Time left, in frames, until active combo wears out
+function active_combat_pointer(region) {
+    if (region == "PAL") {
+        return mask_ptr(0x004eaee8)
+    } else if (region == "NTSC") {
+        return mask_ptr(0x00474da8)
+    }
+}
+
+// We know this works for a single boss. Too lazy to dig for multiple because we don't really need it!
+// $474DA8: [32-bit BE] Base pointer to Boss HP
+//          +0x550  = [32-bit BE] Intermediary pointer
+//          ++0x14  = [32-bit BE] Intermediary pointer
+//          +++0x64 = [Float BE] Boss big HP bar (as it takes damage and a red bar fills up)
+//          +++0x68 = [Float BE] Boss big HP bar (when not taking damage for a while, slowly decreases to value above)
+//          +++0x8c = [Float BE] Boss Small HP Bar (as it takes damage)
+//          ---1.0 = No more bars left. Can use this in conjunction with 0x64=0 to determine that this boss is dead.
+//          +++0x90 = [Float BE] Boss Small HP Bar (catches up to 0x8c)
+// This function returns the third layer as a convenience so you can just do your +0x64 / + 0x68 / +0x8c / +0x90 on top of it for floats. 
+function boss_health_ptr(region) {
+    if (region == "PAL") {
+        return mask_ptr(mask_ptr(mask_ptr(0x004eaee8) + 0x550) + 0x14)
+    } else if (region == "NTSC") {
+        return mask_ptr(mask_ptr(mask_ptr(0x474da8) + 0x550) + 0x14)
+    }
+}
+
+// Check that a single boss just died.
+function active_single_boss_died(region) {
+    health_ptr = boss_health_ptr(region)
+    return float_be(health_ptr + 0x8c) <= -1.0 && prev(float_be(health_ptr + 0x64)) > 0.0 && float_be(health_ptr + 0x64) <= 0.0
+}
+
+function active_single_boss_activated(region) {
+    health_ptr = boss_health_ptr(region)
+    return float_be(health_ptr + 0x8c) > -1.0 && prev(float_be(health_ptr + 0x64)) <= 0.0 && float_be(health_ptr + 0x64) > 0.0
 }
 
 // $DA7314: [32-bit Pointer] Pointer to Settings
@@ -132,12 +177,33 @@ CharacterLookup = {
     0x01: "Momohime"
 }
 
+// Get the current in-game time for the player.
+// This seems to be measured as purely minutes. X / 60 to get hours, X % 60 to get minutes.
+function in_game_timer(region) {
+    if (region == "PAL") {
+        return dword_be(mask_ptr(0x00433c84) + 0x10)
+    } else if (region == "NTSC") {
+        return dword_be(mask_ptr(0x003bdc84) + 0x10)
+    }
+}
+
 // Get the active zone the player is in.
 function active_zone(region) {
     if (region == "PAL") {
         return dword_be(0x00e1d2c4)
     } else if (region == "NTSC") {
         return dword_be(0x00da70c4)
+    }
+}
+
+// This function doesn't *need* zone, but I am locking it down to require one so you think about what you're doing.
+// Please god think about what you're doing here.
+// Anyway, this returns the 32-bit BE value corresponding to the current scene.
+function active_scene(region) {
+    if (region == "PAL") {
+        return dword_be(0x00e1d534)
+    } else if (region == "NTSC") {
+        return dword_be(0x00da7334)
     }
 }
 
@@ -168,7 +234,7 @@ function is_fighting_boss(region) {
     boss_values = [
         // momohime boss values
         0x00, // Blue Monk
-        0x01, // Big Oni "Big Oni",
+        0x01, // Big Oni
         0x05, // "Raijin",
         0x06, // "Chimera",
         0x07, // "Ippondatara",
@@ -192,37 +258,39 @@ function is_fighting_boss(region) {
         0x33, // Inugami Tokugawa Tsunayoshi Ending 3
     ]
 
-    cond = always_true()
+    cond = always_false()
     for boss_value in boss_values {
-        cond = cond && active_zone(region) == boss_value
+        cond = cond || active_zone(region) == boss_value
     }
 
     return cond
 }
 
 function is_fishing(region) {
-    fishing_zones = [
-        0x03, // Kraken
-        0x04, // Mermaid,
+    KRAKEN = 0x03
+    MERMAID = 0x04
 
-    ]
+    return active_zone(region) >= KRAKEN && active_zone(region) <= MERMAID
 }
-
-
 
 // Inverse of #check_on_main_menu so that it doesn't get alt group'd when I negate it.
 function is_in_game(region) {
     if (region == "PAL") {
-        return is_pal() && dword_be(0x00e1d2c4) != 0xffffffff && dword_be(0x00e1d2c4) != 0xffffffff
+        return is_pal() && dword_be(0x00e1d2c4) != 0xffffffff && dword_be(0x00e1d2c8) != 0xffffffff
     } else if (region == "NTSC") {
         return is_ntsc() && dword_be(0x00da70c4) != 0xffffffff && dword_be(0x00da70c8) != 0xffffffff
     }
 }
 
+// Check if the player is in a given zone.
 function in_zone(region, zone) {
     for key in ZoneLookup {
         if (ZoneLookup[key] == zone) {
-            return dword_be(0xDA70C4) == key
+            if (region == "PAL") {
+                return dword_be(0xe1d2c4) == key
+            } else if (region == "NTSC") {
+                return dword_be(0xDA70C4) == key
+            }
         }
     }
     
@@ -278,7 +346,7 @@ ZoneLookup = {
     0x2c: "Foot of Mt. Fuji", // full name is Suruga 
     0x2d: "Buddha Statue Hall", // full name is Yamato Buddha Statue Hall in Zentoji, Nara
     0x2e: "Ise Jingu Forest", // full name is Ise Jingu Forest, Mt. Kamiji
-    0x2f: "Sagami Mountain Road of Rokkoku Kenzan", // full name is 
+    0x2f: "Sagami Mountain Road of Rokkoku Kenzan", // full name is Sagami Mountain Road of Rokkoku Kenzan
     0x30: "Mt. Kongo", // Full name is Yamato HQ of Shingon-Renge School, Mt. Kongo
     0x31: "Inugami Tokugawa Tsunayoshi",
     0x32: "Momohime",
@@ -291,6 +359,56 @@ ZoneLookup = {
     0x39: "Credits",
 }
 
+BOSS_ZONE_MAP = {
+    // Momohime bosses
+    "Blue Monk": 0x00,
+    "Wanyudo": 0x27,
+    "Yukinojyo": 0x26,
+    "Ippondatara": 0x07,
+    "Chimera": 0x06,
+    "Big Oni": 0x01,
+    "Raijin": 0x05,
+    "Fudo-Myouu": 0x34,
+    "Kisuke": 0x35,
+    "Fudo-Myouu (2)": 0x36,
+    // Kisuke bosses
+    "Kurozaru": 0x22,
+    "Giant Centipede": 0x1d,
+    "Torahime": 0x09,
+    "Sayo": 0x28,
+    "Tsuchigumo": 0x1c,
+    "Chigurui Bishamon": 0x29,
+    "Dragon God": 0x25,
+    "Inugami Tokugawa Tsunayoshi": 0x31,
+    "Momohime": 0x32,
+    "Inugami Tokugawa Tsunayoshi (2)": 0x33
+}
+
+BOSS_ZONES = [
+    // momohime boss values
+    0x00, // Blue Monk
+    0x01, // Big Oni "Big Oni",
+    0x05, // "Raijin",
+    0x06, // "Chimera",
+    0x07, // "Ippondatara",
+    0x26, // "Yukinojyo",
+    0x27, // "Wanyudo",
+    0x34, // "Fudo-Myouu"
+    0x35, // Kisuke Ending 2
+    0x36, // Fudo-Myouu Ending 3
+    // kisuke boss values
+    0x22, // Kurozaru
+    0x09, // Torahime
+    0x1d, // Giant Centipede
+    0x28, // Sayo
+    0x1c, // Tsuchigumo
+    0x29, // Chigurui Bishamon
+    0x25, // Dragon God
+    0x31, // Inugami Tokugawa Tsunayoshi
+    0x32, // Momohime Ending 2
+    0x33, // Inugami Tokugawa Tsunayoshi Ending 3
+]
+
 // Get the byte indicating that a given sword is acquired.
 function sword_acquired(region, sword) {
     starting_addr = 0
@@ -298,127 +416,68 @@ function sword_acquired(region, sword) {
         starting_addr = 0x00e1d78d
     } else if (region == "NTSC") {
         starting_addr = 0x00da758d
-        // return byte(sword_flags_ntsc[sword])
     }
 
-    swords = [
-        "Kagura Muramasa",
-        "Shinmei",
-        "Yakumo",
-        "Hayate Muramasa",
-        "Kagero Muramasa",
-        "Nagasone Kotetsu",
-        "Natsusame Muramasa",
-        "Yunagi Muramasa",
-        "Edauchi Muramasa",
-        "Yoiyami Muramasa",
-        "Iganokami Kanemichi",
-        "Fumitsuki Muramasa",
-        "Hazuki Muramasa",
-        "Nagatsuki Muramasa",
-        "Magoroku Kanemoto",
-        "Kirisame Muramasa",
-        "Asaarashi Muramasa",
-        "Shigure Muramasa",
-        "Amagiri Muramasa",
-        "Kogarasumaru",
-        "Yogetsu Muramasa",
-        "Shimotsuki Muramasa",    
-        "Gokugetsu Muramasa",
-        "Kumokiri",
-        "Hibashiri Muramasa",
-        "Ishizuki Muramasa",
-        "Kazanami Muramasa",
-        "Suiran Muramasa",
-        "Osafune Kanemitsu",
-        "Hisame Muramasa",
-        "Mizutachi Muramasa",
-        "Tanahashi Muramasa",
-        "Goro Masamune",
-        "Tasogare Muramasa",
-        "Reimei Muramasa",
-        "Gyoko Muramasa",
-        "Tsubamegaeshi Muramasa",
-        "Mumei Tamonoo",
-        "Iwatoshi Muramasa",
-        "Hiten Muramasa",
-        "Meikyo Muramasa",
-        "Sasanoyuki Muramasa",
-        "Shusui Muramasa",
-        "Nukehishaku Muramasa",
-        "Chizuru Muramasa",
-        "Hisui",
-        "Sazanami",
-        "Botan Muramasa",
-        "Ayame Muramasa",
-        "Hasebe Kunishige",
-        "Umitsubame Muramasa",
-        "Getsuei Muramasa",
-        "Hibari Muramasa",
-        "Tachigesa Muramasa",
-        "Kashagiri Hiromitsu",
-        "Mutsuki Muramasa",
-        "Kisaragi Muramasa",
-        "Kagetsu Muramasa",
-        "Izumokami Naganori",
-        "Tamatsubaki Muramasa",
-        "Yamabuki Muramasa",
-        "Kuchinawa Muramasa",
-        "Asazakura Muramasa",
-        "Ichimonji Norimune",
-        "Uzuki Muramasa",
-        "Satsuki Muramasa",
-        "Suigetsu Muramasa",
-        "Shishiou",
-        "Seika Muramasa",
-        "Maidori Muramasa",
-        "Midarekaze Muramasa",
-        "Tsukimigiri Muramasa",
-        "Onikiri",
-        "Shiden Muramasa",
-        "Hiei Muramasa",
-        "Chisuberi Muramasa",
-        "Mutsunokami Yoshiyuki",
-        "Suiren Muramasa",
-        "Muhyo Muramasa",
-        "Shiratsuyu Muramasa",
-        "Tsuyuharai Muramasa",
-        "Tsukiotoshi",
-        "Setsugekka Muramasa",
-        "Kasai Muramasa",
-        "Takinomizu Muramasa",
-        "Oka Muramasa",
-        "Chizakura Muramasa",
-        "Torinuke Muramasa",
-        "Tsukuyomi Muramasa",
-        "Mikazuki Munechika",
-        "Amatsu Muramasa",
-        "Onimaru Kunitsuna",
-        "Seiryu Muramasa",
-        "Byakko Muramasa",
-        "Jyuzumaru Tsunetsugu",
-        "Suzaku Muramasa",
-        "Kamikazu Muramasa",
-        "Genbu Muramasa",
-        "Ouryu Muramasa",
-        "Mugen Muramasa",
-        "Kagotsurube Muramasa",
-        "Otenta Mitsuyo",
-        "Okanehira",
-        "Kyoshu Muramasa",
-        "Suisei Muramasa",
-        "Dojigiri Yasutsuna",
-        "Tokiwatari Murasa",
-        "Oboro Muramasa"
-    ]
-
-
-    for i in range(0, length(swords)) {
-        if (swords[i] == sword) {
+    for i in range(0, length(ALL_SWORDS)) {
+        if (ALL_SWORDS[i] == sword) {
             return byte(starting_addr + i)
         }
     }
 }
+
+ACCESSORY_BLOCK_ONE = [
+    "Ninja Belt",
+    "Fox Spirit Belt",
+    "Tengu Belt",
+    "Utsusemi Belt",
+    "Shura Belt",
+    "Yata Belt",
+    "Demon God Belt",
+    "Dragon God Belt",
+    "Tengu Mask",
+    "Shura Mask",
+    "Demon God Mask",
+    "Dragon God Mask",
+    "Hinezumi Dress",
+    "Suiko Scale",
+    "Oni Necklace",
+    "Dragon Necklace",
+    "Master's Handbook",
+]
+
+ACCESSORY_BLOCK_TWO = [
+    "Kusarikatabira",
+    "Wolfsbane Poison",
+    "Iwami Poison",
+    "Cypress Rosary",
+    "Cloisonne Rosary",
+    "Clove Oil",
+    "Swashbuckler's Sheath",
+    "Swordmaster's Sheath",
+    "Ise Charm",
+    "Izumo Charm",
+    "Yamato Miracle Drug",
+    "Toyoma Miracle Drug",
+    "Hungry Devil Saucer",
+    "Chowhound Saucer",
+    "Lucky Mallet",
+    "Straw Stalk",
+    "Crystal Magatama",
+    "Jade Magatama",
+    "Ghoulish Seal",
+    "Shura Seal",
+    "Ninja Socks",
+    "Ninja Socks II",
+    "Clapper",
+    "A Pair of Clappers",
+    "Swordsmith Mallet",
+    "Merchant's Abacus",
+    "Imari Platter",
+    "Sacred Tree Tablet",
+    "Narukami Bracelet",
+    "Nio Bracelet",
+]
+
 
 // Check if a specific accessory has been acquired.
 function accessory_acquired(region, accessory) {
@@ -431,29 +490,8 @@ function accessory_acquired(region, accessory) {
         starting_addr = 0x00da7522
     }
 
-    accessory_block_one = [
-        "Ninja Belt",
-        "Fox Spirit Belt",
-        "Tengu Belt",
-        "Utsusemi Belt",
-        "Shura Belt",
-        "Yata Belt",
-        "Demon God Belt",
-        "Dragon God Belt",
-        "Tengu Mask",
-        "Shura Mask",
-        "Demon God Mask",
-        "Dragon God Mask",
-        "Hinezumi Dress",
-        "Suiko Scale",
-        "Oni Necklace",
-        "Dragon Necklace",
-        "Master's Handbook",
-    ]
-
-
-    for i in range(0, length(accessory_block_one) - 1) {
-        if (accessory_block_one[i] == accessory) {
+    for i in range(0, length(ACCESSORY_BLOCK_ONE) - 1) {
+        if (ACCESSORY_BLOCK_ONE[i] == accessory) {
             return byte(starting_addr + i)
         }
     }
@@ -465,48 +503,13 @@ function accessory_acquired(region, accessory) {
         starting_addr = 0x00da75ff
     }
 
-    accessory_block_two = [
-        "Kusarikatabira",
-        "Wolfsbane Poison",
-        "Iwami Poison",
-        "Cypress Rosary",
-        "Cloisonne Rosary",
-        "Clove Oil",
-        "Swashbuckler's Sheath",
-        "Swordmaster's Sheath",
-        "Ise Charm",
-        "Izumo Charm",
-        "Yamato Miracle Drug",
-        "Toyoma Miracle Drug",
-        "Hungry Devil Saucer",
-        "Chowhound Saucer",
-        "Lucky Mallet",
-        "Straw Stalk",
-        "Crystal Magatama",
-        "Jade Magatama",
-        "Ghoulish Seal",
-        "Shura Seal",
-        "Ninja Socks",
-        "Ninja Socks II",
-        "Clapper",
-        "A Pair of Clappers",
-        "Swordsmith Mallet",
-        "Merchant's Abacus",
-        "Imari Platter",
-        "Sacred Tree Tablet",
-        "Narukami Bracelet",
-        "Nio Bracelet",
-    ]
-
-    for i in range(0, length(accessory_block_two)) {
-        if (accessory_block_two[i] == accessory) {
+    for i in range(0, length(ACCESSORY_BLOCK_TWO)) {
+        if (ACCESSORY_BLOCK_TWO[i] == accessory) {
             return byte(starting_addr + i)
         }
     }
 
 }
-
-
 
 // Static pair of arrays. One precedes swords, one is after swords.
 // Each address is a byte with 0x00 = not acquired; 0x01 = acquired
@@ -561,6 +564,8 @@ accessory_flags_ntsc = {
     "Nio Bracelet": 0x00da761c,
 }
 
+// Check if a specific cookbook has been acquired.
+// return: the byte representing the book you care about
 function cookbook_acquired(region, book) {
     starting_book_addr = 0
     if (region == "PAL") {
@@ -569,14 +574,14 @@ function cookbook_acquired(region, book) {
         starting_book_addr = 0x00da753b
     }
 
-    for i in range(0, length(cookbooks)) {
-        if (cookbooks[i] == book) {
+    for i in range(0, length(COOKBOOKS)) {
+        if (COOKBOOKS[i] == book) {
             return byte(starting_book_addr + i)
         }
     }
 }
 
-cookbooks = [
+COOKBOOKS = [
     "Kitchen Secrets Vol. 1",
     "Grilled Cooking Vol. 1",
     "Grilled Cooking Vol. 2",
@@ -599,17 +604,16 @@ cookbooks = [
     "The Grand Hot Pot Vol. 4",
 ]
 
-
-
 // Check that any blade broke during the active combat.
 function any_blade_broke(region) {
     if (region == "PAL") {
-
+        return byte(0x00e1d85c) == 0x01 || byte(0x00e1d880) == 0x01 || byte(0x00e1d8a4) == 0x01
     } else if (region == "NTSC") {
         return byte(0x00da766b) == 0x01 || byte(0x00da768f) == 0x01 || byte(0x00da76b3) == 0x01
     }
 }
 
+// Get the current level of the player.
 function current_level(region) {
     if (region == "PAL") {
         return byte(ptr_character_details_pal() + 0x1fc) + 1
@@ -618,253 +622,7 @@ function current_level(region) {
     }
 }
 
-// Static map ranging [$0x00da758d, $0x00da75f8]
-// Every flag here is 0x00 = Not acquired, 0x01 = Acquired
-sword_flags_ntsc = {
-    "Kagura Muramasa":      0x00da758d,
-    "Shinmei":              0x00da758e,
-    "Yakumo":               0x00da758f,
-    "Hayate Muramasa":      0x00da7590,
-    "Kagero Muramasa":      0x00da7591,
-    "Nagasone Kotetsu":     0x00da7592,
-    "Natsusame Muramasa":   0x00da7593,
-    "Yunagi Muramasa":      0x00da7594,
-    "Edauchi Muramasa":     0x00da7595,
-    "Yoiyami Muramasa":     0x00da7596,
-    "Iganokami Kanemichi":  0x00da7597,
-    "Fumitsuki Muramasa":   0x00da7598,
-    "Hazuki Muramasa":      0x00da7599,
-    "Nagatsuki Muramasa":   0x00da759a,
-    "Magoroku Kanemoto":    0x00da759b,
-    "Kirisame Muramasa":    0x00da759c,
-    "Asaarashi Muramasa":   0x00da759d,
-    "Shigure Muramasa":     0x00da759e,
-    "Amagiri Muramasa":     0x00da759f,
-    "Kogarasumaru":         0x00da75a0,
-    "Yogetsu Muramasa":     0x00da75a1,
-    "Shimotsuki Muramasa":  0x00da75a2,    
-    "Gokugetsu Muramasa":   0x00da75a3,
-    "Kumokiri":             0x00da75a4,
-    "Hibashiri Muramasa":   0x00da75a5,
-    "Ishizuki Muramasa":    0x00da75a6,
-    "Kazanami Muramasa":    0x00da75a7,
-    "Suiran Muramasa":      0x00da75a8,
-    "Osafune Kanemitsu":    0x00da75a9,
-    "Hisame Muramasa":      0x00da75aa,
-    "Mizutachi Muramasa":   0x00da75ab,
-    "Tanahashi Muramasa":   0x00da75ac,
-    "Goro Masamune":        0x00da75ad,
-    "Tasogare Muramasa":    0x00da75ae,
-    "Reimei Muramasa":      0x00da75af,
-    "Gyoko Muramasa":       0x00da75b0,
-    "Tsubamegaeshi Muramasa": 0x00da75b1,
-    "Mumei Tamonoo":        0x00da75b2,
-    "Iwatoshi Muramasa":    0x00da75b3,
-    "Hiten Muramasa":       0x00da75b4,
-    "Meikyo Muramasa":      0x00da75b5,
-    "Sasanoyuki Muramasa":  0x00da75b6,
-    "Shusui Muramasa":      0x00da75b7,
-    "Nukehishaku Muramasa": 0x00da75b8,
-    "Chizuru Muramasa":     0x00da75b9,
-    "Hisui":                0x00da75ba,
-    "Sazanami":             0x00da75bb,
-    "Botan Muramasa":       0x00da75bc,
-    "Ayame Muramasa":       0x00da75bd,
-    "Hasebe Kunishige":     0x00da75be,
-    "Umitsubame Muramasa":  0x00da75bf,
-    "Getsuei Muramasa":     0x00da75c0,
-    "Hibari Muramasa":      0x00da75c1,
-    "Tachigesa Muramasa":   0x00da75c2,
-    "Kashagiri Hiromitsu":  0x00da75c3,
-    "Mutsuki Muramasa":     0x00da75c4,
-    "Kisaragi Muramasa":    0x00da75c5,
-    "Kagetsu Muramasa":     0x00da75c6,
-    "Izumokami Naganori":   0x00da75c7,
-    "Tamatsubaki Muramasa": 0x00da75c8,
-    "Yamabuki Muramasa":    0x00da75c9,
-    "Kuchinawa Muramasa":   0x00da75ca,
-    "Asazakura Muramasa":   0x00da75cb,
-    "Ichimonji Norimune":   0x00da75cc,
-    "Uzuki Muramasa":       0x00da75cd,
-    "Satsuki Muramasa":     0x00da75ce,
-    "Suigetsu Muramasa":    0x00da75cf,
-    "Shishiou":             0x00da75d0,
-    "Seika Muramasa":       0x00da75d1,
-    "Maidori Muramasa":     0x00da75d2,
-    "Midarekaze Muramasa":  0x00da75d3,
-    "Tsukimigiri Muramasa": 0x00da75d4,
-    "Onikiri":              0x00da75d5,
-    "Shiden Muramasa":      0x00da75d6,
-    "Hiei Muramasa":        0x00da75d7,
-    "Chisuberi Muramasa":   0x00da75d8,
-    "Mutsunokami Yoshiyuki": 0x00da75d9,
-    "Suiren Muramasa":      0x00da75da,
-    "Muhyo Muramasa":       0x00da75db,
-    "Shiratsuyu Muramasa":  0x00da75dc,
-    "Tsuyuharai Muramasa":  0x00da75dd,
-    "Tsukiotoshi":          0x00da75de,
-    "Setsugekka Muramasa":  0x00da75df,
-    "Kasai Muramasa":       0x00da75e0,
-    "Takinomizu Muramasa":  0x00da75e1,
-    "Oka Muramasa":         0x00da75e2,
-    "Chizakura Muramasa":   0x00da75e3,
-    "Torinuke Muramasa":    0x00da75e4,
-    "Tsukuyomi Muramasa":   0x00da75e5,
-    "Mikazuki Munechika":   0x00da75e6,
-    "Amatsu Muramasa":      0x00da75e7,
-    "Onimaru Kunitsuna":    0x00da75e8,
-    "Seiryu Muramasa":      0x00da75e9,
-    "Byakko Muramasa":      0x00da75ea,
-    "Jyuzumaru Tsunetsugu": 0x00da75eb,
-    "Suzaku Muramasa":      0x00da75ec,
-    "Kamikazu Muramasa":    0x00da75ed,
-    "Genbu Muramasa":       0x00da75ee,
-    "Ouryu Muramasa":       0x00da75ef,
-    "Mugen Muramasa":       0x00da75f0,
-    "Kagotsurube Muramasa":  0x00da75f1,
-    "Otenta Mitsuyo":       0x00da75f2,
-    "Okanehira":            0x00da75f3,
-    "Kyoshu Muramasa":      0x00da75f4,
-    "Suisei Muramasa":      0x00da75f5,
-    "Dojigiri Yasutsuna":   0x00da75f6,
-    "Tokiwatari Murasa":    0x00da75f7,
-    "Oboro Muramasa":       0x00da75f8
-}
-
-// Get the current number of swords owned by the player.
-function num_current_swords(region) {
-    cond = 0
-    sword_block_start = always_false()
-    if (region == "PAL") {
-        sword_block_start = 0x00e1d78d
-    } else if (region == "NTSC") {
-        sword_block_start = 0x00da758d
-    }
-
-    for i in range(0, 107) {
-        cond = cond + byte(sword_block_start + i)
-    }
-
-    return cond
-}
-
-function num_momohime_swords(region) {
-    exclusive_swords = [
-        "Chizuru Muramasa",
-        "Hisui",
-        "Sazanami",
-        "Botan Muramasa",
-        "Ayame Muramasa",
-        "Hasebe Kunishige",
-        "Umitsubame Muramasa",
-        "Getsuei Muramasa",
-        "Hibari Muramasa",
-        "Tachigesa Muramasa",
-        "Kashagiri Hiromitsu",
-        "Mutsuki Muramasa",
-        "Kisaragi Muramasa",
-        "Kagetsu Muramasa",
-        "Izumokami Naganori",
-        "Tamatsubaki Muramasa",
-        "Yamabuki Muramasa",
-        "Kuchinawa Muramasa",
-        "Asazakura Muramasa",
-        "Ichimonji Norimune",
-        "Uzuki Muramasa",
-        "Satsuki Muramasa",
-        "Suigetsu Muramasa",
-        "Shishiou",
-        "Seika Muramasa",
-        "Maidori Muramasa",
-        "Midarekaze Muramasa",
-        "Tsukimigiri Muramasa",
-        "Onikiri",
-        "Shiden Muramasa",
-        "Hiei Muramasa",
-        "Chisuberi Muramasa",
-        "Mutsunokami Yoshiyuki",
-        "Suiren Muramasa",
-        "Muhyo Muramasa",
-        "Shiratsuyu Muramasa",
-        "Tsuyuharai Muramasa",
-        "Tsukiotoshi",
-        "Setsugekka Muramasa",
-        "Kasai Muramasa",
-        "Takinomizu Muramasa",
-        "Oka Muramasa",
-        "Chizakura Muramasa",
-        "Torinuke Muramasa",
-        "Onimaru Kunitsuna",
-        "Byakko Muramasa",
-        "Suzaku Muramasa",
-        "Genbu Muramasa"
-    ]
-    cond = 0
-    if (region == "PAL") {
-        for sword in exclusive_swords {
-            cond = cond + byte(sword_flags_pal[sword])
-        }
-    } else if (region == "NTSC") {
-        for sword in exclusive_swords {
-            cond = cond + byte(sword_flags_ntsc[sword])
-        }
-    }
-
-    return cond
-}
-
-exclusive_momohime_swords = [
-    "Chizuru Muramasa",
-    "Hisui",
-    "Sazanami",
-    "Botan Muramasa",
-    "Ayame Muramasa",
-    "Hasebe Kunishige",
-    "Umitsubame Muramasa",
-    "Getsuei Muramasa",
-    "Hibari Muramasa",
-    "Tachigesa Muramasa",
-    "Kashagiri Hiromitsu",
-    "Mutsuki Muramasa",
-    "Kisaragi Muramasa",
-    "Kagetsu Muramasa",
-    "Izumokami Naganori",
-    "Tamatsubaki Muramasa",
-    "Yamabuki Muramasa",
-    "Kuchinawa Muramasa",
-    "Asazakura Muramasa",
-    "Ichimonji Norimune",
-    "Uzuki Muramasa",
-    "Satsuki Muramasa",
-    "Suigetsu Muramasa",
-    "Shishiou",
-    "Seika Muramasa",
-    "Maidori Muramasa",
-    "Midarekaze Muramasa",
-    "Tsukimigiri Muramasa",
-    "Onikiri",
-    "Shiden Muramasa",
-    "Hiei Muramasa",
-    "Chisuberi Muramasa",
-    "Mutsunokami Yoshiyuki",
-    "Suiren Muramasa",
-    "Muhyo Muramasa",
-    "Shiratsuyu Muramasa",
-    "Tsuyuharai Muramasa",
-    "Tsukiotoshi",
-    "Setsugekka Muramasa",
-    "Kasai Muramasa",
-    "Takinomizu Muramasa",
-    "Oka Muramasa",
-    "Chizakura Muramasa",
-    "Torinuke Muramasa",
-    "Onimaru Kunitsuna",
-    "Byakko Muramasa",
-    "Suzaku Muramasa",
-    "Genbu Muramasa"
-]
-
-exclusive_kisuke_swords = [
+ALL_SWORDS = [
     "Kagura Muramasa",
     "Shinmei",
     "Yakumo",
@@ -909,54 +667,261 @@ exclusive_kisuke_swords = [
     "Sasanoyuki Muramasa",
     "Shusui Muramasa",
     "Nukehishaku Muramasa",
+    "Chizuru Muramasa",
+    "Hisui",
+    "Sazanami",
+    "Botan Muramasa",
+    "Ayame Muramasa",
+    "Hasebe Kunishige",
+    "Umitsubame Muramasa",
+    "Getsuei Muramasa",
+    "Hibari Muramasa",
+    "Tachigesa Muramasa",
+    "Kashagiri Hiromitsu",
+    "Mutsuki Muramasa",
+    "Kisaragi Muramasa",
+    "Kagetsu Muramasa",
+    "Izumokami Naganori",
+    "Tamatsubaki Muramasa",
+    "Yamabuki Muramasa",
+    "Kuchinawa Muramasa",
+    "Asazakura Muramasa",
+    "Ichimonji Norimune",
+    "Uzuki Muramasa",
+    "Satsuki Muramasa",
+    "Suigetsu Muramasa",
+    "Shishiou",
+    "Seika Muramasa",
+    "Maidori Muramasa",
+    "Midarekaze Muramasa",
+    "Tsukimigiri Muramasa",
+    "Onikiri",
+    "Shiden Muramasa",
+    "Hiei Muramasa",
+    "Chisuberi Muramasa",
+    "Mutsunokami Yoshiyuki",
+    "Suiren Muramasa",
+    "Muhyo Muramasa",
+    "Shiratsuyu Muramasa",
+    "Tsuyuharai Muramasa",
+    "Tsukiotoshi",
+    "Setsugekka Muramasa",
+    "Kasai Muramasa",
+    "Takinomizu Muramasa",
+    "Oka Muramasa",
+    "Chizakura Muramasa",
+    "Torinuke Muramasa",
+    "Tsukuyomi Muramasa",
     "Mikazuki Munechika",
+    "Amatsu Muramasa",
+    "Onimaru Kunitsuna",
+    "Seiryu Muramasa",
+    "Byakko Muramasa",
+    "Jyuzumaru Tsunetsugu",
+    "Suzaku Muramasa",
+    "Kamikazu Muramasa",
+    "Genbu Muramasa",
+    "Ouryu Muramasa",
+    "Mugen Muramasa",
+    "Kagotsurube Muramasa",
+    "Otenta Mitsuyo",
+    "Okanehira",
+    "Kyoshu Muramasa",
+    "Suisei Muramasa",
+    "Dojigiri Yasutsuna",
+    "Tokiwatari Murasa",
+    "Oboro Muramasa",    
 ]
 
-//
+// Get the current number of swords owned by the player.
+function num_current_swords(region) {
+    cond = 0
+    sword_block_start = always_false()
+    if (region == "PAL") {
+        sword_block_start = 0x00e1d78d
+    } else if (region == "NTSC") {
+        sword_block_start = 0x00da758d
+    }
+
+    for i in range(0, 107) {
+        cond = cond + byte(sword_block_start + i)
+    }
+
+    return cond
+}
+
+EXCLUSIVE_MOMOHIME_SWORDS = [
+    "Chizuru Muramasa",
+    "Hisui",
+    "Sazanami",
+    "Botan Muramasa",
+    "Ayame Muramasa",
+    "Hasebe Kunishige",
+    "Umitsubame Muramasa",
+    "Getsuei Muramasa",
+    "Hibari Muramasa",
+    "Tachigesa Muramasa",
+    "Kashagiri Hiromitsu",
+    "Mutsuki Muramasa",
+    "Kisaragi Muramasa",
+    "Kagetsu Muramasa",
+    "Izumokami Naganori",
+    "Tamatsubaki Muramasa",
+    "Yamabuki Muramasa",
+    "Kuchinawa Muramasa",
+    "Asazakura Muramasa",
+    "Ichimonji Norimune",
+    "Uzuki Muramasa",
+    "Satsuki Muramasa",
+    "Suigetsu Muramasa",
+    "Shishiou",
+    "Seika Muramasa",
+    "Maidori Muramasa",
+    "Midarekaze Muramasa",
+    "Tsukimigiri Muramasa",
+    "Onikiri",
+    "Shiden Muramasa",
+    "Hiei Muramasa",
+    "Chisuberi Muramasa",
+    "Mutsunokami Yoshiyuki",
+    "Suiren Muramasa",
+    "Muhyo Muramasa",
+    "Shiratsuyu Muramasa",
+    "Tsuyuharai Muramasa",
+    "Tsukiotoshi",
+    "Setsugekka Muramasa",
+    "Kasai Muramasa",
+    "Takinomizu Muramasa",
+    "Oka Muramasa",
+    "Chizakura Muramasa",
+    "Torinuke Muramasa",
+]
+
+EXCLUSIVE_KISUKE_SWORDS = [
+    "Kagura Muramasa",
+    "Shinmei",
+    "Yakumo",
+    "Hayate Muramasa",
+    "Kagero Muramasa",
+    "Nagasone Kotetsu",
+    "Natsusame Muramasa",
+    "Yunagi Muramasa",
+    "Edauchi Muramasa",
+    "Yoiyami Muramasa",
+    "Iganokami Kanemichi",
+    "Fumitsuki Muramasa",
+    "Hazuki Muramasa",
+    "Nagatsuki Muramasa",
+    "Magoroku Kanemoto",
+    "Kirisame Muramasa",
+    "Asaarashi Muramasa",
+    "Shigure Muramasa",
+    "Amagiri Muramasa",
+    "Kogarasumaru",
+    "Yogetsu Muramasa",
+    "Shimotsuki Muramasa",
+    "Gokugetsu Muramasa",
+    "Kumokiri",
+    "Hibashiri Muramasa",
+    "Ishizuki Muramasa",
+    "Kazanami Muramasa",
+    "Suiran Muramasa",
+    "Osafune Kanemitsu",
+    "Hisame Muramasa",
+    "Mizutachi Muramasa",
+    "Tanahashi Muramasa",
+    "Goro Masamune",
+    "Tasogare Muramasa",
+    "Reimei Muramasa",
+    "Gyoko Muramasa",
+    "Tsubamegaeshi Muramasa",
+    "Mumei Tamonoo",
+    "Iwatoshi Muramasa",
+    "Hiten Muramasa",
+    "Meikyo Muramasa",
+    "Sasanoyuki Muramasa",
+    "Shusui Muramasa",
+    "Nukehishaku Muramasa",
+]
+
+LAIR_SWORDS = [
+    "Jyuzumaru Tsunetsugu",
+    "Otenta Mitsuyo",
+    "Okanehira",
+    "Dojigiri Yasutsuna"
+]
+
+// Get the current number of swords exclusive to the given character.
+// "Exclusive" means you do not have to play the other character in any circumstance to get these swords.
 function num_exclusive_swords(region, character) {
     exclusive_swords = []
     if (character == "Momohime") {
-        exclusive_swords = exclusive_momohime_swords
+        exclusive_swords = EXCLUSIVE_MOMOHIME_SWORDS
     } else if (character == "Kisuke") {
-        exclusive_swords = exclusive_kisuke_swords
+        exclusive_swords = EXCLUSIVE_KISUKE_SWORDS
+    }
+
+    sword_block_start = always_false()
+    if (region == "PAL") {
+        sword_block_start = 0x00e1d78d
+    } else if (region == "NTSC") {
+        sword_block_start = 0x00da758d
     }
 
     cond = 0
-    if (region == "PAL") {
+    for i in range(0, 107) {
         for sword in exclusive_swords {
-            cond = cond + byte(sword_flags_pal[sword])
-        }
-    } else if (region == "NTSC") {
-        for sword in exclusive_swords {
-            cond = cond + byte(sword_flags_ntsc[sword])
+            if (sword == ALL_SWORDS[i]) { 
+                cond = cond + byte(sword_block_start + i)
+            }
         }
     }
 
     return cond
 }
 
-//
+// Get the current number of swords hidden behind lairs.
+function num_blades_from_lairs(region) {
+    sword_block_start = 0
+    if (region == "PAL") {
+        sword_block_start = 0x00e1d78d
+    } else if (region == "NTSC") {
+        sword_block_start = 0x00da758d
+    }
+
+    cond = 0
+    for i in range(0, 107) {
+        for sword in LAIR_SWORDS {
+            if (sword == ALL_SWORDS[i]) { 
+                cond = cond + byte(sword_block_start + i)
+            }
+        }
+    }
+
+    return cond
+}
+
+// Get the current number of recipes that the player has learned.
 function num_current_recipes(region) {
     cond = 0
-    for book in cookbooks {
+    for book in COOKBOOKS {
         cond = cond + cookbook_acquired(region, book)
     }
 
     return cond
 }
 
-//
+// Get the current number of accessories that the player has gotten.
 function num_current_accessories(region) {
     cond = 0
 
+    for accessory in ACCESSORY_BLOCK_ONE {
+        cond = cond + accessory_acquired(region, accessory)
 
+    }
 
-    if (region == "PAL") {
-
-    } else if (region == "NTSC") {
-        for accessory in accessory_flags_ntsc {
-            cond = cond + byte(accessory_flags_ntsc[accessory])
-        }
+    for accessory in ACCESSORY_BLOCK_TWO {
+        cond = cond + accessory_acquired(region, accessory)
     }
 
     return cond
@@ -981,7 +946,7 @@ function current_mon(region) {
 achievement(
     id = 579985,
     title = "Haunted Once More",
-    description = "Bring Momohime to Jinkuro and defend her body from the Blue Monk's assault.",
+    description = "[Momohime] Bring Momohime to Jinkuro and defend her body from the Blue Monk's assault to clear the Opening Act.",
     points = 3,
     type = "progression",
     trigger = (is_ntsc()
@@ -999,38 +964,10 @@ achievement(
                 && sword_acquired("PAL", "Hasebe Kunishige") == 0x01)
 )
 
-// Helper data points:
-// https://www.nicovideo.jp/watch/sm44851300?via=thumb_watch&at=title&state=unplayed - Shigurui speedrun. Hits 72, 78, 39
-// https://www.twitch.tv/videos/1501958318 - 210 
-achievement(
-    title = "Haunting Combo",
-    description = "Achieve a combo of 75 or higher and defeat the Blue Monk on Shura or Shigurui difficulty.",
-    points = 5,
-    trigger = (is_ntsc() 
-            && is_in_game("NTSC")
-            && active_character("NTSC") == 0x01 
-            && current_difficulty("NTSC") == 0x01
-            && never(active_zone("NTSC") != 0x00)
-            && trigger_when(once(prev(dword_be(combat_pointer("NTSC") + 0x7c)) < 0x64 && (dword_be(combat_pointer("NTSC") + 0x7c)) >= 0x64))
-            // the trigger as before
-            && trigger_when(prev(sword_acquired("NTSC", "Hasebe Kunishige") == 0x00)) 
-            && trigger_when(sword_acquired("NTSC", "Hasebe Kunishige") == 0x01))
-        ||
-            (is_pal() 
-                && is_in_game("PAL")
-                && active_character("PAL") == 0x01 
-                && current_difficulty("PAL") == 0x01
-                && never(active_zone("PAL") != 0x00)
-                && trigger_when(once(prev(dword_be(combat_pointer("PAL") + 0x7c)) < 0x64 && (dword_be(combat_pointer("PAL") + 0x7c)) >= 0x64))
-                // the trigger as before
-                && trigger_when(prev(sword_acquired("PAL", "Hasebe Kunishige") == 0x00)) 
-                && trigger_when(sword_acquired("PAL", "Hasebe Kunishige") == 0x01))
-)
-
 achievement(
     id = 579986,
     title = "Collateral Freedom",
-    description = "Track down Momohime's soul all the way to Musashi and forcefully take it back from Wanyudo.",
+    description = "[Momohime] Track down Momohime's soul all the way to Musashi and forcefully take it back from Wanyudo to clear Act 2.",
     points = 5,
     type = "progression",
     trigger = (is_ntsc() 
@@ -1048,36 +985,10 @@ achievement(
             && sword_acquired("PAL", "Kashagiri Hiromitsu") == 0x01)
 )
 
-// Helper data points:
-// https://www.nicovideo.jp/watch/sm44851300?via=thumb_watch&at=title&state=unplayed - Shigurui speedrun. Hits 47, 51, 2x, 47, 34
-// https://www.twitch.tv/videos/1501958318 - 15, 6, 11, 52, 57, 1, 32
-achievement(
-    title = "Wheel Ablaze",
-    description = "Achieve a combo of 50 or higher and defeat Wanyudo on Shura or Shigurui difficulty.",
-    points = 5,  
-    trigger = (is_ntsc() 
-            && is_in_game("NTSC")
-            && current_difficulty("NTSC") == 0x01
-            && active_character("NTSC") == 0x01 
-            && never(active_zone("NTSC") != 0x27)
-            && trigger_when(once(prev(dword_be(combat_pointer("NTSC") + 0x7c)) < 0x32 && (dword_be(combat_pointer("NTSC") + 0x7c)) >= 0x32))
-            && trigger_when(prev(sword_acquired("NTSC", "Kashagiri Hiromitsu")) == 0x00)
-            && trigger_when(sword_acquired("NTSC", "Kashagiri Hiromitsu") == 0x01))
-        ||
-            (is_pal() 
-            && is_in_game("PAL")
-            && current_difficulty("PAL") == 0x01
-            && active_character("PAL") == 0x01 
-            && never(active_zone("PAL") != 0x27)
-            && trigger_when(once(prev(dword_be(combat_pointer("PAL") + 0x7c)) < 0x32 && (dword_be(combat_pointer("PAL") + 0x7c)) >= 0x32))
-            && trigger_when(prev(sword_acquired("PAL", "Kashagiri Hiromitsu")) == 0x00)
-            && trigger_when(sword_acquired("PAL", "Kashagiri Hiromitsu") == 0x01))
-)
-
 achievement(
     id = 579987,
     title = "The Princess' Plea",
-    description = "Ask Yukinoyjo about the Kuromitsu blade and demonstrate the weaknesses of his Shinkage Style.",
+    description = "[Momohime] Ask Yukinojyo about the Kuromitsu blade and survive a fight against the Shinkage Style to clear Act 3",
     points = 5,
     type = "progression",
     trigger = (is_ntsc()
@@ -1095,60 +1006,10 @@ achievement(
         && sword_acquired("PAL", "Izumokami Naganori") == 0x01)
 )
 
-// Helper data points:
-// https://www.nicovideo.jp/watch/sm44851300?via=thumb_watch&at=title&state=unplayed - Shigurui speedrun. Hits 14, ?, 10, 41, 13, 37, ?, 40
-// https://www.twitch.tv/videos/1501958318 - 
-achievement(
-    title = "A One-Sided Affair",
-    description = "Defeat Yukinoyjo on Shura or Shigurui without any of your blades breaking.",
-    points = 5,
-    type = "missable",
-    trigger = (is_ntsc()
-            && is_in_game("NTSC")
-            && current_difficulty("NTSC") == 0x01
-            && active_character("NTSC") == 0x01
-            && never(active_zone("NTSC") != 0x26)
-            && unless(once(any_blade_broke("NTSC")))
-            && trigger_when(prev(sword_acquired("NTSC", "Izumokami Naganori")) == 0x00)
-            && trigger_when(sword_acquired("NTSC", "Izumokami Naganori") == 0x01))
-        || 
-        (is_pal()
-            && is_in_game("PAL")
-            && current_difficulty("PAL") == 0x01
-            && active_character("PAL") == 0x01
-            && never(active_zone("PAL") != 0x26)
-            && unless(once(any_blade_broke("PAL")))
-            && trigger_when(prev(sword_acquired("PAL", "Izumokami Naganori")) == 0x00)
-            && trigger_when(sword_acquired("PAL", "Izumokami Naganori") == 0x01))
-)
-achievement(
-    title = "Grounded for Honor",
-    description = "Defeat Yukinoyjo on Shura or Shigurui without ever pressing up on your control stick or d-pad.",
-    points = 5,
-    type = "missable",
-    trigger = (is_ntsc()
-        && is_in_game("NTSC")
-        && current_difficulty("NTSC") == 0x01
-        && active_character("NTSC") == 0x01
-        && never(active_zone("NTSC") != 0x26)
-        && unless(once(has_jumped("NTSC")))
-        && trigger_when(prev(sword_acquired("NTSC", "Izumokami Naganori")) == 0x00)
-        && trigger_when(sword_acquired("NTSC", "Izumokami Naganori") == 0x01))
-    || 
-    (is_pal()
-        && is_in_game("PAL")
-        && current_difficulty("PAL") == 0x01
-        && active_character("PAL") == 0x01
-        && never(active_zone("PAL") != 0x26)
-        && unless(once(has_jumped("PAL")))
-        && trigger_when(prev(sword_acquired("PAL", "Izumokami Naganori")) == 0x00)
-        && trigger_when(sword_acquired("PAL", "Izumokami Naganori") == 0x01))
-)
-
 achievement(
     id = 579988,
     title = "The Foot of a Mystic Boar",
-    description = "Travel through the mountains of Takayama and defeat Ippondatara to learn a well-guarded secret.",
+    description = "[Momohime] Travel towards Mino through the mountains of Takayama and defeat Ippondatara to learn a well guarded secret to clear Act 4",
     points = 5,
     type = "progression",
     trigger = (is_ntsc()
@@ -1166,37 +1027,10 @@ achievement(
             && sword_acquired("PAL", "Ichimonji Norimune") == 0x01)
 )
 
-// Helper data points:
-// https://www.nicovideo.jp/watch/sm44851300?via=thumb_watch&at=title&state=unplayed - 47, 53, 2x, 5, 5, 10
-// https://www.twitch.tv/videos/1501958318 - 50, 4, 2, 3, 3, 31, 
-achievement(
-    title = "The Hand of a Protective Deity",
-    description = "Achieve a combo of 50 or higher and defeat Ippondatara on Shura or Shigurui difficulty.",
-    points = 10,
-    type = "missable",
-    trigger = (is_ntsc()
-            && is_in_game("NTSC")
-            && current_difficulty("NTSC") == 0x01
-            && active_character("NTSC") == 0x01
-            && never(active_zone("NTSC") != 0x07)
-            && trigger_when(once(prev(dword_be(combat_pointer("NTSC") + 0x7c)) < 0x32 && (dword_be(combat_pointer("NTSC") + 0x7c)) >= 0x32))
-            && trigger_when(prev(sword_acquired("NTSC", "Ichimonji Norimune")) == 0x00)
-            && trigger_when(sword_acquired("NTSC", "Ichimonji Norimune") == 0x01))
-        ||
-            (is_pal()
-            && is_in_game("PAL")
-            && current_difficulty("PAL") == 0x01
-            && active_character("PAL") == 0x01
-            && never(active_zone("PAL") != 0x07)
-            && trigger_when(once(prev(dword_be(combat_pointer("PAL") + 0x7c)) < 0x32 && (dword_be(combat_pointer("PAL") + 0x7c)) >= 0x32))
-            && trigger_when(prev(sword_acquired("PAL", "Ichimonji Norimune")) == 0x00)
-            && trigger_when(sword_acquired("PAL", "Ichimonji Norimune") == 0x01))
-)
-
 achievement(
     id = 579989,
     title = "Disgraced Traitor Exposed",
-    description = "Infiltrate Narukami Castle and defeat Shikami Danjo and his chimera.",
+    description = "[Momohime] Infiltrate Narukami castle and get your hands on Shikami Danjo and his chimera to clear Act 5.",
     points = 5,
     type = "progression",
     trigger = (is_ntsc()
@@ -1214,37 +1048,10 @@ achievement(
             && sword_acquired("PAL", "Shishiou") == 0x01)
 )
 
-// Helper data points:
-// https://www.nicovideo.jp/watch/sm44851300?via=thumb_watch&at=title&state=unplayed - 53, 30, 14, 
-// https://www.twitch.tv/videos/1501958318 - 65, 30, 8, death, 53, 23,16, 8,4, 31, 3
-achievement(
-    title = "The True Form of a Traitor",
-    description = "Achieve a combo of 50 or higher and defeat the Chimera on Shura or Shigurui difficulty.",
-    points = 10,
-    type = "missable",
-    trigger = (is_ntsc()
-            && is_in_game("NTSC")
-            && current_difficulty("NTSC") == 0x01
-            && active_character("NTSC") == 0x01
-            && never(active_zone("NTSC") != 0x06)
-            && trigger_when(once(prev(dword_be(combat_pointer("NTSC") + 0x7c)) < 0x32 && (dword_be(combat_pointer("NTSC") + 0x7c)) >= 0x32))
-            && trigger_when(prev(sword_acquired("NTSC", "Shishiou")) == 0x00)
-            && trigger_when(sword_acquired("NTSC", "Shishiou") == 0x01))
-        ||
-            (is_pal()
-            && is_in_game("PAL")
-            && current_difficulty("PAL") == 0x01
-            && active_character("PAL") == 0x01
-            && never(active_zone("PAL") != 0x06)
-            && trigger_when(once(prev(dword_be(combat_pointer("PAL") + 0x7c)) < 0x32 && (dword_be(combat_pointer("PAL") + 0x7c)) >= 0x32))
-            && trigger_when(prev(sword_acquired("PAL", "Shishiou")) == 0x00)
-            && trigger_when(sword_acquired("PAL", "Shishiou") == 0x01))
-)
-
 achievement(
     id = 579990,
     title = "Served Fresh",
-    description = "Descend into hell and get yourself out of trouble.",
+    description = "[Momohime] Descend into hell only to get swallowed raw. Get yourself out of trouble to clear Act 6.",
     points = 5,
     type = "progression",
     trigger = (is_ntsc()
@@ -1262,37 +1069,10 @@ achievement(
             && sword_acquired("PAL", "Onikiri") == 0x01)
 )
 
-// Helper data points:
-// https://www.nicovideo.jp/watch/sm44851300?via=thumb_watch&at=title&state=unplayed - 25, 3, 37, 4, 35, 10, 32
-// https://www.twitch.tv/videos/1501958318 - 38, 15, 19, 40, 14, 34
-achievement(
-    title = "A Meal Better Eaten Whole",
-    description = "Achieve a combo of 40 or higher and defeat the Big Oni on Shura or Shigurui difficulty.",
-    points = 10,
-    type = "missable",
-    trigger = (is_ntsc()
-        && is_in_game("NTSC")
-        && current_difficulty("NTSC") == 0x01
-        && active_character("NTSC") == 0x01
-        && never(active_zone("NTSC") != 0x01)
-        && trigger_when(once(prev(dword_be(combat_pointer("NTSC") + 0x7c)) < 0x32 && (dword_be(combat_pointer("NTSC") + 0x7c)) >= 0x32))
-        && trigger_when(prev(sword_acquired("NTSC", "Onikiri")) == 0x00)
-        && trigger_when(sword_acquired("NTSC", "Onikiri") == 0x01))
-    ||
-        (is_pal()
-        && is_in_game("PAL")
-        && current_difficulty("PAL") == 0x01
-        && active_character("PAL") == 0x01
-        && never(active_zone("PAL") != 0x01)
-        && trigger_when(once(prev(dword_be(combat_pointer("PAL") + 0x7c)) < 0x32 && (dword_be(combat_pointer("PAL") + 0x7c)) >= 0x32))
-        && trigger_when(prev(sword_acquired("PAL", "Onikiri")) == 0x00)
-        && trigger_when(sword_acquired("PAL", "Onikiri") == 0x01))
-)
-
 achievement(
     id = 579991,
-    title = "Knockin' on Heaven's Door", // New title: Started From the Bottom, Now We Here
-    description = "Seek a way into heaven and entertain the gatekeeper.",
+    title = "Knock Knock Knockin' on Heaven's Door", 
+    description = "[Momohime] Seek a way into heaven and entertain the gatekeeper to clear Act 7.",
     points = 5,
     type = "progression",
     trigger = (is_ntsc()
@@ -1310,38 +1090,11 @@ achievement(
         && sword_acquired("PAL", "Mutsunokami Yoshiyuki") == 0x01)
 )
 
-// Helper data points:
-// https://www.nicovideo.jp/watch/sm44851300?via=thumb_watch&at=title&state=unplayed - 19, 5, 114, 55
-// https://www.twitch.tv/videos/1501958318 - 53, 57, 29, 56, 27
-achievement(
-    title = "Thunderous Performance",
-    description = "Defeat Raijin as Momohime on Shura or Shigurui and achieve a combo of 100 or higher.",
-    points = 10,
-    type = "missable",
-    trigger = (is_ntsc()
-        && is_in_game("NTSC")
-        && current_difficulty("NTSC") == 0x01
-        && active_character("NTSC") == 0x01
-        && never(active_zone("NTSC") != 0x05)
-        && trigger_when(once(prev(dword_be(combat_pointer("NTSC") + 0x7c)) < 0x32 && (dword_be(combat_pointer("NTSC") + 0x7c)) >= 0x32))
-        && trigger_when(prev(sword_acquired("NTSC", "Mutsunokami Yoshiyuki")) == 0x00)
-        && trigger_when(sword_acquired("NTSC", "Mutsunokami Yoshiyuki") == 0x01))
-    ||
-        (is_pal()
-        && is_in_game("PAL")
-        && current_difficulty("PAL") == 0x01
-        && active_character("PAL") == 0x01
-        && never(active_zone("PAL") != 0x05)
-        && trigger_when(once(prev(dword_be(combat_pointer("PAL") + 0x7c)) < 0x32 && (dword_be(combat_pointer("PAL") + 0x7c)) >= 0x32))
-        && trigger_when(prev(sword_acquired("PAL", "Mutsunokami Yoshiyuki")) == 0x00)
-        && trigger_when(sword_acquired("PAL", "Mutsunokami Yoshiyuki") == 0x01))
-
-)
 
 achievement(
     id = 579992,
     title = "A Whole Body to Yourself",
-    description = "Climb the Buddha Hall Statue and free Momohime of possession.",
+    description = "[Momohime] Climb the Buddha Statue Hall, face heavenly forces of epic proportions and have Momohime finally freed from possession to clear the Final Act.",
     points = 5,
     type = "progression",
     trigger = (is_ntsc()
@@ -1359,6 +1112,749 @@ achievement(
         && sword_acquired("PAL", "Tsukiotoshi") == 0x01)
 )
 
+achievement(
+    id = 582443,
+    title = "A Mysterious Foe",
+    description = "Equip Mumei Tamanoo and Tsukiotoshi as Momohime and defeat the new boss in Fudo-Myoou's room.",
+    points = 10,
+    trigger = (is_ntsc()
+            && is_in_game("NTSC")
+            && active_character("NTSC") == 0x01
+            && active_zone("NTSC") == 0x35
+            && prev(sword_acquired("NTSC", "Onimaru Kunitsuna")) == 0x00
+            && sword_acquired("NTSC", "Onimaru Kunitsuna") == 0x01) 
+        || 
+            (is_pal()
+            && is_in_game("PAL")
+            && active_character("PAL") == 0x01
+            && active_zone("PAL") == 0x35
+            && prev(sword_acquired("PAL", "Onimaru Kunitsuna")) == 0x00
+            && sword_acquired("PAL", "Onimaru Kunitsuna") == 0x01)
+)
+
+achievement(
+    id = 579995,
+    title = "Deadly Oboro Arts",
+    description = "Forge and collect every blade unique to Momohime.",
+    points = 10,
+    trigger = (is_ntsc()
+            && prev(num_exclusive_swords("NTSC", "Momohime")) == length(EXCLUSIVE_MOMOHIME_SWORDS) - 1
+            && measured(num_exclusive_swords("NTSC", "Momohime") == length(EXCLUSIVE_MOMOHIME_SWORDS), when=is_ntsc(), format="raw"))
+    || 
+        (is_pal()
+            && prev(num_exclusive_swords("PAL", "Momohime")) == length(EXCLUSIVE_MOMOHIME_SWORDS) - 1
+            && measured(num_exclusive_swords("PAL", "Momohime") == length(EXCLUSIVE_MOMOHIME_SWORDS), when=is_pal(), format="raw"))
+)
+
+achievement(
+    id = 579996,
+    title = "Blades of the Amnesiac",
+    description = "Forge and collect every blade unique to Kisuke.",
+    points = 10,
+    trigger = (is_ntsc() 
+        && prev(num_exclusive_swords("NTSC", "Kisuke")) == length(EXCLUSIVE_KISUKE_SWORDS) - 1
+        && measured(num_exclusive_swords("NTSC", "Kisuke") == length(EXCLUSIVE_KISUKE_SWORDS), when=is_ntsc(), format="raw"))
+    ||
+        (is_pal() 
+            && prev(num_exclusive_swords("PAL", "Kisuke")) == length(EXCLUSIVE_KISUKE_SWORDS) - 1
+            && measured(num_exclusive_swords("PAL", "Kisuke") == length(EXCLUSIVE_KISUKE_SWORDS), when=is_pal(), format="raw"))
+)
+
+achievement(
+    id = 582442,
+    title = "Unlimited Muramasa Works",
+    description = "Obtain all demon blades from lairs.",
+    points = 10,
+    trigger = (is_ntsc()
+        && prev(num_blades_from_lairs("NTSC")) == length(LAIR_SWORDS) - 1
+        && measured(num_blades_from_lairs("NTSC") == length(LAIR_SWORDS), when=is_ntsc(), format="raw"))
+    ||
+        (is_pal()
+        && prev(num_blades_from_lairs("PAL")) == length(LAIR_SWORDS) - 1
+        && measured(num_blades_from_lairs("PAL") == length(LAIR_SWORDS), when=is_pal(), format="raw"))
+)
+
+achievement(
+    id = 579993,
+    title = "The Destroyer of Fate",
+    description = "Forge the Oboro Muramasa after collecting every other blade.",
+    points = 25,
+    trigger = (is_ntsc()
+            && prev(num_current_swords("NTSC")) == length(ALL_SWORDS) - 1
+            && measured(num_current_swords("NTSC") == length(ALL_SWORDS), when=is_ntsc(), format="raw")) 
+    ||
+        (is_pal()
+            && prev(num_current_swords("PAL")) == length(ALL_SWORDS) - 1
+            && measured(num_current_swords("PAL") == length(ALL_SWORDS), when=is_pal(), format="raw"))
+)
+
+achievement(
+    title = "Oboro Massacre, Peach Flavored",
+    description = "Equip the Oboro Muramasa as Momohime and defeat Fudo-Myoou.",
+    points = 10,
+    trigger = (is_ntsc() 
+        && is_in_game("NTSC")
+        && active_character("NTSC") == 0x01
+        && active_zone("NTSC") == 0x36
+        && prev(active_scene("NTSC") == 0x0b)
+        && active_scene("NTSC") == 0x03) 
+    || 
+        (is_pal() 
+        && is_in_game("PAL")
+        && active_character("PAL") == 0x01
+        && active_zone("PAL") == 0x36
+        && prev(active_scene("PAL") == 0x0b)
+        && active_scene("PAL") == 0x03) 
+)
+
+// *** Lairs ***
+achievement(
+    id = 580608,
+    title = "100 Armed Monks",
+    description = "Clear the red enemy lair in Musashi on Shura or Shigurui difficulty.",
+    points = 3,
+    trigger = (is_in_game("NTSC")
+        && in_zone("NTSC", "Musashi")
+        && current_difficulty("NTSC") == 0x01
+        && prev(accessory_acquired("NTSC", "Kusarikatabira")) == 0x00
+        && accessory_acquired("NTSC", "Kusarikatabira") == 0x01)
+    ||
+        (is_in_game("PAL")
+        && in_zone("PAL", "Musashi")
+        && current_difficulty("PAL") == 0x01
+        && prev(accessory_acquired("PAL", "Kusarikatabira")) == 0x00
+        && accessory_acquired("PAL", "Kusarikatabira") == 0x01)
+)
+
+achievement(
+    id = 580611,
+    title = "100 Incarnations of Shadowy Ninja",
+    description = "Clear the enemy lair in Yamashiro on Shura or Shigurui difficulty.",
+    points = 3,
+    trigger = (is_in_game("NTSC")
+        && in_zone("NTSC", "Yamashiro")
+        && current_difficulty("NTSC") == 0x01
+        && prev(accessory_acquired("NTSC", "Chowhound Saucer")) == 0x00
+        && accessory_acquired("NTSC", "Chowhound Saucer") == 0x01)
+    ||
+        (is_in_game("PAL")
+            && in_zone("PAL", "Yamashiro")
+            && current_difficulty("PAL") == 0x01
+            && prev(accessory_acquired("PAL", "Chowhound Saucer")) == 0x00
+            && accessory_acquired("PAL", "Chowhound Saucer") == 0x01)
+)
+
+achievement(
+    id = 580612,
+    title = "God of Pestilence",
+    description = "Clear the enemy lair in Owari on Shura or Shigurui difficulty.",
+    points = 3,
+    trigger = (is_in_game("NTSC")
+        && in_zone("NTSC", "Owari")
+        && current_difficulty("NTSC") == 0x01
+        && prev(accessory_acquired("NTSC", "Cypress Rosary")) == 0x00
+        && accessory_acquired("NTSC", "Cypress Rosary") == 0x01)
+    ||
+        (is_in_game("PAL")
+            && in_zone("PAL", "Owari")
+            && current_difficulty("PAL") == 0x01
+            && prev(accessory_acquired("PAL", "Cypress Rosary")) == 0x00
+            && accessory_acquired("PAL", "Cypress Rosary") == 0x01)
+)
+
+achievement(
+    id = 580613,
+    title = "Mountain Kagura Dance, the Storm of Tengu",
+    description = "Clear the enemy lair in Totomi on Shura or Shigurui difficulty.",
+    points = 5,
+    trigger = (is_in_game("NTSC")
+        && in_zone("NTSC", "Totomi")
+        && current_difficulty("NTSC") == 0x01
+        && prev(accessory_acquired("NTSC", "Lucky Mallet")) == 0x00
+        && accessory_acquired("NTSC", "Lucky Mallet") == 0x01)
+    ||
+        (is_in_game("PAL")
+            && in_zone("PAL", "Totomi")
+            && current_difficulty("PAL") == 0x01
+            && prev(accessory_acquired("PAL", "Lucky Mallet")) == 0x00
+            && accessory_acquired("PAL", "Lucky Mallet") == 0x01)
+)
+
+achievement(
+    id = 580614,
+    title = "Toad of Yoro Falls",
+    description = "Clear the enemy lair in Mino on Shura or Shigurui difficulty.",
+    points = 5,
+    trigger = (is_in_game("NTSC")
+        && in_zone("NTSC", "Mino")
+        && current_difficulty("NTSC") == 0x01
+        && prev(accessory_acquired("NTSC", "Ise Charm")) == 0x00
+        && accessory_acquired("NTSC", "Ise Charm") == 0x01)
+    ||
+        (is_in_game("PAL")
+        && in_zone("PAL", "Mino")
+        && current_difficulty("PAL") == 0x01
+        && prev(accessory_acquired("PAL", "Ise Charm")) == 0x00
+        && accessory_acquired("PAL", "Ise Charm") == 0x01)
+)
+
+achievement(
+    id = 580615,
+    title = "Seven Samurai",
+    description = "Clear the enemy lair in Mikawa on Shura or Shigurui difficulty.",
+    points = 5,
+    trigger = (is_in_game("NTSC")
+        && in_zone("NTSC", "Mikawa")
+        && current_difficulty("NTSC") == 0x01
+        && prev(accessory_acquired("NTSC", "Yamato Miracle Drug")) == 0x00
+        && accessory_acquired("NTSC", "Yamato Miracle Drug") == 0x01)
+    ||
+        (is_in_game("PAL")
+        && in_zone("PAL", "Mikawa")
+        && current_difficulty("PAL") == 0x01
+        && prev(accessory_acquired("PAL", "Yamato Miracle Drug")) == 0x00
+        && accessory_acquired("PAL", "Yamato Miracle Drug") == 0x01)
+)
+
+achievement(
+    id = 580610,
+    title = "Snow Woman, Oiran Procession",
+    description = "Clear the enemy lair in Hida on Shura or Shigurui difficulty.",
+    points = 5,
+    trigger = (is_in_game("NTSC")
+        && in_zone("NTSC", "Hida")
+        && current_difficulty("NTSC") == 0x01
+        && prev(accessory_acquired("NTSC", "Wolfsbane Poison")) == 0x00
+        && accessory_acquired("NTSC", "Wolfsbane Poison") == 0x01)
+    ||
+        (is_in_game("PAL")
+        && in_zone("PAL", "Hida")
+        && current_difficulty("PAL") == 0x01
+        && prev(accessory_acquired("PAL", "Wolfsbane Poison")) == 0x00
+        && accessory_acquired("PAL", "Wolfsbane Poison") == 0x01)
+)
+
+achievement(
+    id = 580616,
+    title = "Courage in the Ghostly Hour",
+    description = "Clear the enemy lair in Sagami on Shura or Shigurui difficulty.",
+    points = 5,
+    trigger = (is_in_game("NTSC")
+        && in_zone("NTSC", "Sagami")
+        && current_difficulty("NTSC") == 0x01
+        && prev(accessory_acquired("NTSC", "Clapper")) == 0x00
+        && accessory_acquired("NTSC", "Clapper") == 0x01)
+    ||
+        (is_in_game("PAL")
+        && in_zone("PAL", "Sagami")
+        && current_difficulty("PAL") == 0x01
+        && prev(accessory_acquired("PAL", "Clapper")) == 0x00
+        && accessory_acquired("PAL", "Clapper") == 0x01)
+)
+
+achievement(
+    id = 580618,
+    title = "Ozaru Stealth Army",
+    description = "Clear the enemy lair in Iga on Shura or Shigurui difficulty.",
+    points = 5,
+    trigger = (is_in_game("NTSC")
+        && in_zone("NTSC", "Iga")
+        && current_difficulty("NTSC") == 0x01
+        && prev(accessory_acquired("NTSC", "Ninja Socks")) == 0x00
+        && accessory_acquired("NTSC", "Ninja Socks") == 0x01)
+    ||
+        (is_in_game("PAL")
+        && in_zone("PAL", "Iga")
+        && current_difficulty("PAL") == 0x01
+        && prev(accessory_acquired("PAL", "Ninja Socks")) == 0x00
+        && accessory_acquired("PAL", "Ninja Socks") == 0x01)
+)
+
+achievement(
+    id = 580617,
+    title = "Wildlife Caricature",
+    description = "Clear the enemy lair in Kai on Shura or Shigurui difficulty.",
+    points = 10,
+    trigger = (is_in_game("NTSC")
+        && in_zone("NTSC", "Kai")
+        && current_difficulty("NTSC") == 0x01
+        && prev(accessory_acquired("NTSC", "Hungry Devil Saucer")) == 0x00
+        && accessory_acquired("NTSC", "Hungry Devil Saucer") == 0x01)
+    ||
+        (is_in_game("PAL")
+        && in_zone("PAL", "Kai")
+        && current_difficulty("PAL") == 0x01
+        && prev(accessory_acquired("PAL", "Hungry Devil Saucer")) == 0x00
+        && accessory_acquired("PAL", "Hungry Devil Saucer") == 0x01)
+)
+
+achievement(
+    id = 580619,
+    title = "The Scheming Yagyuu Clan",
+    description = "Clear the enemy lair in Yamato on Shura or Shigurui difficulty.",
+    points = 10,
+    trigger = (is_in_game("NTSC")
+        && in_zone("NTSC", "Yamato")
+        && current_difficulty("NTSC") == 0x01
+        && prev(sword_acquired("NTSC", "Jyuzumaru Tsunetsugu")) == 0x00
+        && sword_acquired("NTSC", "Jyuzumaru Tsunetsugu") == 0x01)
+    ||
+        (is_in_game("PAL")
+        && in_zone("PAL", "Yamato")
+        && current_difficulty("PAL") == 0x01
+        && prev(sword_acquired("PAL", "Jyuzumaru Tsunetsugu")) == 0x00
+        && sword_acquired("PAL", "Jyuzumaru Tsunetsugu") == 0x01)
+)
+
+achievement(
+    id = 580620,
+    title = "Giant Centipede of the Suzuka Pass",
+    description = "Clear the enemy lair in Ise on Shura or Shigurui difficulty.",
+    points = 10,
+    trigger = (is_in_game("NTSC")
+        && in_zone("NTSC", "Ise")
+        && current_difficulty("NTSC") == 0x01
+        && prev(sword_acquired("NTSC", "Otenta Mitsuyo")) == 0x00
+        && sword_acquired("NTSC", "Otenta Mitsuyo") == 0x01)
+    ||
+        (is_in_game("PAL")
+        && in_zone("PAL", "Ise")
+        && current_difficulty("PAL") == 0x01
+        && prev(sword_acquired("PAL", "Otenta Mitsuyo")) == 0x00
+        && sword_acquired("PAL", "Otenta Mitsuyo") == 0x01)
+)
+
+achievement(
+    id = 580621,
+    title = "Rising Dragon, Lying Dragon",
+    description = "Clear the enemy lair in Suruga on Shura or Shigurui difficulty.",
+    points = 10,
+    trigger = (is_in_game("NTSC")
+        && in_zone("NTSC", "Suruga")
+        && current_difficulty("NTSC") == 0x01
+        && prev(sword_acquired("NTSC", "Okanehira")) == 0x00
+        && sword_acquired("NTSC", "Okanehira") == 0x01)
+    ||
+        (is_in_game("PAL")
+        && in_zone("PAL", "Suruga")
+        && current_difficulty("PAL") == 0x01
+        && prev(sword_acquired("PAL", "Okanehira")) == 0x00
+        && sword_acquired("PAL", "Okanehira") == 0x01)
+)
+
+achievement(
+    id = 580622,
+    title = "Lair of the Oni",
+    description = "Clear the enemy lair in Omi on Shura or Shigurui difficulty.",
+    points = 10,
+    trigger = (is_in_game("NTSC")
+        && in_zone("NTSC", "Omi")
+        && current_difficulty("NTSC") == 0x01
+        && prev(sword_acquired("NTSC", "Dojigiri Yasutsuna")) == 0x00
+        && sword_acquired("NTSC", "Dojigiri Yasutsuna") == 0x01)
+    ||
+        (is_in_game("PAL")
+        && in_zone("PAL", "Omi")
+        && current_difficulty("PAL") == 0x01
+        && prev(sword_acquired("PAL", "Dojigiri Yasutsuna")) == 0x00
+        && sword_acquired("PAL", "Dojigiri Yasutsuna") == 0x01)
+)
+
+achievement(
+    id = 580623,
+    title = "Ghost of the Battle Field",
+    description = "Clear the enemy lair in Shinano on Shura or Shigurui difficulty.",
+    points = 10,
+    trigger = (is_in_game("NTSC")
+        && in_zone("NTSC", "Shinano")
+        && current_difficulty("NTSC") == 0x01
+        && prev(accessory_acquired("NTSC", "Toyoma Miracle Drug")) == 0x00
+        && accessory_acquired("NTSC", "Toyoma Miracle Drug") == 0x01)
+    ||
+        (is_in_game("PAL")
+        && in_zone("PAL", "Shinano")
+        && current_difficulty("PAL") == 0x01
+        && prev(accessory_acquired("PAL", "Toyoma Miracle Drug")) == 0x00
+        && accessory_acquired("PAL", "Toyoma Miracle Drug") == 0x01)
+)
+
+achievement(
+    id = 580624,
+    title = "Total Pandemonium",
+    description = "Clear the enemy lair in Izu on any difficulty.",
+    points = 25,
+    trigger = (is_in_game("NTSC")
+        && in_zone("NTSC", "Izu")
+        && current_difficulty("NTSC") == 0x01
+        && prev(accessory_acquired("NTSC", "Narukami Bracelet")) == 0x00
+        && accessory_acquired("NTSC", "Narukami Bracelet") == 0x01)
+    ||
+        (is_in_game("PAL")
+        && in_zone("PAL", "Izu")
+        && current_difficulty("PAL") == 0x01
+        && prev(accessory_acquired("PAL", "Narukami Bracelet")) == 0x00
+        && accessory_acquired("PAL", "Narukami Bracelet") == 0x01)
+)
+
+achievement(
+    id = 580609,
+    title = "Accessories of Edo",
+    description = "Collect all 47 accessories on either character.",
+    points = 10,
+    trigger = (is_ntsc()
+        && prev(num_current_accessories("NTSC")) == 0x2e
+        && measured(num_current_accessories("NTSC") == 0x2f, when=is_ntsc()))
+    || 
+        (is_pal()
+            && prev(num_current_accessories("PAL")) == 0x2e
+            && measured(num_current_accessories("PAL") == 0x2f, when=is_pal()))
+)
+
+achievement(
+    id = 579994,
+    title = "You'll Never Go Hungry Again",
+    description = "Learn all 20 recipes on either character.",
+    points = 10,
+    trigger = (is_ntsc()
+        && prev(num_current_recipes("NTSC")) == length(COOKBOOKS) - 1
+        && measured(num_current_recipes("NTSC") == length(COOKBOOKS), when=is_ntsc()))
+    ||
+        (is_pal()
+        && prev(num_current_recipes("PAL") == length(COOKBOOKS) - 1)
+        && measured(num_current_recipes("PAL") == length(COOKBOOKS), when=is_pal()))
+)
+
+achievement(
+    title = "Fated Meeting in an Unlikely Place",
+    description = "As Momohime, find Kisuke in a hot spring.",
+    points = 1,
+    trigger = (is_ntsc()
+        && active_character("NTSC") == 0x01
+        && in_zone("NTSC", "Onsen")
+        && always_false()
+        // && something to denote Kisuke
+        // Loose thought here for future me: the two notable difference between this Onsen scene and others are:
+        // 1. Kisuke is present (obviously), but...
+        // 2. You can't leave
+        // If you can't detect that some flag has changed, detect if you can leave?
+        // Alternate explanations:
+        // - game is recording "number of hot spring visits"
+        // - game is recording "number of unique hot spring visits"
+        // - game is recording "number of times other character has been seen in hot spring"
+    )
+    ||
+        (is_pal()
+        && active_character("PAL") == 0x01
+        && in_zone("PAL", "Onsen")
+        && always_false()
+        // && something to denote Kisuke
+    )
+    
+    always_false()
+)
+
+achievement(
+    title = "Onsen Surprise",
+    description = "As Kisuke, find Momohime in a hot spring.",
+    points = 1,
+    trigger = (is_ntsc()
+        && active_character("NTSC") == 0x00
+        && in_zone("NTSC", "Onsen")
+        && always_false()) 
+    || (is_pal()
+        && active_character("PAL") == 0x01
+        && in_zone("PAL", "Onsen")
+        && always_false())
+)
+
+achievement(
+    title = "A Combo of Deadly Proportions", 
+    points = 10,
+    description = "Achieve a combo of 200 or higher in any fight.",
+    trigger = (is_in_game("NTSC")
+            && dword_be(active_combat_pointer("NTSC") + 0x80) < 0x3e8
+            // Combo counter can go up by more than 1 at once, so we just want to be in the ballpark
+            // For now, ballpark is [185, 215]
+            && prev(dword_be(active_combat_pointer("NTSC") + 0x80)) >= 0xb9
+            && prev(dword_be(active_combat_pointer("NTSC") + 0x80)) < 0xc8
+            && dword_be(active_combat_pointer("NTSC") + 0x80) >= 0xc8
+            && dword_be(active_combat_pointer("NTSC") + 0x80) <= 0xd7)
+        ||
+            (is_in_game("PAL")
+                && dword_be(active_combat_pointer("PAL") + 0x80) < 0x3e8
+                // Combo counter can go up by more than 1 at once, so we just want to be in the ballpark
+                // For now, ballpark is [185, 215]
+                && prev(dword_be(active_combat_pointer("PAL") + 0x80)) >= 0xb9
+                && prev(dword_be(active_combat_pointer("PAL") + 0x80)) < 0xc8
+                && dword_be(active_combat_pointer("PAL") + 0x80) >= 0xc8
+                && dword_be(active_combat_pointer("PAL") + 0x80) <= 0xd7)
+)
+
+// Helper data points:
+// https://www.nicovideo.jp/watch/sm44851300?via=thumb_watch&at=title&state=unplayed - Shigurui speedrun. Hits 72, 78, 39
+// https://www.twitch.tv/videos/1501958318 - 210 
+achievement(
+    id = 582475,
+    title = "Haunting Combo",
+    description = "Achieve a combo of 75 or higher and defeat the Blue Monk on Shura or Shigurui difficulty.",
+    points = 3,
+    trigger = (never(is_ntsc() && active_zone("NTSC") != 0x00)
+            && is_in_game("NTSC")
+            && active_character("NTSC") == 0x01 
+            && current_difficulty("NTSC") == 0x01
+            && trigger_when(
+                once(
+                    prev(dword_be(active_combat_pointer("NTSC") + 0x80)) < 0x4b 
+                    && (dword_be(active_combat_pointer("NTSC") + 0x80)) >= 0x4b
+                    && (dword_be(active_combat_pointer("NTSC") + 0x80)) <= 0x55 // buffer in case somehow 2+ hits in a combo are registered at once
+                )
+            )
+            // the trigger as before
+            && prev(sword_acquired("NTSC", "Hasebe Kunishige") == 0x00)
+            && trigger_when(sword_acquired("NTSC", "Hasebe Kunishige") == 0x01))
+        ||
+            (never(is_pal() && active_zone("PAL") != 0x00)
+            && is_in_game("PAL")
+            && active_character("PAL") == 0x01 
+            && current_difficulty("PAL") == 0x01
+            && trigger_when(
+                once(
+                    prev(dword_be(active_combat_pointer("PAL") + 0x80)) < 0x4b 
+                    && (dword_be(active_combat_pointer("PAL") + 0x80)) >= 0x4b
+                    && (dword_be(active_combat_pointer("PAL") + 0x80)) <= 0x55 // buffer in case somehow 2+ hits in a combo are registered at once
+                )
+            )
+            // the trigger as before
+            && prev(sword_acquired("PAL", "Hasebe Kunishige") == 0x00)
+            && trigger_when(sword_acquired("PAL", "Hasebe Kunishige") == 0x01))
+)
+
+// Helper data points:
+// https://www.nicovideo.jp/watch/sm44851300?via=thumb_watch&at=title&state=unplayed - Shigurui speedrun. Hits 47, 51, 2x, 47, 34
+// https://www.twitch.tv/videos/1501958318 - 15, 6, 11, 52, 57, 1, 32
+achievement(
+    title = "Freewheeling",
+    description = "Achieve a combo of 50 or higher and defeat Wanyudo on Shura or Shigurui difficulty.",
+    points = 5,  
+    trigger = (never(is_ntsc() && active_zone("NTSC") != 0x27)
+            && is_in_game("NTSC")
+            && active_character("NTSC") == 0x01 
+            && current_difficulty("NTSC") == 0x01
+            && trigger_when(
+                once(
+                    prev(dword_be(active_combat_pointer("NTSC") + 0x80)) < 0x32 
+                    && (dword_be(active_combat_pointer("NTSC") + 0x80)) >= 0x32
+                    && (dword_be(active_combat_pointer("NTSC") + 0x80)) <= 0x3c // buffer in case somehow 2+ hits in a combo are registered at once
+                )
+            )
+            // the trigger as before
+            && prev(sword_acquired("NTSC", "Kashagiri Hiromitsu") == 0x00)
+            && trigger_when(sword_acquired("NTSC", "Kashagiri Hiromitsu") == 0x01))
+        ||
+            (never(is_pal() && active_zone("PAL") != 0x27)
+            && is_in_game("PAL")
+            && active_character("PAL") == 0x01 
+            && current_difficulty("PAL") == 0x01
+            && trigger_when(
+                once(
+                    prev(dword_be(active_combat_pointer("PAL") + 0x80)) < 0x32 
+                    && (dword_be(active_combat_pointer("PAL") + 0x80)) >= 0x32
+                    && (dword_be(active_combat_pointer("PAL") + 0x80)) <= 0x3c // buffer in case somehow 2+ hits in a combo are registered at once
+                )
+            )
+            // the trigger as before
+            && prev(sword_acquired("PAL", "Kashagiri Hiromitsu") == 0x00)
+            && trigger_when(sword_acquired("PAL", "Kashagiri Hiromitsu") == 0x01))
+)
+
+// Helper data points:
+// https://www.nicovideo.jp/watch/sm44851300?via=thumb_watch&at=title&state=unplayed - Shigurui speedrun. Hits 14, ?, 10, 41, 13, 37, ?, 40
+// https://www.twitch.tv/videos/1501958318 - 
+// TODO debug later, it's not resetting the hit count as I expected
+achievement(
+    title = "Grounded By Honor",
+    description = "Defeat Yukinojyo on Shura or Shigurui without ever pressing up on your control stick or d-pad.",
+    points = 5,
+    type = "missable",
+    trigger = 
+        (never(is_ntsc() && active_zone("NTSC") != 0x26)
+            && is_in_game("NTSC")
+            && active_character("NTSC") == 0x01 
+            && current_difficulty("NTSC") == 0x01
+            && unless(once(has_jumped("NTSC")))
+            // the trigger as before
+            && prev(sword_acquired("NTSC", "Izumokami Naganori") == 0x00)
+            && trigger_when(sword_acquired("NTSC", "Izumokami Naganori") == 0x01))
+    || 
+        (never(is_pal() && active_zone("PAL") != 0x26)
+                && is_in_game("PAL")
+                && active_character("PAL") == 0x01 
+                && current_difficulty("PAL") == 0x01
+                && unless(once(has_jumped("PAL")))
+                // the trigger as before
+                && prev(sword_acquired("PAL", "Izumokami Naganori") == 0x00)
+                && trigger_when(sword_acquired("PAL", "Izumokami Naganori") == 0x01))
+)
+
+// Helper data points:
+// https://www.nicovideo.jp/watch/sm44851300?via=thumb_watch&at=title&state=unplayed - 47, 53, 2x, 5, 5, 10
+// https://www.twitch.tv/videos/1501958318 - 50, 4, 2, 3, 3, 31, 
+achievement(
+    title = "The Hand of a Protective Deity",
+    description = "Achieve a combo of 50 or higher and defeat Ippondatara on Shura or Shigurui difficulty.",
+    points = 10,
+    type = "missable",
+    trigger = (never(is_ntsc() && active_zone("NTSC") != 0x07)
+            && is_in_game("NTSC")
+            && active_character("NTSC") == 0x01 
+            && current_difficulty("NTSC") == 0x01
+            && trigger_when(
+                once(
+                    prev(dword_be(active_combat_pointer("NTSC") + 0x80)) < 0x32 
+                    && (dword_be(active_combat_pointer("NTSC") + 0x80)) >= 0x32
+                    && (dword_be(active_combat_pointer("NTSC") + 0x80)) <= 0x3c // buffer in case somehow 2+ hits in a combo are registered at once
+                )
+            )
+            // the trigger as before
+            && prev(sword_acquired("NTSC", "Ichimonji Norimune") == 0x00)
+            && trigger_when(sword_acquired("NTSC", "Ichimonji Norimune") == 0x01))
+        ||
+            (never(is_pal() && active_zone("PAL") != 0x07)
+            && is_in_game("PAL")
+            && active_character("PAL") == 0x01 
+            && current_difficulty("PAL") == 0x01
+            && trigger_when(
+                once(
+                    prev(dword_be(active_combat_pointer("PAL") + 0x80)) < 0x32 
+                    && (dword_be(active_combat_pointer("PAL") + 0x80)) >= 0x32
+                    && (dword_be(active_combat_pointer("PAL") + 0x80)) <= 0x3c // buffer in case somehow 2+ hits in a combo are registered at once
+                )
+            )
+            // the trigger as before
+            && prev(sword_acquired("PAL", "Ichimonji Norimune") == 0x00)
+            && trigger_when(sword_acquired("PAL", "Ichimonji Norimune") == 0x01))
+)
+
+// Helper data points:
+// https://www.nicovideo.jp/watch/sm44851300?via=thumb_watch&at=title&state=unplayed - 53, 30, 14, 
+// https://www.twitch.tv/videos/1501958318 - 65, 30, 8, death, 53, 23,16, 8,4, 31, 3
+achievement(
+    title = "Truly Traitorous Form",
+    description = "Achieve a combo of 50 or higher and defeat the Chimera on Shura or Shigurui difficulty.",
+    points = 10,
+    type = "missable",
+    trigger = (never(is_ntsc() && active_zone("NTSC") != 0x06)
+            && is_in_game("NTSC")
+            && active_character("NTSC") == 0x01 
+            && current_difficulty("NTSC") == 0x01
+            && trigger_when(
+                once(
+                    prev(dword_be(active_combat_pointer("NTSC") + 0x80)) < 0x32 
+                    && (dword_be(active_combat_pointer("NTSC") + 0x80)) >= 0x32
+                    && (dword_be(active_combat_pointer("NTSC") + 0x80)) <= 0x3c // buffer in case somehow 2+ hits in a combo are registered at once
+                )
+            )
+            // the trigger as before
+            && prev(sword_acquired("NTSC", "Shishiou") == 0x00)
+            && trigger_when(sword_acquired("NTSC", "Shishiou") == 0x01))
+        ||
+            (never(is_pal() && active_zone("PAL") != 0x06)
+            && is_in_game("PAL")
+            && active_character("PAL") == 0x01 
+            && current_difficulty("PAL") == 0x01
+            && trigger_when(
+                once(
+                    prev(dword_be(active_combat_pointer("PAL") + 0x80)) < 0x32 
+                    && (dword_be(active_combat_pointer("PAL") + 0x80)) >= 0x32
+                    && (dword_be(active_combat_pointer("PAL") + 0x80)) <= 0x3c // buffer in case somehow 2+ hits in a combo are registered at once
+                )
+            )
+            // the trigger as before
+            && prev(sword_acquired("PAL", "Shishiou") == 0x00)
+            && trigger_when(sword_acquired("PAL", "Shishiou") == 0x01))
+)
+
+// Helper data points:
+// https://www.nicovideo.jp/watch/sm44851300?via=thumb_watch&at=title&state=unplayed - 25, 3, 37, 4, 35, 10, 32
+// https://www.twitch.tv/videos/1501958318 - 38, 15, 19, 40, 14, 34
+achievement(
+    title = "A Meal Better Eaten Whole",
+    // 60 is too low because of the adds, find a video to corroborate that isn't a speedrun but you can probably float 66-70
+    // maybe 66 as a "haha funny hell ish number"
+    description = "Achieve a combo of 60 or higher and defeat the Big Oni on Shura or Shigurui difficulty.",
+    points = 10,
+    type = "missable",
+    trigger = (never(is_ntsc() && active_zone("NTSC") != 0x01)
+        && is_in_game("NTSC")
+        && active_character("NTSC") == 0x01 
+        && current_difficulty("NTSC") == 0x01
+        && trigger_when(
+            once(
+                prev(dword_be(active_combat_pointer("NTSC") + 0x80)) < 0x3c 
+                && (dword_be(active_combat_pointer("NTSC") + 0x80)) >= 0x3c
+                && (dword_be(active_combat_pointer("NTSC") + 0x80)) <= 0x46 // buffer in case somehow 2+ hits in a combo are registered at once
+            )
+        )
+        // the trigger as before
+        && prev(sword_acquired("NTSC", "Onikiri") == 0x00)
+        && trigger_when(sword_acquired("NTSC", "Onikiri") == 0x01))
+
+    ||
+        (never(is_pal() && active_zone("PAL") != 0x01)
+        && is_in_game("PAL")
+        && active_character("PAL") == 0x01 
+        && current_difficulty("PAL") == 0x01
+        && trigger_when(
+            once(
+                prev(dword_be(active_combat_pointer("PAL") + 0x80)) < 0x3c 
+                && (dword_be(active_combat_pointer("PAL") + 0x80)) >= 0x3c
+                && (dword_be(active_combat_pointer("PAL") + 0x80)) <= 0x46 // buffer in case somehow 2+ hits in a combo are registered at once
+            )
+        )
+        // the trigger as before
+        && prev(sword_acquired("PAL", "Onikiri") == 0x00)
+        && trigger_when(sword_acquired("PAL", "Onikiri") == 0x01))
+)
+
+// Helper data points:
+// https://www.nicovideo.jp/watch/sm44851300?via=thumb_watch&at=title&state=unplayed - 19, 5, 114, 55
+// https://www.twitch.tv/videos/1501958318 - 53, 57, 29, 56, 27
+achievement(
+    title = "Thunderous Performance",
+    description = "Defeat Raijin as Momohime on Shura or Shigurui and achieve a combo of 100 or higher.",
+    points = 10,
+    type = "missable",
+    trigger = (never(is_ntsc() && active_zone("NTSC") != 0x05)
+        && is_in_game("NTSC")
+        && active_character("NTSC") == 0x01 
+        && current_difficulty("NTSC") == 0x01
+        && trigger_when(
+            once(
+                prev(dword_be(active_combat_pointer("NTSC") + 0x80)) < 0x64 
+                && (dword_be(active_combat_pointer("NTSC") + 0x80)) >= 0x64
+                && (dword_be(active_combat_pointer("NTSC") + 0x80)) <= 0x6e // buffer in case somehow 2+ hits in a combo are registered at once
+            )
+        )
+        // the trigger as before
+        && prev(sword_acquired("NTSC", "Mutsunokami Yoshiyuki") == 0x00)
+        && trigger_when(sword_acquired("NTSC", "Mutsunokami Yoshiyuki") == 0x01))
+    ||
+        (never(is_pal() && active_zone("PAL") != 0x05)
+        && is_in_game("PAL")
+        && active_character("PAL") == 0x01 
+        && current_difficulty("PAL") == 0x01
+        && trigger_when(
+            once(
+                prev(dword_be(active_combat_pointer("PAL") + 0x80)) < 0x64 
+                && (dword_be(active_combat_pointer("PAL") + 0x80)) >= 0x64
+                && (dword_be(active_combat_pointer("PAL") + 0x80)) <= 0x6e // buffer in case somehow 2+ hits in a combo are registered at once
+            )
+        )
+        // the trigger as before
+        && prev(sword_acquired("PAL", "Mutsunokami Yoshiyuki") == 0x00)
+        && trigger_when(sword_acquired("PAL", "Mutsunokami Yoshiyuki") == 0x01))
+)
+
 // Helper data points:
 // https://www.nicovideo.jp/watch/sm44851300?via=thumb_watch&at=title&state=unplayed - 0, they just cheese the everliving fuck out of it :)
 // https://www.twitch.tv/videos/1501958318 - 
@@ -1369,395 +1865,904 @@ achievement(
     description = "Defeat Fudo-Myoou on Shura or Shigurui difficulty without any of your blades breaking.",
     points = 10,
     type = "missable",
-    trigger = (is_ntsc()
+    trigger = (never(is_ntsc() && active_zone("NTSC") != 0x34)
         && is_in_game("NTSC")
+        && active_character("NTSC") == 0x01 
         && current_difficulty("NTSC") == 0x01
-        && active_character("NTSC") == 0x01
-        && never(active_zone("NTSC") != 0x34) // todo also allow this for other fudo-myoou
         && unless(once(any_blade_broke("NTSC")))
-        && trigger_when(prev(sword_acquired("NTSC", "Tsukiotoshi")) == 0x00)
+        // the trigger as before
+        && prev(sword_acquired("NTSC", "Tsukiotoshi") == 0x00)
         && trigger_when(sword_acquired("NTSC", "Tsukiotoshi") == 0x01))
     ||
-        (is_pal()
+        (never(is_pal() && active_zone("PAL") != 0x34)
         && is_in_game("PAL")
+        && active_character("PAL") == 0x01 
         && current_difficulty("PAL") == 0x01
-        && active_character("PAL") == 0x01
-        && never(active_zone("PAL") != 0x34) // todo also allow this for other fudo-myoou
         && unless(once(any_blade_broke("PAL")))
-        && trigger_when(prev(sword_acquired("PAL", "Tsukiotoshi")) == 0x00)
+        // the trigger as before
+        && prev(sword_acquired("PAL", "Tsukiotoshi") == 0x00)
         && trigger_when(sword_acquired("PAL", "Tsukiotoshi") == 0x01))
 )
 
-// *** Lairs ***
-// All of these need a stronger fingerprint, I believe I could pop them from a save file currently. 
-// Probably not a good look
 achievement(
-    title = "100 Armed Monks",
-    description = "Clear the red enemy lair in Musashi.",
-    points = 3,
-    trigger = is_in_game("NTSC")
-        && in_zone("NTSC", "Musashi")
-        && prev(accessory_acquired("NTSC", "Kusarikatabira")) == 0x00
-        && accessory_acquired("NTSC", "Kusarikatabira") == 0x01
-)
-
-achievement(
-    title = "100 Incarnations of Shadowy Ninja",
-    description = "Clear the enemy lair in Yamashiro.",
-    points = 3,
-    trigger = is_in_game("NTSC")
-        && in_zone("NTSC", "Yamashiro")
-        && prev(accessory_acquired("NTSC", "Chowhound Saucer")) == 0x00
-        && accessory_acquired("NTSC", "Chowhound Saucer") == 0x01
-)
-
-achievement(
-    title = "God of Pestilence",
-    description = "Clear the enemy lair in Owari.",
-    points = 3,
-    trigger = is_in_game("NTSC")
-        && in_zone("NTSC", "Owari")
-        && prev(accessory_acquired("NTSC", "Cypress Rosary")) == 0x00
-        && accessory_acquired("NTSC", "Cypress Rosary") == 0x01
-)
-
-achievement(
-    title = "Mountain Kagura Dance, the Storm of Tengu",
-    description = "Clear the enemy lair in Totomi.",
+    id = 580625,
+    title = "Furious Haunting",
+    description = "Defeat the Blue Monk on Shigurui difficulty.",
     points = 5,
-    trigger = is_in_game("NTSC")
-        && in_zone("NTSC", "Totomi")
-        && prev(accessory_acquired("NTSC", "Lucky Mallet")) == 0x00
-        && accessory_acquired("NTSC", "Lucky Mallet") == 0x01
-)
-
-achievement(
-    title = "Toad of Yoro Falls",
-    description = "Clear the enemy lair in Mino.",
-    points = 5,
-    trigger = is_in_game("NTSC")
-        && in_zone("NTSC", "Mino")
-        && prev(accessory_acquired("NTSC", "Ise Charm")) == 0x00
-        && accessory_acquired("NTSC", "Ise Charm") == 0x01
-)
-
-achievement(
-    title = "Seven Samurai",
-    description = "Clear the enemy lair in Mikawa.",
-    points = 5,
-    trigger = is_in_game("NTSC")
-        && in_zone("NTSC", "Mikawa")
-        && prev(accessory_acquired("NTSC", "Yamato Miracle Drug")) == 0x00
-        && accessory_acquired("NTSC", "Yamato Miracle Drug") == 0x01
-)
-
-achievement(
-    title = "Snow Woman, Oiran Procession",
-    description = "Clear the enemy lair in Hida.",
-    points = 5,
-    trigger = is_in_game("NTSC")
-        && in_zone("NTSC", "Hida")
-        && prev(accessory_acquired("NTSC", "Wolfsbane Poison")) == 0x00
-        && accessory_acquired("NTSC", "Wolfsbane Poison") == 0x01
-)
-
-achievement(
-    title = "Courage in the Ghostly Hour",
-    description = "Clear the enemy lair in Sagami.",
-    points = 5,
-    trigger = is_in_game("NTSC")
-        && in_zone("NTSC", "Sagami")
-        && prev(accessory_acquired("NTSC", "Clapper")) == 0x00
-        && accessory_acquired("NTSC", "Clapper") == 0x01
-)
-
-achievement(
-    title = "Ozaru Stealth Army",
-    description = "Clear the enemy lair in Iga.",
-    points = 5,
-    trigger = is_in_game("NTSC")
-        && in_zone("NTSC", "Iga")
-        && prev(accessory_acquired("NTSC", "Ninja Socks")) == 0x00
-        && accessory_acquired("NTSC", "Ninja Socks") == 0x01
-)
-
-achievement(
-    title = "Wildlife Caricature",
-    description = "Clear the enemy lair in Kai.",
-    points = 10,
-    trigger = is_in_game("NTSC")
-        && in_zone("NTSC", "Kai")
-        && prev(accessory_acquired("NTSC", "Hungry Devil Saucer")) == 0x00
-        && accessory_acquired("NTSC", "Hungry Devil Saucer") == 0x01
-)
-
-achievement(
-    title = "The Scheming Yagyuu Clan",
-    description = "Clear the enemy lair in Yamato.",
-    points = 10,
-    trigger = is_in_game("NTSC")
-        && in_zone("NTSC", "Yamato")
-        && prev(sword_acquired("NTSC", "Jyuzumaru Tsunetsugu")) == 0x00
-        && sword_acquired("NTSC", "Jyuzumaru Tsunetsugu") == 0x01
-)
-
-achievement(
-    title = "Giant Centipede of the Suzuka Pass",
-    description = "Clear the enemy lair in Ise.",
-    points = 10,
-    trigger = is_in_game("NTSC")
-        && in_zone("NTSC", "Ise")
-        && prev(sword_acquired("NTSC", "Otenta Mitsuyo")) == 0x00
-        && sword_acquired("NTSC", "Otenta Mitsuyo") == 0x01
-)
-
-achievement(
-    title = "Rising Dragon, Lying Dragon",
-    description = "Clear the enemy lair in Suruga.",
-    points = 10,
-    trigger = is_in_game("NTSC")
-        && in_zone("NTSC", "Suruga")
-        && prev(sword_acquired("NTSC", "Okanehira")) == 0x00
-        && sword_acquired("NTSC", "Okanehira") == 0x01
-)
-
-achievement(
-    title = "Lair of the Oni",
-    description = "Clear the enemy lair in Omi.",
-    points = 10,
-    trigger = is_in_game("NTSC")
-        && in_zone("NTSC", "Omi")
-        && prev(sword_acquired("NTSC", "Dojigiri Yasutsuna")) == 0x00
-        && sword_acquired("NTSC", "Dojigiri Yasutsuna") == 0x01
-)
-
-achievement(
-    title = "Ghost of the Battle Field",
-    description = "Clear the enemy lair in Shinano.",
-    points = 10,
-    trigger = is_in_game("NTSC")
-        && in_zone("NTSC", "Shinano")
-        && prev(accessory_acquired("NTSC", "Toyoma Miracle Drug")) == 0x00
-        && accessory_acquired("NTSC", "Toyoma Miracle Drug") == 0x01
-)
-
-achievement(
-    id = 579995,
-    title = "Deadly Oboro Arts",
-    description = "Forge and collect every blade unique to Momohime.",
-    points = 10,
     trigger = (is_ntsc()
-        && prev(num_exclusive_swords("NTSC", "Momohime")) == 0x2f
-        && measured(num_exclusive_swords("NTSC", "Momohime") == 0x30, when=always_true(), format="raw"))
-    || (is_pal()
-        && prev(num_exclusive_swords("PAL", "Momohime")) == 0x2f
-        && measured(num_exclusive_swords("PAL", "Momohime") == 0x30, when=always_true(), format="raw"))
+            && is_in_game("NTSC")
+            && active_character("NTSC") == 0x01 
+            && active_zone("NTSC") == 0x00
+            && is_shigurui("NTSC")
+            && prev(sword_acquired("NTSC", "Hasebe Kunishige") == 0x00) 
+            && sword_acquired("NTSC", "Hasebe Kunishige") == 0x01)
+        ||
+            (is_pal()
+                && is_in_game("PAL")
+                && active_character("PAL") == 0x01 
+                && active_zone("PAL") == 0x00
+                && is_shigurui("PAL")
+                && prev(sword_acquired("PAL", "Hasebe Kunishige") == 0x00) 
+                && sword_acquired("PAL", "Hasebe Kunishige") == 0x01)
 )
 
 achievement(
-    id = 579996,
-    title = "Blades of the Amnesiac",
-    description = "Forge and collect every blade unique to Kisuke.",
+    id = 580626,
+    title = "The Wheel Burns Once More",
+    description = "Defeat Wanyudo on Shigurui difficulty",
     points = 10,
     trigger = (is_ntsc() 
-        && prev(num_exclusive_swords("NTSC", "Kisuke")) == 0x2c
-        && measured(num_exclusive_swords("NTSC", "Kisuke") == 0x2d, when=always_true(), format="raw"))
-    ||
-        (is_pal() 
-            && prev(num_exclusive_swords("PAL", "Kisuke")) == 0x2c
-            && measured(num_exclusive_swords("PAL", "Kisuke") == 0x2d, when=always_true(), format="raw"))
+            && is_in_game("NTSC")
+            && active_character("NTSC") == 0x01 
+            && active_zone("NTSC") == 0x27
+            && is_shigurui("NTSC")
+            && prev(sword_acquired("NTSC", "Kashagiri Hiromitsu")) == 0x00 
+            && sword_acquired("NTSC", "Kashagiri Hiromitsu") == 0x01)
+        ||
+            (is_pal() 
+            && is_in_game("PAL")
+            && active_character("PAL") == 0x01 
+            && active_zone("PAL") == 0x27
+            && is_shigurui("PAL")
+            && prev(sword_acquired("PAL", "Kashagiri Hiromitsu")) == 0x00 
+            && sword_acquired("PAL", "Kashagiri Hiromitsu") == 0x01)
 )
 
 achievement(
-    id = 579993,
-    title = "Unlimited Muramasa Works",
-    description = "Forge and collect all 108 blades.",
+    id = 580627,
+    title = "Shinkage Style Still Inferior",
+    description = "Defeat Yukinojyo on Shigurui difficulty",
+    points = 10,
+    trigger = (is_ntsc()
+        && is_in_game("NTSC")
+        && active_character("NTSC") == 0x01
+        && active_zone("NTSC") == 0x26
+        && is_shigurui("NTSC")
+        && prev(sword_acquired("NTSC", "Izumokami Naganori")) == 0x00
+        && sword_acquired("NTSC", "Izumokami Naganori") == 0x01)
+    ||
+        (is_pal()
+        && is_in_game("PAL")
+        && active_character("PAL") == 0x01
+        && active_zone("PAL") == 0x26
+        && is_shigurui("PAL")
+        && prev(sword_acquired("PAL", "Izumokami Naganori")) == 0x00
+        && sword_acquired("PAL", "Izumokami Naganori") == 0x01)
+)
+
+achievement(
+    id = 580628,
+    title = "The Eye of a Springly Guardian",
+    description = "Defeat Ippondatara on Shigurui difficulty",
+    points = 10,
+    trigger = (is_ntsc()
+            && is_in_game("NTSC")
+            && active_character("NTSC") == 0x01
+            && active_zone("NTSC") == 0x07
+            && is_shigurui("NTSC")
+            && prev(sword_acquired("NTSC", "Ichimonji Norimune")) == 0x00
+            && sword_acquired("NTSC", "Ichimonji Norimune") == 0x01)
+        ||
+        (is_pal()
+            && is_in_game("PAL")
+            && active_character("PAL") == 0x01
+            && active_zone("PAL") == 0x07
+            && is_shigurui("PAL")
+            && prev(sword_acquired("PAL", "Ichimonji Norimune")) == 0x00
+            && sword_acquired("PAL", "Ichimonji Norimune") == 0x01)
+)
+
+achievement(
+    id = 580629,
+    title = "Justice Served",
+    description = "Defeat the Chimera on Shigurui difficulty",
+    points = 10,
+    trigger = (is_ntsc()
+            && is_in_game("NTSC")
+            && active_character("NTSC") == 0x01
+            && active_zone("NTSC") == 0x06
+            && is_shigurui("NTSC")
+            && prev(sword_acquired("NTSC", "Shishiou")) == 0x00
+            && sword_acquired("NTSC", "Shishiou") == 0x01)
+        ||
+        (is_pal()
+            && is_in_game("PAL")
+            && active_character("PAL") == 0x01
+            && active_zone("PAL") == 0x06
+            && is_shigurui("PAL")
+            && prev(sword_acquired("PAL", "Shishiou")) == 0x00
+            && sword_acquired("PAL", "Shishiou") == 0x01)
+)
+
+achievement(
+    id = 580630,
+    title = "To Hell And Back, Again",
+    description = "Defeat the Big Oni on Shigurui difficulty",
+    points = 10,
+    trigger = (is_ntsc()
+        && is_in_game("NTSC")
+        && active_character("NTSC") == 0x01
+        && active_zone("NTSC") == 0x01
+        && is_shigurui("NTSC")
+        && prev(sword_acquired("NTSC", "Onikiri")) == 0x00
+        && sword_acquired("NTSC", "Onikiri") == 0x01)
+    ||
+        (is_pal()
+            && is_in_game("PAL")
+            && active_character("PAL") == 0x01
+            && active_zone("PAL") == 0x01
+            && is_shigurui("PAL")
+            && prev(sword_acquired("PAL", "Onikiri")) == 0x00
+            && sword_acquired("PAL", "Onikiri") == 0x01)
+)
+
+achievement(
+    id = 580631,
+    title = "Putting on a Clinic for Fujin",
+    description = "Defeat Raijin on Shigurui difficulty",
+    points = 10,
+    trigger = (is_ntsc()
+        && is_in_game("NTSC")
+        && active_character("NTSC") == 0x01
+        && active_zone("NTSC") == 0x05
+        && is_shigurui("NTSC")
+        && prev(sword_acquired("NTSC", "Mutsunokami Yoshiyuki")) == 0x00
+        && sword_acquired("NTSC", "Mutsunokami Yoshiyuki") == 0x01)
+    ||
+        (is_pal()
+        && is_in_game("PAL")
+        && active_character("PAL") == 0x01
+        && active_zone("PAL") == 0x05
+        && is_shigurui("PAL")
+        && prev(sword_acquired("PAL", "Mutsunokami Yoshiyuki")) == 0x00
+        && sword_acquired("PAL", "Mutsunokami Yoshiyuki") == 0x01)
+)
+
+achievement(
+    id = 580632,
+    title = "Buddhist Death Frenzy",
+    description = "Defeat Fudo-Myoou on Shigurui difficulty.",
     points = 25,
     trigger = (is_ntsc()
-        && prev(num_current_swords("NTSC")) == 0x6b
-        && measured(num_current_swords("NTSC") == 0x6c, when=always_true(), format="raw")) ||
-        (is_pal()
-        && prev(num_current_swords("PAL")) == 0x6b
-        && measured(num_current_swords("PAL") == 0x6c, when=always_true(), format="raw"))
-)
-
-achievement(
-    title = "Accessories of Edo",
-    description = "Collect every accessory across both characters.",
-    points = 10,
-    trigger = (is_ntsc()
-        && prev(num_current_accessories("NTSC")) == 0x00
-        && num_current_accessories("NTSC") == 0x01)
-    || 
-        (is_pal()
-            && prev(num_current_accessories("PAL")) == 0x00
-            && num_current_accessories("PAL") == 0x01)
-)
-
-achievement(
-    id = 579994,
-    title = "You'll Never Go Hungry Again",
-    description = "Learn all 20 recipes.",
-    points = 10,
-    trigger = (is_ntsc()
-        && prev(num_current_recipes("NTSC") == 0x13)
-        && num_current_recipes("NTSC") == 0x14)
+        && is_in_game("NTSC")
+        && active_character("NTSC") == 0x01
+        && active_zone("NTSC") == 0x34
+        && is_shigurui("NTSC")
+        && prev(sword_acquired("NTSC", "Tsukiotoshi")) == 0x00
+        && sword_acquired("NTSC", "Tsukiotoshi") == 0x01)
     ||
         (is_pal()
-        && prev(num_current_recipes("PAL") == 0x13)
-        && num_current_recipes("PAL") == 0x14)
+        && is_in_game("PAL")
+        && active_character("PAL") == 0x01
+        && active_zone("PAL") == 0x34
+        && is_shigurui("PAL")
+        && prev(sword_acquired("PAL", "Tsukiotoshi")) == 0x00
+        && sword_acquired("PAL", "Tsukiotoshi") == 0x01)
 )
 
 achievement(
-    title = "A Combo of Deadly Proportions", 
-    points = 10,
-    description = "Achieve a combo of 200 or higher in any fight.",
-    trigger =  is_in_game("NTSC") &&
-            dword_be(combat_pointer("NTSC") + 0x6c) == 0xc7 &&
-            dword_be(combat_pointer("NTSC") + 0x7c) < 0x3e8 &&
-            prev(dword_be(combat_pointer("NTSC") + 0x7c)) < 0xc8 &&
-            dword_be(combat_pointer("NTSC") + 0x7c) >= 0xc8
-)
-
-// absolutely need more RAM digging for this
-achievement(
-    title = "Total Pandemonium",
+    id = 580633,
+    title = "No Life No Problems",
     description = "Clear the enemy lair in Izu on Shigurui difficulty.",
-    points = 100,
-    trigger = always_false()
+    points = 50,
+    trigger = (is_in_game("NTSC")
+        && in_zone("NTSC", "Izu")
+        && current_difficulty("NTSC") == 0x01
+        && is_shigurui("NTSC")
+        && prev(accessory_acquired("NTSC", "Narukami Bracelet")) == 0x00
+        && accessory_acquired("NTSC", "Narukami Bracelet") == 0x01)
+    ||
+        (is_in_game("PAL")
+        && in_zone("PAL", "Izu")
+        && current_difficulty("PAL") == 0x01
+        && is_shigurui("PAL")
+        && prev(accessory_acquired("PAL", "Narukami Bracelet")) == 0x00
+        && accessory_acquired("PAL", "Narukami Bracelet") == 0x01)
 )
 
-// TODO here we need to fix our "difficulty" function so that we can reduce duplication here
-// branches we want:
-// - Onsen
-// - Credits
-// - Fighting a boss
-// - Running in any other zone
-// - Fishing
-// - On the main menu
-// Default is 
+// We do this because the toolkit can't answer the following question:
+// "Can I record the highest X the game has seen in an address and submit only that?"
+// So instead, we check if the player hit 1..999 combo and submit that. As hits.
+// In theory, this should work! In practice I can't get the toolkit to load this.
+// For the time being, there is a file alongside this script: "current-leaderboard-value-block.txt".
+// It contains the optimized size version of this. Have this be intentionally small and paste that into the leaderboard instead.
+function lb_combo_adder(region) {
+    cond = is_ntsc()
+    combo_address = dword_be(active_combat_pointer(region) + 0x7c)
+    for i in range(1, 2) {
+        cond = cond && (combo_address <= 1000 && tally(1, combo_address >= i))
+    }
+
+    return cond
+}
+
+leaderboard(
+    id = 156157,
+    title = "Momohime Blue Monk Highest Combo",
+    description = "(Shura or Shigurui) Highest combo over the entire fight after defeating the Blue Monk in Act 1.",
+    start = (is_ntsc()
+            && active_character("NTSC") == 0x01
+            && active_zone("NTSC") == 0x00
+            && current_difficulty("NTSC") == 0x01
+            && prev(dword_be(active_combat_pointer("NTSC") + 0x80)) == 0xffffffff
+            && dword_be(active_combat_pointer("NTSC") + 0x80) <= 0x10)
+        ||
+            (is_pal()
+            && active_character("PAL") == 0x01
+            && active_zone("PAL") == 0x00
+            && current_difficulty("PAL") == 0x01
+            && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
+            && dword_be(active_combat_pointer("PAL") + 0x80) <= 0x10),
+    cancel = (is_ntsc() && active_zone("NTSC") != 0x00) || (is_pal() && active_zone("PAL") != 0x00),
+    submit = (is_ntsc() 
+        && prev(sword_acquired("NTSC", "Hasebe Kunishige") == 0x00) 
+        && sword_acquired("NTSC", "Hasebe Kunishige") == 0x01)
+        ||
+            (is_pal()
+            && prev(sword_acquired("PAL", "Hasebe Kunishige")  == 0x00)
+            && sword_acquired("PAL", "Hasebe Kunishige") == 0x01),
+    value = lb_combo_adder("NTSC"),
+    format = "VALUE"
+)
+
+// tested PAL
+leaderboard(
+    title = "Momohime Wanyudo Highest Combo",
+    description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Wanyudo in Act 2.",
+    start = (is_ntsc()
+        && active_character("NTSC") == 0x01
+        && active_zone("NTSC") == 0x27
+        && current_difficulty("NTSC") == 0x01
+        && prev(dword_be(active_combat_pointer("NTSC") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("NTSC") + 0x80) <= 0x10)
+    ||
+        (is_pal()
+        && active_character("PAL") == 0x01
+        && active_zone("PAL") == 0x27
+        && current_difficulty("PAL") == 0x01
+        && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("PAL") + 0x80) <= 0x10),
+    cancel = (is_ntsc() && active_zone("NTSC") != 0x27) || (is_pal() && active_zone("PAL") != 0x27),
+    submit = (is_ntsc() 
+        && prev(sword_acquired("NTSC", "Kashagiri Hiromitsu") == 0x00) 
+        && sword_acquired("NTSC", "Kashagiri Hiromitsu") == 0x01)
+        ||
+            (is_pal()
+            && prev(sword_acquired("PAL", "Kashagiri Hiromitsu")  == 0x00)
+            && sword_acquired("PAL", "Kashagiri Hiromitsu") == 0x01),
+    value = lb_combo_adder("NTSC"),
+    format = "VALUE"
+)
+
+// tested PAL
+leaderboard(
+    title = "Momohime Yukinojyo Highest Combo",
+    description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Yukinojyo in Act 3.",
+    start = (is_ntsc()
+        && active_character("NTSC") == 0x01
+        && active_zone("NTSC") == 0x26
+        && current_difficulty("NTSC") == 0x01
+        && prev(dword_be(active_combat_pointer("NTSC") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("NTSC") + 0x80) <= 0x10)
+    ||
+        (is_pal()
+        && active_character("PAL") == 0x01
+        && active_zone("PAL") == 0x26
+        && current_difficulty("PAL") == 0x01
+        && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("PAL") + 0x80) <= 0x10),
+    cancel = (is_ntsc() && active_zone("NTSC") != 0x26) || (is_pal() && active_zone("PAL") != 0x26),
+    submit = (is_ntsc() 
+        && prev(sword_acquired("NTSC", "Izumokami Naganori") == 0x00) 
+        && sword_acquired("NTSC", "Izumokami Naganori") == 0x01)
+        ||
+            (is_pal()
+            && prev(sword_acquired("PAL", "Izumokami Naganori")  == 0x00)
+            && sword_acquired("PAL", "Izumokami Naganori") == 0x01),
+    value = lb_combo_adder("NTSC"),
+    format = "VALUE"
+)
+
+// tested PAL
+leaderboard(
+    title = "Momohime Ippondatara Highest Combo",
+    description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Ippondatara in Act 4.",
+    start = (is_ntsc()
+        && active_character("NTSC") == 0x01
+        && active_zone("NTSC") == 0x07
+        && current_difficulty("NTSC") == 0x01
+        && prev(dword_be(active_combat_pointer("NTSC") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("NTSC") + 0x80) <= 0x10)
+    ||
+        (is_pal()
+        && active_character("PAL") == 0x01
+        && active_zone("PAL") == 0x07
+        && current_difficulty("PAL") == 0x01
+        && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("PAL") + 0x80) <= 0x10),
+    cancel = (is_ntsc() && active_zone("NTSC") != 0x07) || (is_pal() && active_zone("PAL") != 0x07),
+    submit = (is_ntsc() 
+        && prev(sword_acquired("NTSC", "Ichimonji Norimune") == 0x00) 
+        && sword_acquired("NTSC", "Ichimonji Norimune") == 0x01)
+        ||
+            (is_pal()
+            && prev(sword_acquired("PAL", "Ichimonji Norimune")  == 0x00)
+            && sword_acquired("PAL", "Ichimonji Norimune") == 0x01),
+    value = lb_combo_adder("NTSC"),
+    format = "VALUE"
+)
+
+// tested on PAL
+leaderboard(
+    title = "Momohime Chimera Highest Combo",
+    description = "(Shura or Shigurui) Highest combo over the entire fight after defeating the Chimera in Act 5.",
+    start = (is_ntsc()
+        && active_character("NTSC") == 0x01
+        && active_zone("NTSC") == 0x06
+        && current_difficulty("NTSC") == 0x01
+        && prev(dword_be(active_combat_pointer("NTSC") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("NTSC") + 0x80) <= 0x10)
+    ||
+        (is_pal()
+        && active_character("PAL") == 0x01
+        && active_zone("PAL") == 0x06
+        && current_difficulty("PAL") == 0x01
+        && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("PAL") + 0x80) <= 0x10),
+    cancel = (is_ntsc() && active_zone("NTSC") != 0x06) || (is_pal() && active_zone("PAL") != 0x06),
+    submit = (is_ntsc() 
+        && prev(sword_acquired("NTSC", "Shishiou") == 0x00) 
+        && sword_acquired("NTSC", "Shishiou") == 0x01)
+        ||
+            (is_pal()
+            && prev(sword_acquired("PAL", "Shishiou")  == 0x00)
+            && sword_acquired("PAL", "Shishiou") == 0x01),
+    value = lb_combo_adder("NTSC"),
+    format = "VALUE"
+)
+
+// Tested on PAL
+leaderboard(
+    title = "Momohime Big Oni Highest Combo",
+    description = "(Shura or Shigurui) Highest combo over the entire fight after defeating the Big Oni in Act 6.",
+    start = (is_ntsc()
+        && active_character("NTSC") == 0x01
+        && active_zone("NTSC") == 0x01
+        && current_difficulty("NTSC") == 0x01
+        && prev(dword_be(active_combat_pointer("NTSC") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("NTSC") + 0x80) <= 0x10)
+    ||
+        (is_pal()
+        && active_character("PAL") == 0x01
+        && active_zone("PAL") == 0x01
+        && current_difficulty("PAL") == 0x01
+        && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("PAL") + 0x80) <= 0x10),
+    cancel = (is_ntsc() && active_zone("NTSC") != 0x01) || (is_pal() && active_zone("PAL") != 0x01),
+    submit = (is_ntsc() 
+        && prev(sword_acquired("NTSC", "Onikiri") == 0x00) 
+        && sword_acquired("NTSC", "Onikiri") == 0x01)
+        ||
+            (is_pal()
+            && prev(sword_acquired("PAL", "Onikiri")  == 0x00)
+            && sword_acquired("PAL", "Onikiri") == 0x01),
+    value = lb_combo_adder("NTSC"),
+    format = "VALUE"
+)
+
+leaderboard(
+    title = "Momohime Raijin Highest Combo",
+    description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Raijin in Act 7.",
+    start = (is_ntsc()
+        && active_character("NTSC") == 0x01
+        && active_zone("NTSC") == 0x05
+        && current_difficulty("NTSC") == 0x01
+        && prev(dword_be(active_combat_pointer("NTSC") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("NTSC") + 0x80) <= 0x10)
+    ||
+        (is_pal()
+        && active_character("PAL") == 0x01
+        && active_zone("PAL") == 0x05
+        && current_difficulty("PAL") == 0x01
+        && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("PAL") + 0x80) <= 0x10),
+    cancel = (is_ntsc() && active_zone("NTSC") != 0x05) || (is_pal() && active_zone("PAL") != 0x05),
+    submit = (is_ntsc() 
+        && prev(sword_acquired("NTSC", "Mutsunokami Yoshiyuki") == 0x00) 
+        && sword_acquired("NTSC", "Mutsunokami Yoshiyuki") == 0x01)
+        ||
+            (is_pal()
+            && prev(sword_acquired("PAL", "Mutsunokami Yoshiyuki")  == 0x00)
+            && sword_acquired("PAL", "Mutsunokami Yoshiyuki") == 0x01),
+    value = lb_combo_adder("NTSC"),
+    format = "VALUE"
+)
+
+leaderboard(
+    title = "Momohime Fudo-Myouu Highest Combo",
+    description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Fudo-Myouu in the Final Act.",
+    start = (is_ntsc()
+        && active_character("NTSC") == 0x01
+        && active_zone("NTSC") == 0x34
+        && current_difficulty("NTSC") == 0x01
+        && prev(dword_be(active_combat_pointer("NTSC") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("NTSC") + 0x80) <= 0x10)
+    ||
+        (is_pal()
+        && active_character("PAL") == 0x01
+        && active_zone("PAL") == 0x34
+        && current_difficulty("PAL") == 0x01
+        && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("PAL") + 0x80) <= 0x10),
+    cancel = (is_ntsc() && active_zone("NTSC") != 0x34) || (is_pal() && active_zone("PAL") != 0x34),
+    submit = (is_ntsc() 
+        && prev(sword_acquired("NTSC", "Tsukiotoshi") == 0x00) 
+        && sword_acquired("NTSC", "Tsukiotoshi") == 0x01)
+        ||
+            (is_pal()
+            && prev(sword_acquired("PAL", "Tsukiotoshi")  == 0x00)
+            && sword_acquired("PAL", "Tsukiotoshi") == 0x01),
+    value = lb_combo_adder("NTSC"),
+    format = "VALUE"
+)
+
+leaderboard(
+    title = "Kisuke Kurozaru Highest Combo",
+    description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Kurozaru in Act 1.",
+    start = (is_ntsc()
+        && active_character("NTSC") == 0x00
+        && active_zone("NTSC") == 0x22
+        && current_difficulty("NTSC") == 0x01
+        && prev(dword_be(active_combat_pointer("NTSC") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("NTSC") + 0x80) <= 0x10)
+    ||
+        (is_pal()
+        && active_character("PAL") == 0x00
+        && active_zone("PAL") == 0x22
+        && current_difficulty("PAL") == 0x01
+        && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("PAL") + 0x80) <= 0x10),
+    cancel = (is_ntsc() && active_zone("NTSC") != 0x22) || (is_pal() && active_zone("PAL") != 0x22),
+    submit = (is_ntsc() 
+        && prev(sword_acquired("NTSC", "Nagasone Kotetsu") == 0x00) 
+        && sword_acquired("NTSC", "Nagasone Kotetsu") == 0x01)
+        ||
+            (is_pal()
+            && prev(sword_acquired("PAL", "Nagasone Kotetsu")  == 0x00)
+            && sword_acquired("PAL", "Nagasone Kotetsu") == 0x01),
+    value = lb_combo_adder("NTSC"),
+    format = "VALUE"
+)
+
+leaderboard(
+    title = "Kisuke Giant Centipede Highest Combo",
+    description = "(Shura or Shigurui) Highest combo over the entire fight after defeating the Giant Centipedes in Act 2.",
+    start = (is_ntsc()
+        && active_character("NTSC") == 0x00
+        && active_zone("NTSC") == 0x1d
+        && current_difficulty("NTSC") == 0x01
+        && prev(dword_be(active_combat_pointer("NTSC") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("NTSC") + 0x80) <= 0x10)
+    ||
+        (is_pal()
+        && active_character("PAL") == 0x00
+        && active_zone("PAL") == 0x1d
+        && current_difficulty("PAL") == 0x01
+        && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("PAL") + 0x80) <= 0x10),
+    cancel = (is_ntsc() && active_zone("NTSC") != 0x1d) || (is_pal() && active_zone("PAL") != 0x1d),
+    submit = (is_ntsc() 
+        && prev(sword_acquired("NTSC", "Iganokami Kanemichi") == 0x00) 
+        && sword_acquired("NTSC", "Iganokami Kanemichi") == 0x01)
+        ||
+            (is_pal()
+            && prev(sword_acquired("PAL", "Iganokami Kanemichi")  == 0x00)
+            && sword_acquired("PAL", "Iganokami Kanemichi") == 0x01),
+    value = lb_combo_adder("NTSC"),
+    format = "VALUE"
+)
+
+leaderboard(
+    title = "Kisuke Torahime Highest Combo",
+    description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Torahime in Act 3.",
+    start = (is_ntsc()
+        && active_character("NTSC") == 0x00
+        && active_zone("NTSC") == 0x09
+        && current_difficulty("NTSC") == 0x01
+        && prev(dword_be(active_combat_pointer("NTSC") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("NTSC") + 0x80) <= 0x10)
+    ||
+        (is_pal()
+        && active_character("PAL") == 0x00
+        && active_zone("PAL") == 0x09
+        && current_difficulty("PAL") == 0x01
+        && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("PAL") + 0x80) <= 0x10),
+    cancel = (is_ntsc() && active_zone("NTSC") != 0x09) || (is_pal() && active_zone("PAL") != 0x09),
+    submit = (is_ntsc() 
+        && prev(sword_acquired("NTSC", "Magoroku Kanemoto") == 0x00) 
+        && sword_acquired("NTSC", "Magoroku Kanemoto") == 0x01)
+        ||
+            (is_pal()
+            && prev(sword_acquired("PAL", "Magoroku Kanemoto")  == 0x00)
+            && sword_acquired("PAL", "Magoroku Kanemoto") == 0x01),
+    value = lb_combo_adder("NTSC"),
+    format = "VALUE"
+)
+
+leaderboard(
+    title = "Kisuke Sayo Highest Combo",
+    description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Sayo in Act 4.",
+    start = (is_ntsc()
+        && active_character("NTSC") == 0x00
+        && active_zone("NTSC") == 0x28
+        && current_difficulty("NTSC") == 0x01
+        && prev(dword_be(active_combat_pointer("NTSC") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("NTSC") + 0x80) <= 0x10)
+    ||
+        (is_pal()
+        && active_character("PAL") == 0x00
+        && active_zone("PAL") == 0x28
+        && current_difficulty("PAL") == 0x01
+        && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("PAL") + 0x80) <= 0x10),
+    cancel = (is_ntsc() && active_zone("NTSC") != 0x28) || (is_pal() && active_zone("PAL") != 0x28),
+    submit = (is_ntsc() 
+        && prev(sword_acquired("NTSC", "Kogarasumaru") == 0x00) 
+        && sword_acquired("NTSC", "Kogarasumaru") == 0x01)
+        ||
+            (is_pal()
+            && prev(sword_acquired("PAL", "Kogarasumaru")  == 0x00)
+            && sword_acquired("PAL", "Kogarasumaru") == 0x01),
+    value = lb_combo_adder("NTSC"),
+    format = "VALUE"
+)
+
+leaderboard(
+    title = "Kisuke Tsuchigumo Highest Combo",
+    description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Tsuchigumo in Act 5.",
+    start = (is_ntsc()
+        && active_character("NTSC") == 0x00
+        && active_zone("NTSC") == 0x1c
+        && current_difficulty("NTSC") == 0x01
+        && prev(dword_be(active_combat_pointer("NTSC") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("NTSC") + 0x80) <= 0x10)
+    ||
+        (is_pal()
+        && active_character("PAL") == 0x00
+        && active_zone("PAL") == 0x1c
+        && current_difficulty("PAL") == 0x01
+        && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("PAL") + 0x80) <= 0x10),
+    cancel = (is_ntsc() && active_zone("NTSC") != 0x1c) || (is_pal() && active_zone("PAL") != 0x1c),
+    submit = (is_ntsc() 
+        && prev(sword_acquired("NTSC", "Kumokiri") == 0x00) 
+        && sword_acquired("NTSC", "Kumokiri") == 0x01)
+        ||
+            (is_pal()
+            && prev(sword_acquired("PAL", "Kumokiri")  == 0x00)
+            && sword_acquired("PAL", "Kumokiri") == 0x01),
+    value = lb_combo_adder("NTSC"),
+    format = "VALUE"
+)
+
+leaderboard(
+    title = "Kisuke Chigurui Bishamon Highest Combo",
+    description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Chigurui Bishamon in Act 6.",
+    start = (is_ntsc()
+        && active_character("NTSC") == 0x00
+        && active_zone("NTSC") == 0x29
+        && current_difficulty("NTSC") == 0x01
+        && prev(dword_be(active_combat_pointer("NTSC") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("NTSC") + 0x80) <= 0x10)
+    ||
+        (is_pal()
+        && active_character("PAL") == 0x00
+        && active_zone("PAL") == 0x29
+        && current_difficulty("PAL") == 0x01
+        && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("PAL") + 0x80) <= 0x10),
+    cancel = (is_ntsc() && active_zone("NTSC") != 0x1c) || (is_pal() && active_zone("PAL") != 0x1c),
+    submit = (is_ntsc() 
+        && prev(sword_acquired("NTSC", "Osafune Kanemitsu") == 0x00) 
+        && sword_acquired("NTSC", "Osafune Kanemitsu") == 0x01)
+        ||
+            (is_pal()
+            && prev(sword_acquired("PAL", "Osafune Kanemitsu")  == 0x00)
+            && sword_acquired("PAL", "Osafune Kanemitsu") == 0x01),
+    value = lb_combo_adder("NTSC"),
+    format = "VALUE"
+)
+
+leaderboard(
+    title = "Kisuke Dragon God Highest Combo",
+    description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Dragon God in Act 7.",
+    start = (is_ntsc()
+        && active_character("NTSC") == 0x00
+        && active_zone("NTSC") == 0x25
+        && current_difficulty("NTSC") == 0x01
+        && prev(dword_be(active_combat_pointer("NTSC") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("NTSC") + 0x80) <= 0x10)
+    ||
+        (is_pal()
+        && active_character("PAL") == 0x00
+        && active_zone("PAL") == 0x25
+        && current_difficulty("PAL") == 0x01
+        && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("PAL") + 0x80) <= 0x10),
+    cancel = (is_ntsc() && active_zone("NTSC") != 0x25) || (is_pal() && active_zone("PAL") != 0x25),
+    submit = (is_ntsc() 
+        && prev(sword_acquired("NTSC", "Goro Masamune") == 0x00) 
+        && sword_acquired("NTSC", "Goro Masamune") == 0x01)
+        ||
+            (is_pal()
+            && prev(sword_acquired("PAL", "Goro Masamune")  == 0x00)
+            && sword_acquired("PAL", "Goro Masamune") == 0x01),
+    value = lb_combo_adder("NTSC"),
+    format = "VALUE"
+)
+
+leaderboard(
+    title = "Kisuke Inugama Tokugawa Tsunayoshi Highest Combo",
+    description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Inugama Tokugawa Tsunayoshi in the Final Act.",
+    start = (is_ntsc()
+        && active_character("NTSC") == 0x00
+        && active_zone("NTSC") == 0x31
+        && current_difficulty("NTSC") == 0x01
+        && prev(dword_be(active_combat_pointer("NTSC") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("NTSC") + 0x80) <= 0x10)
+    ||
+        (is_pal()
+        && active_character("PAL") == 0x00
+        && active_zone("PAL") == 0x31
+        && current_difficulty("PAL") == 0x01
+        && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
+        && dword_be(active_combat_pointer("PAL") + 0x80) <= 0x10),
+    cancel = (is_ntsc() && active_zone("NTSC") != 0x31) || (is_pal() && active_zone("PAL") != 0x31),
+    submit = (is_ntsc() 
+        && prev(sword_acquired("NTSC", "Mumei Tamonoo") == 0x00) 
+        && sword_acquired("NTSC", "Mumei Tamonoo") == 0x01)
+        ||
+            (is_pal()
+            && prev(sword_acquired("PAL", "Mumei Tamonoo")  == 0x00)
+            && sword_acquired("PAL", "Mumei Tamonoo") == 0x01),
+    value = lb_combo_adder("NTSC"),
+    format = "VALUE"
+)
 
 rich_presence_conditional_display(check_on_main_menu("NTSC"), "On the title screen")
 rich_presence_conditional_display(check_on_main_menu("PAL"), "On the title screen")
 
+// Onsen
+
+rich_presence_conditional_display(
+    is_ntsc() && in_zone("NTSC", "Onsen") && is_shigurui("NTSC"),
+    "[Shigurui] lv. {0} {1} is relaxing in an onsen | {2} / 108 ⚔️ | {3} / 20 📖 | {4} / 47 💍 | {5} ryo, {6} mon",
+    rich_presence_value("CurrLevel", current_level("NTSC"), "VALUE"),
+    rich_presence_lookup("Character", active_character("NTSC"), CharacterLookup),
+    rich_presence_value("NumCurrentSwords", num_current_swords("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentBooks", num_current_recipes("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
+    rich_presence_value("Ryo", current_ryo("NTSC"), "VALUE"),
+    rich_presence_value("Mon", current_mon("NTSC"), "VALUE")
+)
+
+rich_presence_conditional_display(
+    is_pal() && in_zone("PAL", "Onsen") && is_shigurui("PAL"),
+    "[Shigurui] lv. {0} {1} is relaxing in an onsen | {2} / 108 ⚔️ | {3} / 20 📖 | {4} / 47 💍 | {5} ryo, {6} mon",
+    rich_presence_lookup("Difficulty", current_difficulty("PAL"), DifficultyLookup),
+    rich_presence_value("CurrLevel", current_level("PAL"), "VALUE"),
+    rich_presence_lookup("Character", active_character("PAL"), CharacterLookup),
+    rich_presence_value("NumCurrentSwords", num_current_swords("PAL"), "VALUE"),
+    rich_presence_value("NumCurrentBooks", num_current_recipes("PAL"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
+    rich_presence_value("Ryo", current_ryo("PAL"), "VALUE"),
+    rich_presence_value("Mon", current_mon("PAL"), "VALUE")
+) 
+
 rich_presence_conditional_display(
     is_ntsc() && in_zone("NTSC", "Onsen"),
-    "[{0}] lv. {1} {2} is relaxing in an onsen | {3} / 108 ⚔️ | {4} / 19 📖 | {5} ryo, {6} mon",
+    "[{0}] lv. {1} {2} is relaxing in an onsen | {3} / 108 ⚔️ | {4} / 20 📖 | {5} / 47 💍 | {6} ryo, {7} mon",
     rich_presence_lookup("Difficulty", current_difficulty("NTSC"), DifficultyLookup),
     rich_presence_value("CurrLevel", current_level("NTSC"), "VALUE"),
     rich_presence_lookup("Character", active_character("NTSC"), CharacterLookup),
     rich_presence_value("NumCurrentSwords", num_current_swords("NTSC"), "VALUE"),
     rich_presence_value("NumCurrentBooks", num_current_recipes("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
     rich_presence_value("Ryo", current_ryo("NTSC"), "VALUE"),
     rich_presence_value("Mon", current_mon("NTSC"), "VALUE")
 )
 
 rich_presence_conditional_display(
     is_pal() && in_zone("PAL", "Onsen"),
-    "[{0}] lv. {1} {2} is resting in an onsen | {3} / 108 ⚔️ | {4} / 19 📖 | {5} ryo, {6} mon",
+    "[{0}] lv. {1} {2} is resting in an onsen | {3} / 108 ⚔️ | {4} / 20 📖 | {5} / 47 💍 | {6} ryo, {7} mon",
     rich_presence_lookup("Difficulty", current_difficulty("PAL"), DifficultyLookup),
     rich_presence_value("CurrLevel", current_level("PAL"), "VALUE"),
     rich_presence_lookup("Character", active_character("PAL"), CharacterLookup),
     rich_presence_value("NumCurrentSwords", num_current_swords("PAL"), "VALUE"),
     rich_presence_value("NumCurrentBooks", num_current_recipes("PAL"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
     rich_presence_value("Ryo", current_ryo("PAL"), "VALUE"),
     rich_presence_value("Mon", current_mon("PAL"), "VALUE")
 ) 
 
+// Credits
 rich_presence_conditional_display(
-    in_zone("NTSC", "Purple waves scene") || in_zone("NTSC", "Credits"),
-    "[{0}] lv. {0} {1} is enjoying the credits | {2} / 108 ⚔️ | {3} / 19 📖 | {4} ryo, {5} mon",
+    (in_zone("NTSC", "Purple waves scene") || in_zone("NTSC", "Credits")) && is_shigurui("NTSC"),
+    "[Shigurui] lv. {0} {1} is enjoying the credits | {2} / 108 ⚔️ | {3} / 20 📖 | {4} / 47 💍 | {5} ryo, {6} mon",
     rich_presence_value("CurrLevel", current_level("NTSC"), "VALUE"),
     rich_presence_lookup("Character", active_character("NTSC"), CharacterLookup),
     rich_presence_value("NumCurrentSwords", num_current_swords("NTSC"), "VALUE"),
     rich_presence_value("NumCurrentBooks", num_current_recipes("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
+    rich_presence_value("Ryo", current_ryo("NTSC"), "VALUE"),
+    rich_presence_value("Mon", current_mon("NTSC"), "VALUE")
+)
+
+rich_presence_conditional_display(
+    (in_zone("PAL", "Purple waves scene") || in_zone("PAL", "Credits")) && is_shigurui("PAL"),
+    "[Shigurui] lv. {0} {1} is enjoying the credits | {2} / 108 ⚔️ | {3} / 20 📖 | {4} / 47 💍 | {5} ryo, {6} mon",
+    rich_presence_value("CurrLevel", current_level("PAL"), "VALUE"),
+    rich_presence_lookup("Character", active_character("PAL"), CharacterLookup),
+    rich_presence_value("NumCurrentSwords", num_current_swords("PAL"), "VALUE"),
+    rich_presence_value("NumCurrentBooks", num_current_recipes("PAL"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
+    rich_presence_value("Ryo", current_ryo("PAL"), "VALUE"),
+    rich_presence_value("Mon", current_mon("PAL"), "VALUE")
+)
+
+rich_presence_conditional_display(
+    in_zone("NTSC", "Purple waves scene") || in_zone("NTSC", "Credits"),
+    "[{0}] lv. {1} {2} is enjoying the credits | {3} / 108 ⚔️ | {4} / 20 📖 | {5} / 47 💍 | {6} ryo, {7} mon",
+    rich_presence_lookup("Difficulty", current_difficulty("NTSC"), DifficultyLookup),
+    rich_presence_value("CurrLevel", current_level("NTSC"), "VALUE"),
+    rich_presence_lookup("Character", active_character("NTSC"), CharacterLookup),
+    rich_presence_value("NumCurrentSwords", num_current_swords("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentBooks", num_current_recipes("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
     rich_presence_value("Ryo", current_ryo("NTSC"), "VALUE"),
     rich_presence_value("Mon", current_mon("NTSC"), "VALUE")
 )
 
 rich_presence_conditional_display(
     in_zone("PAL", "Purple waves scene") || in_zone("PAL", "Credits"),
-    "[{0}] lv. {0} {1} is enjoying the credits | {2} / 108 ⚔️ | {3} / 19 📖 | {4} ryo, {5} mon",
+    "[{0}] lv. {0} {1} is enjoying the credits | {2} / 108 ⚔️ | {3} / 20 📖 | {4} / 47 💍 | {5} ryo, {6} mon",
+    rich_presence_lookup("Difficulty", current_difficulty("NTSC"), DifficultyLookup),
     rich_presence_value("CurrLevel", current_level("PAL"), "VALUE"),
     rich_presence_lookup("Character", active_character("PAL"), CharacterLookup),
     rich_presence_value("NumCurrentSwords", num_current_swords("PAL"), "VALUE"),
     rich_presence_value("NumCurrentBooks", num_current_recipes("PAL"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
     rich_presence_value("Ryo", current_ryo("PAL"), "VALUE"),
     rich_presence_value("Mon", current_mon("PAL"), "VALUE")
 )
 
 rich_presence_conditional_display(
-    is_shigurui("NTSC"),
-    "[Shigurui] lv. {0} {1} is fighting {2} | {3} / 108 ⚔️ | {4} / 19 📖 | {5} ryo, {6} mon",
+    is_fighting_boss("NTSC") && is_shigurui("NTSC"), 
+    "[Shigurui] lv. {0} {1} is fighting {2} | {3} / 108 ⚔️ | {4} / 20 📖 | {5} / 47 💍 | {6} ryo, {7} mon",
     rich_presence_value("CurrLevel", current_level("NTSC"), "VALUE"),
     rich_presence_lookup("Character", active_character("NTSC"), CharacterLookup),
     rich_presence_lookup("Zone", active_zone("NTSC"), ZoneLookup),
     rich_presence_value("NumCurrentSwords", num_current_swords("NTSC"), "VALUE"),
     rich_presence_value("NumCurrentBooks", num_current_recipes("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
     rich_presence_value("Ryo", current_ryo("NTSC"), "VALUE"),
     rich_presence_value("Mon", current_mon("NTSC"), "VALUE")
 )
 
 rich_presence_conditional_display(
-    is_shigurui("PAL"),
-    "[Shigurui] lv. {0} {1} is fighting {2} | {3} / 108 ⚔️ | {4} / 19 📖 | {5} ryo, {6} mon",
+    is_fighting_boss("PAL") && is_shigurui("PAL"), 
+    "[Shigurui] lv. {0} {1} is fighting {2} | {3} / 108 ⚔️ | {4} / 20 📖 | {5} / 47 💍 | {6} ryo, {7} mon",
     rich_presence_value("CurrLevel", current_level("PAL"), "VALUE"),
     rich_presence_lookup("Character", active_character("PAL"), CharacterLookup),
     rich_presence_lookup("Zone", active_zone("PAL"), ZoneLookup),
     rich_presence_value("NumCurrentSwords", num_current_swords("PAL"), "VALUE"),
     rich_presence_value("NumCurrentBooks", num_current_recipes("PAL"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
     rich_presence_value("Ryo", current_ryo("PAL"), "VALUE"),
     rich_presence_value("Mon", current_mon("PAL"), "VALUE")
 )
 
 rich_presence_conditional_display(
     is_fighting_boss("NTSC"), 
-    "[{0}] lv. {1} {2} is fighting {3} | {4} / 108 ⚔️ | {5} / 19 📖 | {6} ryo, {7} mon",
+    "[{0}] lv. {1} {2} is fighting {3} | {4} / 108 ⚔️ | {5} / 20 📖 | {6} / 47 💍 | {7} ryo, {8} mon",
     rich_presence_lookup("Difficulty", current_difficulty("NTSC"), DifficultyLookup),
     rich_presence_value("CurrLevel", current_level("NTSC"), "VALUE"),
     rich_presence_lookup("Character", active_character("NTSC"), CharacterLookup),
     rich_presence_lookup("Zone", active_zone("NTSC"), ZoneLookup),
     rich_presence_value("NumCurrentSwords", num_current_swords("NTSC"), "VALUE"),
     rich_presence_value("NumCurrentBooks", num_current_recipes("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
     rich_presence_value("Ryo", current_ryo("NTSC"), "VALUE"),
     rich_presence_value("Mon", current_mon("NTSC"), "VALUE")
 )
 
 rich_presence_conditional_display(
     is_fighting_boss("PAL"), 
-    "[{0}] lv. {1} {2} is fighting {3} | {4} / 108 ⚔️ | {5} / 19 📖 | {6} ryo, {7} mon",
+    "[{0}] lv. {1} {2} is fighting {3} | {4} / 108 ⚔️ | {5} / 20 📖 | {6} / 47 💍 | {7} ryo, {8} mon",
     rich_presence_lookup("Difficulty", current_difficulty("PAL"), DifficultyLookup),
     rich_presence_value("CurrLevel", current_level("PAL"), "VALUE"),
     rich_presence_lookup("Character", active_character("PAL"), CharacterLookup),
     rich_presence_lookup("Zone", active_zone("PAL"), ZoneLookup),
     rich_presence_value("NumCurrentSwords", num_current_swords("PAL"), "VALUE"),
     rich_presence_value("NumCurrentBooks", num_current_recipes("PAL"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
+    rich_presence_value("Ryo", current_ryo("PAL"), "VALUE"),
+    rich_presence_value("Mon", current_mon("PAL"), "VALUE")
+)
+
+// Exploring
+
+rich_presence_conditional_display(
+    is_shigurui("NTSC"),
+    "[Shigurui] lv. {0} {1} is exploring {2} | {3} / 108 ⚔️ | {4} / 20 📖 | {5} / 47 💍 | {6} ryo, {7} mon",
+    rich_presence_value("CurrLevel", current_level("NTSC"), "VALUE"),
+    rich_presence_lookup("Character", active_character("NTSC"), CharacterLookup),
+    rich_presence_lookup("Zone", active_zone("NTSC"), ZoneLookup),
+    rich_presence_value("NumCurrentSwords", num_current_swords("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentBooks", num_current_recipes("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
+    rich_presence_value("Ryo", current_ryo("NTSC"), "VALUE"),
+    rich_presence_value("Mon", current_mon("NTSC"), "VALUE"),
+)
+
+rich_presence_conditional_display(
+    is_shigurui("PAL"),
+    "[Shigurui] lv. {0} {1} is traversing {2} | {3} / 108 ⚔️ | {4} / 20 📖 | {5} / 47 💍 | {6} ryo, {7} mon",
+    rich_presence_value("CurrLevel", current_level("PAL"), "VALUE"),
+    rich_presence_lookup("Character", active_character("PAL"), CharacterLookup),
+    rich_presence_lookup("Zone", active_zone("PAL"), ZoneLookup),
+    rich_presence_value("NumCurrentSwords", num_current_swords("PAL"), "VALUE"),
+    rich_presence_value("NumCurrentBooks", num_current_recipes("PAL"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
     rich_presence_value("Ryo", current_ryo("PAL"), "VALUE"),
     rich_presence_value("Mon", current_mon("PAL"), "VALUE")
 )
 
 rich_presence_conditional_display(
     is_in_game("NTSC"),
-    "[{0}] lv. {1} {2} is exploring {3} | {4} / 108 ⚔️ | {5} / 20 📖 | {6} ryo, {7} mon",
+    "[{0}] lv. {1} {2} is exploring {3} | {4} / 108 ⚔️ | {5} / 20 📖 | {6} / 47 💍 | {7} ryo, {8} mon",
     rich_presence_lookup("Difficulty", current_difficulty("NTSC"), DifficultyLookup),
     rich_presence_value("CurrLevel", current_level("NTSC"), "VALUE"),
     rich_presence_lookup("Character", active_character("NTSC"), CharacterLookup),
     rich_presence_lookup("Zone", active_zone("NTSC"), ZoneLookup),
     rich_presence_value("NumCurrentSwords", num_current_swords("NTSC"), "VALUE"),
     rich_presence_value("NumCurrentBooks", num_current_recipes("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
     rich_presence_value("Ryo", current_ryo("NTSC"), "VALUE"),
     rich_presence_value("Mon", current_mon("NTSC"), "VALUE")
 )
 
 rich_presence_conditional_display(
     is_in_game("PAL"),
-    "[{0}] lv. {1} {2} is traversing {3} | {4} / 108 ⚔️ | {5} / 20 📖 | {6} ryo, {7} mon",
+    "[{0}] lv. {1} {2} is traversing {3} | {4} / 108 ⚔️ | {5} / 20 📖 | {6} / 47 💍 | {7} ryo, {8} mon",
     rich_presence_lookup("Difficulty", current_difficulty("PAL"), DifficultyLookup),
     rich_presence_value("CurrLevel", current_level("PAL"), "VALUE"),
     rich_presence_lookup("Character", active_character("PAL"), CharacterLookup),
     rich_presence_lookup("Zone", active_zone("PAL"), ZoneLookup),
     rich_presence_value("NumCurrentSwords", num_current_swords("PAL"), "VALUE"),
     rich_presence_value("NumCurrentBooks", num_current_recipes("PAL"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
     rich_presence_value("Ryo", current_ryo("PAL"), "VALUE"),
     rich_presence_value("Mon", current_mon("PAL"), "VALUE")
 )

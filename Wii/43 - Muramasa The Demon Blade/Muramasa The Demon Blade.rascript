@@ -52,6 +52,16 @@ function is_shigurui(region) {
     }
 }
 
+// Inverse of above to avoid excess alts.
+// Why 6 alt when no alt do?
+function is_not_shigurui(region) {
+    if (region == "PAL") {
+        return __ornext(current_difficulty(region) == 0x00 || dword_be(ptr_character_details_pal() + 0x1dc) > 0x01)
+    } else if (region == "NTSC") {
+        return __ornext(current_difficulty(region) == 0x00 || dword_be(ptr_character_details_ntsc() + 0x1dc) > 0x01)
+    }
+}
+
 // Not to be confused with "active combat."
 // This pointer leads you to the current combat timer and the rewards screen.
 // [32-bit BE Pointer] [NTSC] Pointer to combat
@@ -177,14 +187,45 @@ CharacterLookup = {
     0x01: "Momohime"
 }
 
+// Check the phase of hot spring visits.
+// "Phase" refers to whether or not the other character shows up, really. 
+function hot_spring_phase(region, character) {
+    addr = 0
+    if (region == "PAL") {
+        addr = 0x00433c84
+    } else if (region == "NTSC") {
+        addr = 0x003bdc84
+    }
+
+    if (character == "Kisuke") {
+        offset = 0x90
+    } else if (character == "Momohime") {
+        offset = 0x190
+    }
+
+    return dword_be(mask_ptr(addr) + offset)
+}
+
 // Get the current in-game time for the player.
 // This seems to be measured as purely minutes. X / 60 to get hours, X % 60 to get minutes.
-function in_game_timer(region) {
-    if (region == "PAL") {
-        return dword_be(mask_ptr(0x00433c84) + 0x10)
-    } else if (region == "NTSC") {
-        return dword_be(mask_ptr(0x003bdc84) + 0x10)
+function in_game_timer(region, character) {
+    addr = 0
+    offset = 0
+    if (character == "Momohime") {
+        offset = 0x194
+    } else if (character == "Kisuke") {
+        offset = 0x94
+    } else if (character == "Either") {
+        offset = 0x10
     }
+
+    if (region == "PAL") {
+        addr = 0x00433c84
+    } else if (region == "NTSC") {
+        addr = 0x003bdc84
+    }
+
+    return dword_be(mask_ptr(addr) + offset)
 }
 
 // Get the active zone the player is in.
@@ -1189,6 +1230,7 @@ achievement(
 )
 
 achievement(
+    id = 583618,
     title = "Oboro Massacre, Peach Flavored",
     description = "Equip the Oboro Muramasa as Momohime and defeat Fudo-Myoou.",
     points = 10,
@@ -1525,13 +1567,15 @@ achievement(
 )
 
 achievement(
+    id = 583619,
     title = "Fated Meeting in an Unlikely Place",
     description = "As Momohime, find Kisuke in a hot spring.",
     points = 1,
     trigger = (is_ntsc()
         && active_character("NTSC") == 0x01
         && in_zone("NTSC", "Onsen")
-        && always_false()
+        && prev(hot_spring_phase("NTSC", "Momohime")) == 0x01
+        && hot_spring_phase("NTSC", "Momohime") == 0x02
         // && something to denote Kisuke
         // Loose thought here for future me: the two notable difference between this Onsen scene and others are:
         // 1. Kisuke is present (obviously), but...
@@ -1546,30 +1590,33 @@ achievement(
         (is_pal()
         && active_character("PAL") == 0x01
         && in_zone("PAL", "Onsen")
-        && always_false()
+        && prev(hot_spring_phase("PAL", "Momohime")) == 0x01
+        && hot_spring_phase("PAL", "Momohime") == 0x02
         // && something to denote Kisuke
     )
-    
-    always_false()
 )
 
 achievement(
+    id = 583620,
     title = "Onsen Surprise",
     description = "As Kisuke, find Momohime in a hot spring.",
     points = 1,
     trigger = (is_ntsc()
         && active_character("NTSC") == 0x00
         && in_zone("NTSC", "Onsen")
-        && always_false()) 
+        && prev(hot_spring_phase("NTSC", "Kisuke")) == 0x01
+        && hot_spring_phase("NTSC", "Kisuke") == 0x02) 
     || (is_pal()
         && active_character("PAL") == 0x01
         && in_zone("PAL", "Onsen")
-        && always_false())
+        && prev(hot_spring_phase("PAL", "Kisuke")) == 0x01
+        && hot_spring_phase("PAL", "Kisuke") == 0x02)
 )
 
 achievement(
+    id = 583621,
     title = "A Combo of Deadly Proportions", 
-    points = 10,
+    points = 3,
     description = "Achieve a combo of 200 or higher in any fight.",
     trigger = (is_in_game("NTSC")
             && dword_be(active_combat_pointer("NTSC") + 0x80) < 0x3e8
@@ -1633,8 +1680,9 @@ achievement(
 // https://www.nicovideo.jp/watch/sm44851300?via=thumb_watch&at=title&state=unplayed - Shigurui speedrun. Hits 47, 51, 2x, 47, 34
 // https://www.twitch.tv/videos/1501958318 - 15, 6, 11, 52, 57, 1, 32
 achievement(
+    id = 583622,
     title = "Freewheeling",
-    description = "Achieve a combo of 50 or higher and defeat Wanyudo on Shura or Shigurui difficulty.",
+    description = "Achieve a combo of 75 or higher and defeat Wanyudo on Shura or Shigurui difficulty.",
     points = 5,  
     trigger = (never(is_ntsc() && active_zone("NTSC") != 0x27)
             && is_in_game("NTSC")
@@ -1642,9 +1690,9 @@ achievement(
             && current_difficulty("NTSC") == 0x01
             && trigger_when(
                 once(
-                    prev(dword_be(active_combat_pointer("NTSC") + 0x80)) < 0x32 
-                    && (dword_be(active_combat_pointer("NTSC") + 0x80)) >= 0x32
-                    && (dword_be(active_combat_pointer("NTSC") + 0x80)) <= 0x3c // buffer in case somehow 2+ hits in a combo are registered at once
+                    prev(dword_be(active_combat_pointer("NTSC") + 0x80)) < 0x4b 
+                    && (dword_be(active_combat_pointer("NTSC") + 0x80)) >= 0x4b
+                    && (dword_be(active_combat_pointer("NTSC") + 0x80)) <= 0x55 // buffer in case somehow 2+ hits in a combo are registered at once
                 )
             )
             // the trigger as before
@@ -1657,9 +1705,9 @@ achievement(
             && current_difficulty("PAL") == 0x01
             && trigger_when(
                 once(
-                    prev(dword_be(active_combat_pointer("PAL") + 0x80)) < 0x32 
-                    && (dword_be(active_combat_pointer("PAL") + 0x80)) >= 0x32
-                    && (dword_be(active_combat_pointer("PAL") + 0x80)) <= 0x3c // buffer in case somehow 2+ hits in a combo are registered at once
+                    prev(dword_be(active_combat_pointer("PAL") + 0x80)) < 0x4b 
+                    && (dword_be(active_combat_pointer("PAL") + 0x80)) >= 0x4b
+                    && (dword_be(active_combat_pointer("PAL") + 0x80)) <= 0x55 // buffer in case somehow 2+ hits in a combo are registered at once
                 )
             )
             // the trigger as before
@@ -1670,39 +1718,52 @@ achievement(
 // Helper data points:
 // https://www.nicovideo.jp/watch/sm44851300?via=thumb_watch&at=title&state=unplayed - Shigurui speedrun. Hits 14, ?, 10, 41, 13, 37, ?, 40
 // https://www.twitch.tv/videos/1501958318 - 
-// TODO debug later, it's not resetting the hit count as I expected
 achievement(
-    title = "Grounded By Honor",
-    description = "Defeat Yukinojyo on Shura or Shigurui without ever pressing up on your control stick or d-pad.",
-    points = 5,
-    type = "missable",
-    trigger = 
-        (never(is_ntsc() && active_zone("NTSC") != 0x26)
+    id = 583623,
+    title = "Sending Swords Swimming",
+    description = "Achieve a combo of 50 or higher and defeat Yukinojyo on Shura or Shigurui difficulty.",
+    points = 5,  
+    trigger = (never(is_ntsc() && !in_zone("NTSC", "Yukinojyo"))
             && is_in_game("NTSC")
             && active_character("NTSC") == 0x01 
             && current_difficulty("NTSC") == 0x01
-            && unless(once(has_jumped("NTSC")))
+            && trigger_when(
+                once(
+                    prev(dword_be(active_combat_pointer("NTSC") + 0x80)) < 0x32 
+                    && (dword_be(active_combat_pointer("NTSC") + 0x80)) >= 0x32
+                    && (dword_be(active_combat_pointer("NTSC") + 0x80)) <= 0x3c // buffer in case somehow 2+ hits in a combo are registered at once
+                )
+            )
             // the trigger as before
             && prev(sword_acquired("NTSC", "Izumokami Naganori") == 0x00)
             && trigger_when(sword_acquired("NTSC", "Izumokami Naganori") == 0x01))
-    || 
-        (never(is_pal() && active_zone("PAL") != 0x26)
-                && is_in_game("PAL")
-                && active_character("PAL") == 0x01 
-                && current_difficulty("PAL") == 0x01
-                && unless(once(has_jumped("PAL")))
-                // the trigger as before
-                && prev(sword_acquired("PAL", "Izumokami Naganori") == 0x00)
-                && trigger_when(sword_acquired("PAL", "Izumokami Naganori") == 0x01))
+        ||
+            (never(is_pal() && !in_zone("PAL", "Yukinojyo"))
+            && is_in_game("PAL")
+            && active_character("PAL") == 0x01 
+            && current_difficulty("PAL") == 0x01
+            && trigger_when(
+                once(
+                    prev(dword_be(active_combat_pointer("PAL") + 0x80)) < 0x32 
+                    && (dword_be(active_combat_pointer("PAL") + 0x80)) >= 0x32
+                    && (dword_be(active_combat_pointer("PAL") + 0x80)) <= 0x3c // buffer in case somehow 2+ hits in a combo are registered at once
+                )
+            )
+            // the trigger as before
+            && prev(sword_acquired("PAL", "Izumokami Naganori") == 0x00)
+            && trigger_when(sword_acquired("PAL", "Izumokami Naganori") == 0x01))
 )
 
 // Helper data points:
 // https://www.nicovideo.jp/watch/sm44851300?via=thumb_watch&at=title&state=unplayed - 47, 53, 2x, 5, 5, 10
 // https://www.twitch.tv/videos/1501958318 - 50, 4, 2, 3, 3, 31, 
+// https://www.youtube.com/watch?v=bYkpF9zNyUI - 25, 26, 11, 19, 29
+// https://www.youtube.com/watch?v=wQEnYBohJzY - 20, 21, 
 achievement(
+    id = 583860,
     title = "The Hand of a Protective Deity",
     description = "Achieve a combo of 50 or higher and defeat Ippondatara on Shura or Shigurui difficulty.",
-    points = 10,
+    points = 5,
     type = "missable",
     trigger = (never(is_ntsc() && active_zone("NTSC") != 0x07)
             && is_in_game("NTSC")
@@ -1739,9 +1800,10 @@ achievement(
 // https://www.nicovideo.jp/watch/sm44851300?via=thumb_watch&at=title&state=unplayed - 53, 30, 14, 
 // https://www.twitch.tv/videos/1501958318 - 65, 30, 8, death, 53, 23,16, 8,4, 31, 3
 achievement(
+    id = 583862,
     title = "Truly Traitorous Form",
     description = "Achieve a combo of 50 or higher and defeat the Chimera on Shura or Shigurui difficulty.",
-    points = 10,
+    points = 5,
     type = "missable",
     trigger = (never(is_ntsc() && active_zone("NTSC") != 0x06)
             && is_in_game("NTSC")
@@ -1777,12 +1839,14 @@ achievement(
 // Helper data points:
 // https://www.nicovideo.jp/watch/sm44851300?via=thumb_watch&at=title&state=unplayed - 25, 3, 37, 4, 35, 10, 32
 // https://www.twitch.tv/videos/1501958318 - 38, 15, 19, 40, 14, 34
+// https://www.youtube.com/watch?v=44JoHndPWto - 71
 achievement(
+    id = 583863,
     title = "A Meal Better Eaten Whole",
     // 60 is too low because of the adds, find a video to corroborate that isn't a speedrun but you can probably float 66-70
     // maybe 66 as a "haha funny hell ish number"
-    description = "Achieve a combo of 60 or higher and defeat the Big Oni on Shura or Shigurui difficulty.",
-    points = 10,
+    description = "Achieve a combo of 66 or higher and defeat the Big Oni on Shura or Shigurui difficulty.",
+    points = 5,
     type = "missable",
     trigger = (never(is_ntsc() && active_zone("NTSC") != 0x01)
         && is_in_game("NTSC")
@@ -1790,9 +1854,9 @@ achievement(
         && current_difficulty("NTSC") == 0x01
         && trigger_when(
             once(
-                prev(dword_be(active_combat_pointer("NTSC") + 0x80)) < 0x3c 
-                && (dword_be(active_combat_pointer("NTSC") + 0x80)) >= 0x3c
-                && (dword_be(active_combat_pointer("NTSC") + 0x80)) <= 0x46 // buffer in case somehow 2+ hits in a combo are registered at once
+                prev(dword_be(active_combat_pointer("NTSC") + 0x80)) < 0x42 
+                && (dword_be(active_combat_pointer("NTSC") + 0x80)) >= 0x42
+                && (dword_be(active_combat_pointer("NTSC") + 0x80)) <= 0x4c // buffer in case somehow 2+ hits in a combo are registered at once
             )
         )
         // the trigger as before
@@ -1806,9 +1870,9 @@ achievement(
         && current_difficulty("PAL") == 0x01
         && trigger_when(
             once(
-                prev(dword_be(active_combat_pointer("PAL") + 0x80)) < 0x3c 
-                && (dword_be(active_combat_pointer("PAL") + 0x80)) >= 0x3c
-                && (dword_be(active_combat_pointer("PAL") + 0x80)) <= 0x46 // buffer in case somehow 2+ hits in a combo are registered at once
+                prev(dword_be(active_combat_pointer("PAL") + 0x80)) < 0x42 
+                && (dword_be(active_combat_pointer("PAL") + 0x80)) >= 0x42
+                && (dword_be(active_combat_pointer("PAL") + 0x80)) <= 0x4c // buffer in case somehow 2+ hits in a combo are registered at once
             )
         )
         // the trigger as before
@@ -1820,6 +1884,7 @@ achievement(
 // https://www.nicovideo.jp/watch/sm44851300?via=thumb_watch&at=title&state=unplayed - 19, 5, 114, 55
 // https://www.twitch.tv/videos/1501958318 - 53, 57, 29, 56, 27
 achievement(
+    id = 583888,
     title = "Thunderous Performance",
     description = "Defeat Raijin as Momohime on Shura or Shigurui and achieve a combo of 100 or higher.",
     points = 10,
@@ -1860,10 +1925,13 @@ achievement(
 // https://www.twitch.tv/videos/1501958318 - 
 // Could try to highlight the speedrun strat - never achieve a combo and defeat Fudo-Myouu. 
 // Probably an UWC though so maybe just highlight the tech in the forum and call it a day.
+// If we switch this to combo, helper videos:
+// https://www.youtube.com/watch?v=vhCtutaqKgU - 52, 18, 47, 49, 
 achievement(
+    id = 583889,
     title = "Surpassing Buddha's Protector",
     description = "Defeat Fudo-Myoou on Shura or Shigurui difficulty without any of your blades breaking.",
-    points = 10,
+    points = 5,
     type = "missable",
     trigger = (never(is_ntsc() && active_zone("NTSC") != 0x34)
         && is_in_game("NTSC")
@@ -1909,7 +1977,7 @@ achievement(
 achievement(
     id = 580626,
     title = "The Wheel Burns Once More",
-    description = "Defeat Wanyudo on Shigurui difficulty",
+    description = "Defeat Wanyudo on Shigurui difficulty.",
     points = 10,
     trigger = (is_ntsc() 
             && is_in_game("NTSC")
@@ -1931,7 +1999,7 @@ achievement(
 achievement(
     id = 580627,
     title = "Shinkage Style Still Inferior",
-    description = "Defeat Yukinojyo on Shigurui difficulty",
+    description = "Defeat Yukinojyo on Shigurui difficulty.",
     points = 10,
     trigger = (is_ntsc()
         && is_in_game("NTSC")
@@ -1953,7 +2021,7 @@ achievement(
 achievement(
     id = 580628,
     title = "The Eye of a Springly Guardian",
-    description = "Defeat Ippondatara on Shigurui difficulty",
+    description = "Defeat Ippondatara on Shigurui difficulty.",
     points = 10,
     trigger = (is_ntsc()
             && is_in_game("NTSC")
@@ -1975,7 +2043,7 @@ achievement(
 achievement(
     id = 580629,
     title = "Justice Served",
-    description = "Defeat the Chimera on Shigurui difficulty",
+    description = "Defeat the Chimera on Shigurui difficulty.",
     points = 10,
     trigger = (is_ntsc()
             && is_in_game("NTSC")
@@ -1997,7 +2065,7 @@ achievement(
 achievement(
     id = 580630,
     title = "To Hell And Back, Again",
-    description = "Defeat the Big Oni on Shigurui difficulty",
+    description = "Defeat the Big Oni on Shigurui difficulty.",
     points = 10,
     trigger = (is_ntsc()
         && is_in_game("NTSC")
@@ -2019,7 +2087,7 @@ achievement(
 achievement(
     id = 580631,
     title = "Putting on a Clinic for Fujin",
-    description = "Defeat Raijin on Shigurui difficulty",
+    description = "Defeat Raijin on Shigurui difficulty.",
     points = 10,
     trigger = (is_ntsc()
         && is_in_game("NTSC")
@@ -2083,22 +2151,31 @@ achievement(
 // We do this because the toolkit can't answer the following question:
 // "Can I record the highest X the game has seen in an address and submit only that?"
 // So instead, we check if the player hit 1..999 combo and submit that. As hits.
-// In theory, this should work! In practice I can't get the toolkit to load this.
+// In theory, this should work! In practice I can't get RATools to load this.
+// It will either run Remember each time, or, better yet, the entire script won't be able to load properly.
 // For the time being, there is a file alongside this script: "current-leaderboard-value-block.txt".
 // It contains the optimized size version of this. Have this be intentionally small and paste that into the leaderboard instead.
 function lb_combo_adder(region) {
-    cond = is_ntsc()
-    combo_address = dword_be(active_combat_pointer(region) + 0x7c)
-    for i in range(1, 2) {
-        cond = cond && (combo_address <= 1000 && tally(1, combo_address >= i))
-    }
+    return always_true()
+    // This will adjust the combo pointer automatically depending on region
+    // Basically, NTSC has a game code that has bit0=1 in its least significant address and PAL does not! 
 
-    return cond
+    // combo_address_regional_offset = 0x76140 * (bit0(0x03) & 0x01)
+
+    // combo_address = dword_be((combo_address_regional_offset + active_combat_pointer("NTSC")) + 0x80)
+
+    // possible_combo_values = []
+
+    // for i in range(1, 999) {
+    //     array_push(possible_combo_values, i)
+    // }
+
+    // return unless(combo_address == 0xffffffff) && measured(tally_of(possible_combo_values, 0, c => once(combo_address >= c)))
 }
 
 leaderboard(
     id = 156157,
-    title = "Momohime Blue Monk Highest Combo",
+    title = "Momohime - Blue Monk - Highest Combo",
     description = "(Shura or Shigurui) Highest combo over the entire fight after defeating the Blue Monk in Act 1.",
     start = (is_ntsc()
             && active_character("NTSC") == 0x01
@@ -2127,7 +2204,8 @@ leaderboard(
 
 // tested PAL
 leaderboard(
-    title = "Momohime Wanyudo Highest Combo",
+    id = 156243,
+    title = "Momohime - Wanyudo - Highest Combo",
     description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Wanyudo in Act 2.",
     start = (is_ntsc()
         && active_character("NTSC") == 0x01
@@ -2156,7 +2234,8 @@ leaderboard(
 
 // tested PAL
 leaderboard(
-    title = "Momohime Yukinojyo Highest Combo",
+    id = 156242,
+    title = "Momohime - Yukinojyo - Highest Combo",
     description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Yukinojyo in Act 3.",
     start = (is_ntsc()
         && active_character("NTSC") == 0x01
@@ -2185,7 +2264,8 @@ leaderboard(
 
 // tested PAL
 leaderboard(
-    title = "Momohime Ippondatara Highest Combo",
+    id = 156241,
+    title = "Momohime - Ippondatara - Highest Combo",
     description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Ippondatara in Act 4.",
     start = (is_ntsc()
         && active_character("NTSC") == 0x01
@@ -2214,7 +2294,8 @@ leaderboard(
 
 // tested on PAL
 leaderboard(
-    title = "Momohime Chimera Highest Combo",
+    id = 156240,
+    title = "Momohime - Chimera - Highest Combo",
     description = "(Shura or Shigurui) Highest combo over the entire fight after defeating the Chimera in Act 5.",
     start = (is_ntsc()
         && active_character("NTSC") == 0x01
@@ -2243,7 +2324,8 @@ leaderboard(
 
 // Tested on PAL
 leaderboard(
-    title = "Momohime Big Oni Highest Combo",
+    id = 156239,
+    title = "Momohime - Big Oni - Highest Combo",
     description = "(Shura or Shigurui) Highest combo over the entire fight after defeating the Big Oni in Act 6.",
     start = (is_ntsc()
         && active_character("NTSC") == 0x01
@@ -2271,7 +2353,7 @@ leaderboard(
 )
 
 leaderboard(
-    title = "Momohime Raijin Highest Combo",
+    title = "Momohime - Raijin - Highest Combo",
     description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Raijin in Act 7.",
     start = (is_ntsc()
         && active_character("NTSC") == 0x01
@@ -2299,7 +2381,7 @@ leaderboard(
 )
 
 leaderboard(
-    title = "Momohime Fudo-Myouu Highest Combo",
+    title = "Momohime - Fudo-Myouu - Highest Combo",
     description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Fudo-Myouu in the Final Act.",
     start = (is_ntsc()
         && active_character("NTSC") == 0x01
@@ -2327,7 +2409,57 @@ leaderboard(
 )
 
 leaderboard(
-    title = "Kisuke Kurozaru Highest Combo",
+    title = "Momohime - New Game Time (Muso/Shura)",
+    description = "Finish Momohime's story as fast as possible on Muso or Shura.",
+    start = (is_ntsc()
+        && active_character("NTSC") == 0x01
+        && active_zone("NTSC") == 0x34
+        && prev(sword_acquired("NTSC", "Tsukiotoshi") == 0x00)
+        && sword_acquired("NTSC", "Tsukiotoshi") == 0x01
+        && is_not_shigurui("NTSC"))
+    || 
+        (is_pal()
+        && active_character("PAL") == 0x01
+        && active_zone("PAL") == 0x34
+        && prev(sword_acquired("PAL", "Tsukiotoshi") == 0x00)
+        && sword_acquired("PAL", "Tsukiotoshi") == 0x01
+        && is_not_shigurui("PAL")),
+    cancel = (is_ntsc() && active_zone("NTSC") != 0x34) || (is_pal() && active_zone("PAL") != 0x34),
+    submit = always_true(),
+    value = max_of(
+        measured(in_game_timer("NTSC", "Momohime"), when=is_ntsc()), 
+        measured(in_game_timer("PAL", "Momohime"), when=is_pal())
+    ),
+    format="MINUTES" 
+)
+
+leaderboard(
+    title = "Momohime - New Game Time (Shigurui)",
+    description = "Finish Momohime's story as fast as possible on Shigurui.",
+    start = (is_ntsc()
+        && active_character("NTSC") == 0x01
+        && active_zone("NTSC") == 0x34
+        && prev(sword_acquired("NTSC", "Tsukiotoshi") == 0x00)
+        && sword_acquired("NTSC", "Tsukiotoshi") == 0x01
+        && is_shigurui("NTSC"))
+    || 
+        (is_pal()
+        && active_character("PAL") == 0x01
+        && active_zone("PAL") == 0x34
+        && prev(sword_acquired("PAL", "Tsukiotoshi") == 0x00)
+        && sword_acquired("PAL", "Tsukiotoshi") == 0x01
+        && is_shigurui("PAL")),
+    cancel = (is_ntsc() && active_zone("NTSC") != 0x34) || (is_pal() && active_zone("PAL") != 0x34),
+    submit = always_true(),
+    value = max_of(
+        measured(in_game_timer("NTSC", "Momohime"), when=is_ntsc()), 
+        measured(in_game_timer("PAL", "Momohime"), when=is_pal())
+    ),
+    format="MINUTES" 
+)
+
+leaderboard(
+    title = "Kisuke - Kurozaru - Highest Combo",
     description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Kurozaru in Act 1.",
     start = (is_ntsc()
         && active_character("NTSC") == 0x00
@@ -2354,8 +2486,10 @@ leaderboard(
     format = "VALUE"
 )
 
+// Tested on NTSC
 leaderboard(
-    title = "Kisuke Giant Centipede Highest Combo",
+    id = 156238,
+    title = "Kisuke - Giant Centipede - Highest Combo",
     description = "(Shura or Shigurui) Highest combo over the entire fight after defeating the Giant Centipedes in Act 2.",
     start = (is_ntsc()
         && active_character("NTSC") == 0x00
@@ -2383,7 +2517,7 @@ leaderboard(
 )
 
 leaderboard(
-    title = "Kisuke Torahime Highest Combo",
+    title = "Kisuke - Torahime - Highest Combo",
     description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Torahime in Act 3.",
     start = (is_ntsc()
         && active_character("NTSC") == 0x00
@@ -2411,7 +2545,7 @@ leaderboard(
 )
 
 leaderboard(
-    title = "Kisuke Sayo Highest Combo",
+    title = "Kisuke - Sayo - Highest Combo",
     description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Sayo in Act 4.",
     start = (is_ntsc()
         && active_character("NTSC") == 0x00
@@ -2439,7 +2573,7 @@ leaderboard(
 )
 
 leaderboard(
-    title = "Kisuke Tsuchigumo Highest Combo",
+    title = "Kisuke - Tsuchigumo - Highest Combo",
     description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Tsuchigumo in Act 5.",
     start = (is_ntsc()
         && active_character("NTSC") == 0x00
@@ -2467,7 +2601,7 @@ leaderboard(
 )
 
 leaderboard(
-    title = "Kisuke Chigurui Bishamon Highest Combo",
+    title = "Kisuke - Chigurui Bishamon - Highest Combo",
     description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Chigurui Bishamon in Act 6.",
     start = (is_ntsc()
         && active_character("NTSC") == 0x00
@@ -2482,7 +2616,7 @@ leaderboard(
         && current_difficulty("PAL") == 0x01
         && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
         && dword_be(active_combat_pointer("PAL") + 0x80) <= 0x10),
-    cancel = (is_ntsc() && active_zone("NTSC") != 0x1c) || (is_pal() && active_zone("PAL") != 0x1c),
+    cancel = (is_ntsc() && active_zone("NTSC") != 0x29) || (is_pal() && active_zone("PAL") != 0x29),
     submit = (is_ntsc() 
         && prev(sword_acquired("NTSC", "Osafune Kanemitsu") == 0x00) 
         && sword_acquired("NTSC", "Osafune Kanemitsu") == 0x01)
@@ -2495,7 +2629,7 @@ leaderboard(
 )
 
 leaderboard(
-    title = "Kisuke Dragon God Highest Combo",
+    title = "Kisuke - Dragon God - Highest Combo",
     description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Dragon God in Act 7.",
     start = (is_ntsc()
         && active_character("NTSC") == 0x00
@@ -2523,7 +2657,7 @@ leaderboard(
 )
 
 leaderboard(
-    title = "Kisuke Inugama Tokugawa Tsunayoshi Highest Combo",
+    title = "Kisuke - Inugama Tokugawa Tsunayoshi - Highest Combo",
     description = "(Shura or Shigurui) Highest combo over the entire fight after defeating Inugama Tokugawa Tsunayoshi in the Final Act.",
     start = (is_ntsc()
         && active_character("NTSC") == 0x00
@@ -2548,6 +2682,56 @@ leaderboard(
             && sword_acquired("PAL", "Mumei Tamonoo") == 0x01),
     value = lb_combo_adder("NTSC"),
     format = "VALUE"
+)
+
+leaderboard(
+    title = "Kisuke - New Game Time (Muso/Shura)",
+    description = "Finish Kisuke's story as fast as possible on Muso or Shura.",
+    start = (is_ntsc()
+        && active_character("NTSC") == 0x00
+        && active_zone("NTSC") == 0x31
+        && prev(sword_acquired("NTSC", "Mumei Tamonoo") == 0x00)
+        && sword_acquired("NTSC", "Mumei Tamonoo") == 0x01
+        && is_not_shigurui("NTSC"))
+    || 
+        (is_pal()
+        && active_character("PAL") == 0x01
+        && active_zone("PAL") == 0x31
+        && prev(sword_acquired("PAL", "Mumei Tamonoo") == 0x00)
+        && sword_acquired("PAL", "Mumei Tamonoo") == 0x01
+        && is_not_shigurui("PAL")),
+    cancel = (is_ntsc() && active_zone("NTSC") != 0x31) || (is_pal() && active_zone("PAL") != 0x31),
+    submit = always_true(),
+    value = max_of(
+        measured(in_game_timer("NTSC", "Kisuke"), when=is_ntsc()), 
+        measured(in_game_timer("PAL", "Kisuke"), when=is_pal())
+    ),
+    format="MINUTES" 
+)
+
+leaderboard(
+    title = "Kisuke - New Game Time (Shigurui)",
+    description = "Finish Kisuke's story as fast as possible on Shigurui.",
+    start = (is_ntsc()
+        && active_character("NTSC") == 0x00
+        && active_zone("NTSC") == 0x31
+        && prev(sword_acquired("NTSC", "Mumei Tamonoo") == 0x00)
+        && sword_acquired("NTSC", "Mumei Tamonoo") == 0x01
+        && is_shigurui("NTSC"))
+    || 
+        (is_pal()
+        && active_character("PAL") == 0x00
+        && active_zone("PAL") == 0x31
+        && prev(sword_acquired("PAL", "Mumei Tamonoo") == 0x00)
+        && sword_acquired("PAL", "Mumei Tamonoo") == 0x01
+        && is_shigurui("PAL")),
+    cancel = (is_ntsc() && active_zone("NTSC") != 0x31) || (is_pal() && active_zone("PAL") != 0x31),
+    submit = always_true(),
+    value = max_of(
+        measured(in_game_timer("NTSC", "Kisuke"), when=is_ntsc()),
+        measured(in_game_timer("PAL", "Kisuke"), when=is_pal())
+    ),
+    format="MINUTES" 
 )
 
 rich_presence_conditional_display(check_on_main_menu("NTSC"), "On the title screen")
@@ -2723,7 +2907,7 @@ rich_presence_conditional_display(
     rich_presence_value("NumCurrentBooks", num_current_recipes("NTSC"), "VALUE"),
     rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
     rich_presence_value("Ryo", current_ryo("NTSC"), "VALUE"),
-    rich_presence_value("Mon", current_mon("NTSC"), "VALUE"),
+    rich_presence_value("Mon", current_mon("NTSC"), "VALUE")
 )
 
 rich_presence_conditional_display(

@@ -137,7 +137,7 @@ function results_screen_ptr(region) {
 
 // Helper function for every achievement where I need to ask "Is the results screen up? Did we win?"
 function results_screen_present(region) {
-    return dword_be(ptr_character_details("NTSC") + 0x1d8) > 0
+    return dword_be(ptr_character_details(region) + 0x1d8) > 0
         // results screen timer is initialized
         && dword_be(results_screen_ptr(region) + 0x4bc) == 0xffffffff
         && dword_be(results_screen_ptr(region) + 0x80c) == 0xffffffff
@@ -299,18 +299,6 @@ function check_on_main_menu(region) {
     }
 }
 
-// Check if the player ever jumped.
-function has_jumped(region) {
-    address = 0
-    if (region == "PAL") {
-        address = 0x4eaee0
-    } else if (region == "NTSC") {
-        address = 0x474da0
-    }
-
-    return dword_be(address) - prev(dword_be(address)) == 0x01
-}
-
 function is_fighting_boss(region) {
     boss_values = [
         // momohime boss values
@@ -378,6 +366,13 @@ function in_zone(region, zone) {
     return always_false()
 }
 
+// Check if the player is on the given screen.
+// This is a more forceful check that combines screen and map ids.
+function on_screen(region, map_name, screen_name) {
+    return in_zone(region, map_name) && RELEVANT_SCREENS[map_name][screen_name] == active_screen(region)
+}
+
+
 // $DA70C4: [32-bit BE] Current Map ID
 ZoneLookup = {
     0x0: "Blue Monk",
@@ -438,6 +433,83 @@ ZoneLookup = {
     0x37: "Onsen",
     0x38: "Purple waves scene",
     0x39: "Credits",
+}
+
+// Structure: RELEVANT_SCREENS[MAP_NAME][SCREEN_NAME] = SCREEN_ID
+RELEVANT_SCREENS = {
+    "Blue Monk": {
+        "Fight": 0x00
+    },
+    "Yamashiro": {
+        "Lair": 0x3a
+    },
+    "Iga": {
+        "Lair": 0x13
+    },
+    "Yamato": {
+        "Lair": 0x19
+    },
+    "Ise": {
+        "Lair": 0x16
+    },
+    "Mino": {
+        "Lair": 0x1d
+    },
+    "Omi": {
+        "Lair": 0x10
+    },
+    "Owari": {
+        "Lair": 0x0f
+    },
+    "Musashi": {
+        "Lair": 0x1e
+    },
+    "Kai": {
+        "Lair": 0x12
+    },
+    "Izu": {
+        "Lair, pt. 1": 0x0c,
+        "Lair, pt. 2": 0x0e,
+        "Lair, pt. 3": 0x0f,
+        "Lair, pt. 4": 0x10,
+        "Lair, pt. 5": 0x11,
+        "Lair, pt. 6": 0x12,
+        "Lair, pt. 7": 0x13,
+        "Lair, final part": 0x14,
+    },
+    "Mikawa": {
+        "Lair": 0x0d
+    },
+    "Shinano": {
+        "Lair, pt. 1": 0x15,
+        "Lair, pt. 2": 0x16
+    },
+    "Totomi": {
+        "Lair": 0x10
+    },
+    "Sagami": {
+        "Lair": 0x11
+    },
+    "Suruga": {
+        "Lair": 0x19
+    },
+    "Hida": {
+        "Lair": 0x0e
+    },
+    // For these two keys specifically, we are relying on the fact that we do not care for the regular endings
+    // These are specifically for the alternate, "Ending 3" paths
+    "Inugami Tokugawa": {
+        "Fight": 0x00,
+        "Before Fight": 0x01,
+        "Alternate Ending Start": 0x05
+    },
+    "Fudo-Myouu": {
+        "Before Fight": 0x00,
+        "Pre-Fight Room": 0x01,
+        "Cutscene before fight": 0x02,
+        "Fight": 0x0b,
+        "Alternate Ending Cutscene Start": 0x03 
+    }
 }
 
 BOSS_ZONE_MAP = {
@@ -1484,6 +1556,7 @@ achievement(
     trigger = (is_in_game("NTSC")
         && in_zone("NTSC", "Iga")
         && active_screen("NTSC") == 0x13
+        && current_difficulty("NTSC") == 0x01
         && results_screen_present("NTSC"))
     ||
         (is_in_game("PAL")
@@ -1571,7 +1644,7 @@ achievement(
         && active_screen("PAL") == 0x19
         && current_difficulty("PAL") == 0x01
         // character HP is above 0
-        && results_screen_present("PAL")
+        && results_screen_present("PAL"))
 )
 
 achievement(
@@ -2469,6 +2542,7 @@ achievement(
     points = 100,
     trigger = (is_in_game("NTSC")
         && in_zone("NTSC", "Izu")
+        && active_screen("NTSC") == 0x14
         && current_difficulty("NTSC") == 0x01
         && is_shigurui("NTSC")
         && accessory_acquired("NTSC", "Narukami Bracelet") == 0x00
@@ -2476,6 +2550,7 @@ achievement(
     ||
         (is_in_game("PAL")
         && in_zone("PAL", "Izu")
+        && active_screen("PAL") == 0x14
         && current_difficulty("PAL") == 0x01
         && is_shigurui("PAL")
         && accessory_acquired("PAL", "Narukami Bracelet") == 0x00
@@ -2513,7 +2588,7 @@ leaderboard(
     description = "(Shura or Shigurui) Highest combo over the entire fight after defeating the Blue Monk in Act 1.",
     start = (is_ntsc()
             && active_character("NTSC") == 0x01
-            && in_zone("NTSC", "Blue Monk") == 0x00
+            && in_zone("NTSC", "Blue Monk")
             && sword_acquired("NTSC", "Hasebe Kunishige") == 0x00
             && current_difficulty("NTSC") == 0x01
             && prev(dword_be(active_combat_pointer("NTSC") + 0x80)) == 0xffffffff
@@ -2521,7 +2596,7 @@ leaderboard(
         ||
             (is_pal()
             && active_character("PAL") == 0x01
-            && in_zone("PAL", "Blue Monk") == 0x00
+            && in_zone("PAL", "Blue Monk")
             && sword_acquired("PAL", "Hasebe Kunishige") == 0x00
             && current_difficulty("PAL") == 0x01
             && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
@@ -2681,7 +2756,7 @@ leaderboard(
     ||
         (is_pal()
         && active_character("PAL") == 0x01
-        && in_zone("PAL", "Big Oni") == 0x01
+        && in_zone("PAL", "Big Oni")
         && sword_acquired("PAL", "Onikiri")  == 0x00
         && current_difficulty("PAL") == 0x01
         && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
@@ -2711,7 +2786,7 @@ leaderboard(
     ||
         (is_pal()
         && active_character("PAL") == 0x01
-        && in_zone("PAL", "Raijin") == 0x05
+        && in_zone("PAL", "Raijin")
         && sword_acquired("PAL", "Mutsunokami Yoshiyuki")  == 0x00
         && current_difficulty("PAL") == 0x01
         && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
@@ -2853,7 +2928,7 @@ leaderboard(
     ||
         (is_pal()
         && active_character("PAL") == 0x00
-        && in_zone("PAL", "Giant Centipede") == 0x1d
+        && in_zone("PAL", "Giant Centipede")
         && sword_acquired("PAL", "Iganokami Kanemichi")  == 0x00
         && current_difficulty("PAL") == 0x01
         && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
@@ -2883,7 +2958,7 @@ leaderboard(
     ||
         (is_pal()
         && active_character("PAL") == 0x00
-        && active_zone("PAL", "Torahime")
+        && in_zone("PAL", "Torahime")
         && sword_acquired("PAL", "Magoroku Kanemoto")  == 0x00
         && current_difficulty("PAL") == 0x01
         && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
@@ -3008,7 +3083,7 @@ leaderboard(
         && current_difficulty("PAL") == 0x01
         && prev(dword_be(active_combat_pointer("PAL") + 0x80)) == 0xffffffff
         && dword_be(active_combat_pointer("PAL") + 0x80) <= 0x10),
-    cancel = (is_ntsc() && !in_zone("NTSC", "Dragon God")) || (is_pal() && !active_zone("PAL", "Dragon God")),
+    cancel = (is_ntsc() && !in_zone("NTSC", "Dragon God")) || (is_pal() && !in_zone("PAL", "Dragon God")),
     submit = (is_ntsc() 
         && prev(sword_acquired("NTSC", "Goro Masamune") == 0x00) 
         && sword_acquired("NTSC", "Goro Masamune") == 0x01)
@@ -3282,7 +3357,7 @@ rich_presence_conditional_display(
     rich_presence_lookup("Zone", active_zone("PAL"), ZoneLookup),
     rich_presence_value("NumCurrentSwords", num_current_swords("PAL"), "VALUE"),
     rich_presence_value("NumCurrentBooks", num_current_recipes("PAL"), "VALUE"),
-    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("PAL"), "VALUE"),
     rich_presence_value("Ryo", current_ryo("PAL"), "VALUE"),
     rich_presence_value("Mon", current_mon("PAL"), "VALUE")
 )
@@ -3310,7 +3385,7 @@ rich_presence_conditional_display(
     rich_presence_lookup("Zone", active_zone("PAL"), ZoneLookup),
     rich_presence_value("NumCurrentSwords", num_current_swords("PAL"), "VALUE"),
     rich_presence_value("NumCurrentBooks", num_current_recipes("PAL"), "VALUE"),
-    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("PAL"), "VALUE"),
     rich_presence_value("Ryo", current_ryo("PAL"), "VALUE"),
     rich_presence_value("Mon", current_mon("PAL"), "VALUE")
 )

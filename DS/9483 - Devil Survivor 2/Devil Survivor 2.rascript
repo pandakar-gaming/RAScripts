@@ -129,8 +129,36 @@ function unit_respawns() {
     return cond && running_total == 0x01
 }
 
+// Helper function for the thing I keep copy-pasting everywhere.
+// Check that any unit defeated the named unit.
+function specific_leader_defeated(unit_name) {
+    return ((attacker_leader_is(unit_name) && attacker_leader_defeated()) 
+          || defender_leader_is(unit_name) && defender_leader_defeated())
+}
+
+// Helper function for the other damn thing that keeps coming up.
+// Can these units JUST DIE?
+// This is the soft defeat analagous helper function to #specific_leader_defeated.
+function specific_leader_soft_defeated(unit_name) {
+    return ((attacker_leader_is(unit_name)) && attacker_leader_reduced_to_1hp()
+        || defender_leader_is(unit_name) && defender_leader_defeated())
+}
+
+// Similar to specific_leader_soft_defeated, except we check if a specific unit reduced the other one to 1hp.
+function specific_leader_soft_defeated_by(defeated_unit, winning_unit) {
+    return (attacker_leader_is(winning_unit) && defender_leader_is(defeated_unit) && defender_leader_reduced_to_1hp()) || 
+           (defender_leader_is(winning_unit) && attacker_leader_is(defeated_unit) && attacker_leader_reduced_to_1hp())
+}
+
+// Similar to unit_defeated, except we're checking that a specific unit defeated another specific unit.
+function specific_leader_defeated_by(defeated_unit, winning_unit) {
+    return (attacker_leader_is(winning_unit) && defender_leader_is(defeated_unit) && defender_leader_defeated()) || 
+           (defender_leader_is(winning_unit) && attacker_leader_is(defeated_unit) && attacker_leader_defeated())
+   
+}
+
 // Check whether there are only allied teams standing in combat.
-// This specifically checks if all expected deployed allies are alive.
+// This specifically checks if all expected deployed allies are alive and only those teams are alive.
 function all_allied_teams_last_standing(num_starting_teams) {
     // Player team indexed from 0 and game reserves first 4 indexes for player teams
     // enemy ids have to start at 0x04 as a result
@@ -157,6 +185,69 @@ function all_allied_teams_last_standing(num_starting_teams) {
     return only_friendlies_present
 }
 
+// Check how many player teams are alive.
+// This is different from #all_allied_teams_last_standing because this strictly checks player teams, not enemy teams.
+function player_teams_alive(num_teams) {
+    cond = ptr_valid(FULL_COMBAT_PTR)
+    for i in range(0, num_teams - 1) {
+        cond = cond && byte(COMBAT_PTR + 0x284 + (0x27c) * i) > 0
+    }
+
+    return cond
+}
+
+
+function any_friendlies_with_exception_team_alive(exception_team_index) {
+    return (
+            // Case 1: one party member alive
+            (
+                __ornext(byte(COMBAT_PTR + 0x250) <= 0x03 || byte(COMBAT_PTR + 0x250) == exception_team_index)
+                && __ornext(byte(COMBAT_PTR + 0x251) <= 0x03 || byte(COMBAT_PTR + 0x251) == exception_team_index)
+                && prev(byte(COMBAT_PTR + 0x252) >= 0x04)
+                && byte(COMBAT_PTR + 0x252) == 0xff
+            )
+            ||
+            // Case 2: two party members alive
+            (
+                __ornext(byte(COMBAT_PTR + 0x250) <= 0x03 || byte(COMBAT_PTR + 0x250) == exception_team_index)
+                && __ornext(byte(COMBAT_PTR + 0x251) <= 0x03 || byte(COMBAT_PTR + 0x251) == exception_team_index)
+                && __ornext(byte(COMBAT_PTR + 0x252) <= 0x03 || byte(COMBAT_PTR + 0x252) == exception_team_index)
+                && prev(byte(COMBAT_PTR + 0x253) >= 0x04)
+                && byte(COMBAT_PTR + 0x253) == 0xff
+            )
+            ||
+            // Case 3: three party members alive
+            (
+                __ornext(byte(COMBAT_PTR + 0x250) <= 0x03 || byte(COMBAT_PTR + 0x250) == exception_team_index)
+                && __ornext(byte(COMBAT_PTR + 0x251) <= 0x03 || byte(COMBAT_PTR + 0x251) == exception_team_index)
+                && __ornext(byte(COMBAT_PTR + 0x252) <= 0x03 || byte(COMBAT_PTR + 0x252) == exception_team_index)
+                && __ornext(byte(COMBAT_PTR + 0x253) <= 0x03 || byte(COMBAT_PTR + 0x253) == exception_team_index)
+                && prev(byte(COMBAT_PTR + 0x254) >= 0x04)
+                && byte(COMBAT_PTR + 0x254) == 0xff
+            )
+            ||
+            // Case 4: four party members alive
+            (
+                __ornext(byte(COMBAT_PTR + 0x250) <= 0x03 || byte(COMBAT_PTR + 0x250) == exception_team_index)
+                && __ornext(byte(COMBAT_PTR + 0x251) <= 0x03 || byte(COMBAT_PTR + 0x251) == exception_team_index)
+                && __ornext(byte(COMBAT_PTR + 0x252) <= 0x03 || byte(COMBAT_PTR + 0x252) == exception_team_index)
+                && __ornext(byte(COMBAT_PTR + 0x253) <= 0x03 || byte(COMBAT_PTR + 0x253) == exception_team_index)
+                && __ornext(byte(COMBAT_PTR + 0x254) <= 0x03 || byte(COMBAT_PTR + 0x254) == exception_team_index)
+                && prev(byte(COMBAT_PTR + 0x255) >= 0x04)
+                && byte(COMBAT_PTR + 0x255) == 0xff
+            )
+        )
+}
+
+// Checks if a specific team is alive in the current combat mission.
+// Usually, if you care about this, you know that the unit is "special" so you should have a good idea
+// of what order they got spawned in. I.e. you SHOULD know the index of the unit.
+function check_specific_team_alive(expected_index, unit_name) {
+    return ptr_valid(FULL_COMBAT_PTR)
+        && byte(COMBAT_PTR + 0x284 + (0x27c) * expected_index) > 0
+        && word(COMBAT_PTR + 0x276 + (0x27c) * expected_index) == enemy_id_by_name[unit_name]
+}
+
 // Haven't really found a good indicator otherwise for game overs, except for this pointer popping up
 // So if you're in combat and this is valid, player goofed
 function game_over() => ptr_valid(dword(0x001beac8))
@@ -170,10 +261,13 @@ function unit_defeated(addr_unit_current_health) {
     return prev(word(addr_unit_current_health)) <= word(addr_unit_current_health + 0x02) && word(addr_unit_current_health) == 0x00
 }
 
+// Determine if the specific unit was soft defeated.
+// Some enemy leaders trigger mission events upon hitting 1HP.
 function unit_soft_defeated(addr_unit_current_health) {
     return prev(word(addr_unit_current_health)) <= word(addr_unit_current_health + 0x02) && word(addr_unit_current_health) == 0x01
 }
 
+// Check that all characters are alive for plot purposes.
 function all_characters_alive() {
     cond = always_true()
     for character in chararacter_ids_by_name {
@@ -192,10 +286,22 @@ function character_alive(char_name) {
     return bit1(0x00284dc2 + (0x10 * char_index)) == 0
 }
 
+// Check that a specific character has been recruited.
 function character_recruited(char_name) {
     // for whatever reason no characters exist from 0x00 -> 0x02
     char_index = chararacter_ids_by_name[char_name] - 0x03
     return prev(bit2(0x00284dc2 + (0x10 * char_index))) == 0x01 && bit2(0x00284dc2 + (0x10 * char_index)) == 0x00
+}
+
+// Check that these characters have been recruited.
+// Shorthand for character_recruited(char_name_one) && character_recruited(char_name_two) && ... && character_recruited(char_name_n) 
+function characters_recruited(characters) {
+    cond = always_true()
+    for character in characters {
+        cond = cond && character_recruited(character)
+    }
+
+    return cond
 }
 
 // Check if the given team moved to the given tile on the active combat map.
@@ -255,6 +361,19 @@ function num_teams_on_map(num_teams) {
     return cond
 }
 
+// This is slightly distinct from num_teams_on_map as it's affirming "validity" of combat.
+// This confirms if combat's in a good state to read from.
+// We do this by reading the guaranteed turn order array and the projected one. They should be a match.
+// If they're not, they should be off by exactly one, i.e. it's off because a team leader just died. 
+function valid_teams_on_map() {
+    cond = ptr_valid(FULL_COMBAT_PTR)
+    for i in range(0, 11) {
+        cond = cond && __ornext(byte(COMBAT_PTR + 0x250 + i) == byte(COMBAT_PTR + 0x250 + i + 0xc) || byte(COMBAT_PTR + 0x250 + i) == 0xff)
+    }
+
+    return cond
+}
+
 // Check if the given team is deployed in the current combat.
 // This specifically looks to see if the team leader is paired with a specific demon.
 function pairing_present(team_leader_name, demon_name) {
@@ -289,15 +408,20 @@ function right_demon(team_offset) {
 function true_auction_cost() => dword(FULL_AUCTION_PTR + 0x1cc) + dword(FULL_AUCTION_PTR + 0x1e4)
 
 // Stub for now until I have logic for this.
-function is_new_game_plus() => byte(0x00287074) > 0x00 || byte(0x00287075) > 0x00 || bit6(0x00284b1f) == 0x01 || bit7(0x00284b1f) == 0x01 || bit0(0x00284b20) == 0x01
-
+function is_new_game_plus() {
+    return __ornext(byte(0x00287074) > 0x00 || byte(0x00287075) > 0x00 || bit6(0x00284b1f) == 0x01 || bit7(0x00284b1f) == 0x01 || bit0(0x00284b20) == 0x01)
+}
 // Confirm we're on the ending path we intend to be on.
 // @param one of ["Anguished One", "Daichi (Real)", "Daichi", "Ronaldo", "Yamato"]
 function ending_selected(ending) {
     if (ending == "Anguished One") {
-        return bit4(0x00284b10) == 0x01
+        return bit4(0x00284b10) == 0x01 && bit1(0x00284b10) == 0x00 && bit2(0x00284b10) == 0x00 && bit3(0x00284b10) == 0x00
     } else if (ending == "Yamato") {
-        return bit2(0x00284b10) == 0x01
+        return bit2(0x00284b10) == 0x01 && bit1(0x00284b10) == 0x00 && bit3(0x00284b10) == 0x00 && bit4(0x00284b10) == 0x00
+    } else if (ending == "Ronaldo") {
+        return bit1(0x00284b10) == 0x01 && bit2(0x00284b10) == 0x00 && bit3(0x00284b10) == 0x00 && bit4(0x00284b10) == 0x00
+    } else if (ending == "Daichi") {
+        return bit3(0x00284b10) == 0x01 && bit1(0x00284b10) == 0x00 && bit2(0x00284b10) == 0x00 && bit4(0x00284b10) == 0x00
     }
 }
 
@@ -312,7 +436,8 @@ function allied_turn_starts() {
     cond = ptr_valid(FULL_COMBAT_PTR)
 
     return cond && byte(COMBAT_PTR + 0x250) <= 0x03 
-        && prev(byte(COMBAT_PTR + 0x24)) == 0x00 && byte(COMBAT_PTR + 0x24) == 0x02 
+        && prev(byte(COMBAT_PTR + 0x24)) == 0x00 
+        && byte(COMBAT_PTR + 0x24) == 0x02 
 }
 
 // I would do by id/offset BUT THEY PUT GAPS IN BETWEEN SOME.
@@ -817,6 +942,7 @@ enemy_id_by_name = {
     "Tall Woman":     0x134, // Makoto in Daichi's Crisis
     "Salaryman Carrying Food": 0x146, // in Girl in Pursuit. No, do not fix the indentation.
     "Polaris B":        0x15f,
+    "Lilith (Hostile)": 0x162, // Version of Lilith that shows up in Original Wife
     "Polaris (Complete)": 0x163, // the actual fr fr final boss
     "Vacant Woman":   0x164, // Fumi in Demon-Hacked
 }
@@ -1104,6 +1230,7 @@ enemy_name_by_id = {
     0x149: "Student",
     0x15f: "Polaris B",
     0x161: "Fumi",        // in Hacker Revealed
+    0x162: "Lilith",      // in Original Wife
     0x163: "Polaris",
     0x164: "Vacant Woman" // Fumi in Demon-Hacked
 }
@@ -1415,7 +1542,7 @@ location = {
     0x07: "Eikokuji",
     0x08: "Fukutoshin Line Platform",
     0x09: "Omotesando",
-    0x0a: "Shinbashi Special Platform",
+    0x0a: "Kanda",
     0x0b: "Bugeikan",
     0x0c: "Sengakuji",
     0x0d: "Tokyo Tower",
@@ -1465,7 +1592,7 @@ location = {
     0x39: "OCUT Plaza",
     0x3a: "Ten 7 Mall",
     0x3b: "Tennouji Station Turnstile",
-    0x3c: "??? 0x3c",
+    0x3c: "Nankou",
     0x3d: "Osaka Castle Park Square",
     0x3e: "Shinsekai Terminal Mk. 2",
     0x3f: "??? 0x3f", 
@@ -1500,6 +1627,7 @@ combat_mission_by_name = {
     "Man of Fury (Phecda)": 0x0021,
     "Father Time": 0x00b7, // This is the "Sage of Time" encounter
     "Necromancer": 0x00b8, // Nebiros
+    "Original Wife": 0x00b9, // Lilith
 }
 
 // This is for events selected on the map
@@ -1740,16 +1868,18 @@ function mailbox_hunt_helper() {
         0x00284cb8,
         0x00284cb9,
         0x00284cbb,
+        0x00284cc6,
         0x00284ccb,
         0x00284ccc,
         0x00284cce,
         0x00284ccf,
-        0x00284ce6,
-        0x00284ce7,
+        0x00284cd0,
         0x00284cd5,
         0x00284cd6,
         0x00284cd7,
-        0x00284cd9
+        0x00284cd9,
+        0x00284ce6,
+        0x00284ce7,
     ]
 
     mails_to_check = DAY <= 0x08
@@ -1773,6 +1903,8 @@ function mail_triggered(mail_name) {
         addr = 0x00284cb8
     } else if (mail_name == "Re: Trumpeter") {
         addr = 0x00284cc0
+    } else if (mail_name == "Re: Lilith") {
+        addr = 0x00284cc6
     }
 
     return byte(addr) != 0xff && prev(bit7(addr)) == 0x01 && bit7(addr) == 0x00
@@ -1791,6 +1923,7 @@ achievement(
     points = 0,
     trigger = IN_GAME_CLOCK != 0000 && (
         CURRENT_LOCATION == 0x01 ||
+        CURRENT_LOCATION == 0x0a ||
         CURRENT_LOCATION == 0x13 ||
         CURRENT_LOCATION == 0x14 ||
         CURRENT_LOCATION == 0x15 ||
@@ -1800,7 +1933,6 @@ achievement(
         CURRENT_LOCATION == 0x26 ||
         CURRENT_LOCATION == 0x29 ||
         CURRENT_LOCATION == 0x36 ||
-        CURRENT_LOCATION == 0x3c ||
         CURRENT_LOCATION == 0x3f ||
         CURRENT_LOCATION == 0x52
     )
@@ -1818,11 +1950,9 @@ achievement(
         (prev(bit1(0x00284ad9)) == 0x00 && bit1(0x00284ad9) == 0x01) ||
         (prev(bit3(0x00284ad9)) == 0x00 && bit3(0x00284ad9) == 0x01) ||
         (prev(bit4(0x00284ad9)) == 0x00 && bit4(0x00284ad9) == 0x01) ||
-        // 0x00284ada
-        (prev(bit1(0x00284ada)) == 0x00 && bit1(0x00284ada) == 0x01) ||
+        // 0x00284ada fully covered
         // 0x00284adb
         (prev(bit2(0x00284adb)) == 0x00 && bit2(0x00284adb) == 0x01) ||
-        (prev(bit6(0x00284adb)) == 0x00 && bit6(0x00284adb) == 0x01) ||
         // 0x00284adc
         (prev(bit1(0x00284adc)) == 0x00 && bit1(0x00284adc) == 0x01) ||
         (prev(bit2(0x00284adc)) == 0x00 && bit2(0x00284adc) == 0x01) ||
@@ -1836,7 +1966,6 @@ achievement(
         (prev(bit5(0x00284ade)) == 0x00 && bit5(0x00284ade) == 0x01) ||
         (prev(bit6(0x00284ade)) == 0x00 && bit6(0x00284ade) == 0x01) ||
         // 0x00284adf
-        (prev(bit0(0x00284adf)) == 0x00 && bit0(0x00284adf) == 0x01) ||
         (prev(bit4(0x00284adf)) == 0x00 && bit4(0x00284adf) == 0x01) ||
         (prev(bit7(0x00284adf)) == 0x00 && bit7(0x00284adf) == 0x01) ||
         // 0x00284ae0
@@ -1846,7 +1975,6 @@ achievement(
         (prev(bit1(0x00284ae1)) == 0x00 && bit1(0x00284ae1) == 0x01) ||
         (prev(bit3(0x00284ae1)) == 0x00 && bit3(0x00284ae1) == 0x01) ||
         (prev(bit4(0x00284ae1)) == 0x00 && bit4(0x00284ae1) == 0x01) ||
-        (prev(bit6(0x00284ae1)) == 0x00 && bit6(0x00284ae1) == 0x01) ||
         // 0x00284ae2 
         (prev(bit0(0x00284ae2)) == 0x00 && bit0(0x00284ae2) == 0x01) ||
         (prev(bit1(0x00284ae2)) == 0x00 && bit1(0x00284ae2) == 0x01) ||
@@ -1862,8 +1990,6 @@ achievement(
         (prev(bit2(0x00284ae4)) == 0x00 && bit2(0x00284ae4) == 0x01) ||
         (prev(bit3(0x00284ae4)) == 0x00 && bit3(0x00284ae4) == 0x01) ||
         // 0x00284ae5
-        // bit4 is likely Jungo's Find
-        (prev(bit4(0x00284ae5)) == 0x00 && bit4(0x00284ae5) == 0x01) ||
         (prev(bit5(0x00284ae5)) == 0x00 && bit5(0x00284ae5) == 0x01) ||
         (prev(bit6(0x00284ae5)) == 0x00 && bit6(0x00284ae5) == 0x01) ||
         (prev(bit7(0x00284ae5)) == 0x00 && bit7(0x00284ae5) == 0x01) ||
@@ -1873,9 +1999,7 @@ achievement(
         // 0x00284ae7
         (prev(bit1(0x00284ae7)) == 0x00 && bit1(0x00284ae7) == 0x01) ||
         (prev(bit2(0x00284ae7)) == 0x00 && bit2(0x00284ae7) == 0x01) ||
-        (prev(bit4(0x00284ae7)) == 0x00 && bit4(0x00284ae7) == 0x01) ||
-        (prev(bit5(0x00284ae7)) == 0x00 && bit5(0x00284ae7) == 0x01) ||
-        (prev(bit6(0x00284ae7)) == 0x00 && bit6(0x00284ae7) == 0x01) ||
+        (prev(bit7(0x00284ae7)) == 0x00 && bit7(0x00284ae7) == 0x01) ||
         // 0x00284ae8
         (prev(bit0(0x00284ae8)) == 0x00 && bit0(0x00284ae8) == 0x01) ||
         (prev(bit1(0x00284ae8)) == 0x00 && bit1(0x00284ae8) == 0x01) ||
@@ -1892,30 +2016,19 @@ achievement(
         // 0x00284af0 is fully covered
         // 0x00284af1 is fully covered
         // 0x00284af2
-        (prev(bit0(0x00284af2)) == 0x00 && bit0(0x00284af2) == 0x01) ||
         (prev(bit2(0x00284af2)) == 0x00 && bit2(0x00284af2) == 0x01) ||
         // 0x00284af3
         (prev(bit1(0x00284af3)) == 0x00 && bit1(0x00284af3) == 0x01) ||
         // 0x00284af4
         (prev(bit0(0x00284af4)) == 0x00 && bit0(0x00284af4) == 0x01) ||
-        (prev(bit4(0x00284af4)) == 0x00 && bit4(0x00284af4) == 0x01) ||
-        (prev(bit5(0x00284af4)) == 0x00 && bit5(0x00284af4) == 0x01) ||
-        (prev(bit6(0x00284af4)) == 0x00 && bit6(0x00284af4) == 0x01) ||
-        // 0x00284af5
-        (prev(bit1(0x00284af5)) == 0x00 && bit1(0x00284af5) == 0x01) ||
-        (prev(bit2(0x00284af5)) == 0x00 && bit2(0x00284af5) == 0x01) ||
-        (prev(bit4(0x00284af5)) == 0x00 && bit4(0x00284af5) == 0x01) ||
-        (prev(bit5(0x00284af5)) == 0x00 && bit5(0x00284af5) == 0x01) ||
-        (prev(bit6(0x00284af5)) == 0x00 && bit6(0x00284af5) == 0x01) ||
+        // 0x00284af5 fully covered
         // 0x00284af6
         (prev(bit1(0x00284af6)) == 0x00 && bit1(0x00284af6) == 0x01) ||
         (prev(bit2(0x00284af6)) == 0x00 && bit2(0x00284af6) == 0x01) ||
         (prev(bit3(0x00284af6)) == 0x00 && bit3(0x00284af6) == 0x01) ||
         (prev(bit4(0x00284af6)) == 0x00 && bit4(0x00284af6) == 0x01) ||
         (prev(bit5(0x00284af6)) == 0x00 && bit5(0x00284af6) == 0x01) ||
-        (prev(bit6(0x00284af6)) == 0x00 && bit6(0x00284af6) == 0x01) ||
         // 0x00284af7
-        (prev(bit0(0x00284af7)) == 0x00 && bit0(0x00284af7) == 0x01) ||
         (prev(bit1(0x00284af7)) == 0x00 && bit1(0x00284af7) == 0x01) ||
         (prev(bit2(0x00284af7)) == 0x00 && bit2(0x00284af7) == 0x01) ||
         (prev(bit3(0x00284af7)) == 0x00 && bit3(0x00284af7) == 0x01) ||
@@ -2056,10 +2169,7 @@ achievement(
         (prev(bit3(0x00284b0f)) == 0x00 && bit3(0x00284b0f) == 0x01) ||
         (prev(bit4(0x00284b0f)) == 0x00 && bit4(0x00284b0f) == 0x01) ||
         // 0x00284b10
-        (prev(bit1(0x00284b10)) == 0x00 && bit1(0x00284b10) == 0x01) ||
-        (prev(bit3(0x00284b10)) == 0x00 && bit3(0x00284b10) == 0x01) ||
         (prev(bit5(0x00284b10)) == 0x00 && bit5(0x00284b10) == 0x01) ||
-        (prev(bit6(0x00284b10)) == 0x00 && bit6(0x00284b10) == 0x01) ||
         (prev(bit7(0x00284b10)) == 0x00 && bit7(0x00284b10) == 0x01) ||
         // 0x00284b11
         (prev(bit0(0x00284b11)) == 0x00 && bit0(0x00284b11) == 0x01) ||
@@ -2128,7 +2238,6 @@ achievement(
         (prev(bit3(0x00284b1b)) == 0x00 && bit3(0x00284b1b) == 0x01) ||
         (prev(bit4(0x00284b1b)) == 0x00 && bit4(0x00284b1b) == 0x01) ||
         // 0x00284b1c
-        (prev(bit0(0x00284b1c)) == 0x00 && bit0(0x00284b1c) == 0x01) ||
         (prev(bit1(0x00284b1c)) == 0x00 && bit1(0x00284b1c) == 0x01) ||
         (prev(bit2(0x00284b1c)) == 0x00 && bit2(0x00284b1c) == 0x01) ||
         (prev(bit3(0x00284b1c)) == 0x00 && bit3(0x00284b1c) == 0x01) ||
@@ -2162,10 +2271,8 @@ achievement(
         (prev(bit7(0x00284b1f)) == 0x00 && bit7(0x00284b1f) == 0x01) ||
         // 0x00284b20
         (prev(bit0(0x00284b20)) == 0x00 && bit0(0x00284b20) == 0x01) ||
-        (prev(bit1(0x00284b20)) == 0x00 && bit1(0x00284b20) == 0x01) ||
         (prev(bit2(0x00284b20)) == 0x00 && bit2(0x00284b20) == 0x01) ||
         (prev(bit5(0x00284b20)) == 0x00 && bit5(0x00284b20) == 0x01) ||
-        (prev(bit7(0x00284b20)) == 0x00 && bit7(0x00284b20) == 0x01) ||
         // noooooooooooooooooooo it goes even further down here too!!
         // 0x00284b21
         (prev(bit0(0x00284b21)) == 0x00 && bit0(0x00284b21) == 0x01) ||
@@ -2297,8 +2404,7 @@ achievement(
     title = "Dubious Dubhe",
     description = "Defeat Dubhe.",
     points = 5,
-    trigger = on_mission("Daichi's Resolve")
-        && ((attacker_leader_is("Dubhe (Half)") && attacker_leader_defeated()) || defender_leader_is("Dubhe (Half)") && defender_leader_defeated()),
+    trigger = on_mission("Daichi's Resolve") && specific_leader_defeated("Dubhe (Half)"),
     type = "progression",
     id=530961
 )
@@ -2379,8 +2485,7 @@ achievement(
     trigger = on_grid_map() && on_mission("Merak Arrives") 
             && ptr_valid(FULL_TEAM_ARRAY_PTR)
             && never(loaded_from_suspend())
-            && trigger_when((attacker_leader_is("Merak") && attacker_leader_defeated()) 
-            || defender_leader_is("Merak") && defender_leader_defeated())
+            && trigger_when(specific_leader_defeated("Merak"))
             && disable_when(prev(byte(TEAM_ARRAY_PTR + 0xc3b)) == 0x00 && byte(TEAM_ARRAY_PTR + 0xc3b) == 0x0a, until=MOST_RECENT_MISSION != 0x7e2),
     type = "missable",
     id=530964
@@ -2389,8 +2494,7 @@ achievement(
     title = "Meticulous Merak",
     description = "Defeat Merak.",
     points = 5,
-    trigger = on_mission("Merak Arrives")  
-        && ((attacker_leader_is("Merak") && attacker_leader_defeated()) || defender_leader_is("Merak") && defender_leader_defeated()),
+    trigger = on_mission("Merak Arrives") && specific_leader_defeated("Merak"),
     type = "progression",
     id=530965
 )
@@ -2398,8 +2502,7 @@ achievement(
     title = "A Fun-Filled Q...!",
     description = "Defeat Ghost Q.",
     points = 10,
-    trigger = DAY == 0x03 && on_mission("Vs. Q")
-        && ((defender_leader_is("Ghost Q") && defender_leader_defeated()) || (attacker_leader_is("Ghost Q") && attacker_leader_defeated())),
+    trigger = DAY == 0x03 && on_mission("Vs. Q") && specific_leader_defeated("Ghost Q"),
     type = "missable",
     id=530966
 )
@@ -2417,8 +2520,7 @@ achievement(
     title = "Second Time's the Charm",
     description = "Defeat Botis in 'Hacker Revealed.'",
     points = 5,
-    trigger = on_mission("Hacker Revealed") &&
-        ((defender_leader_is("Botis") && defender_leader_defeated()) || (attacker_leader_is("Botis") && attacker_leader_defeated())),
+    trigger = on_mission("Hacker Revealed") && specific_leader_defeated("Botis"),
     type = "missable",
     id=530968
 )
@@ -2428,7 +2530,11 @@ achievement(
     points = 3,
     // Misfired when a miasma was dropped
     // New logic: only up to 5 units left on map (fumi and at least one player controlled unit) and fumi reduced to 1hp
-    trigger = on_mission("Hacker Revealed") && active_mission_completed("Hacker Revealed"),
+    // Fumi in this case is expected to be unit 5, which we can easily confirm
+    trigger = on_mission("Hacker Revealed") 
+        && ptr_valid(FULL_COMBAT_PTR)
+        && word(COMBAT_PTR + 0xee2) == 0x161
+        && any_friendlies_with_exception_team_alive(0x05),
     type = "progression",
     id=530969
 )
@@ -2560,7 +2666,7 @@ achievement(
     title = "Truly a Hard Choice",
     description = "Defeat Neko Shogun in A Hard Choice",
     points = 5,
-    trigger = on_mission("A Hard Choice") && ((attacker_leader_is("Neko Shogun") && attacker_leader_defeated()) || (defender_leader_is("Neko Shogun") && defender_leader_defeated())),
+    trigger = on_mission("A Hard Choice") && specific_leader_defeated("Neko Shogun"),
     type = "missable",
     id=546531
 )
@@ -2591,14 +2697,15 @@ achievement(
         && bit2(0x00284b58) == 0x00
         && bit3(0x00284b58) == 0x00
         && bit4(0x00284b58) == 0x00
-        && trigger_when((attacker_leader_is("Megrez") && attacker_leader_defeated()) || (defender_leader_is("Megrez") && defender_leader_defeated())),
+        && valid_teams_on_map()
+        && trigger_when(specific_leader_defeated("Megrez")),
     type = "missable"
 )
 achievement(
     title = "Marooned Megrez",
     description = "Defeat Megrez.",
     points = 10,
-    trigger = on_mission("Delta Battle") && ((attacker_leader_is("Megrez") && attacker_leader_defeated()) || (defender_leader_is("Megrez") && defender_leader_defeated())),
+    trigger = on_mission("Delta Battle") && specific_leader_defeated("Megrez"),
     type = "progression",
     id = 546547
 )
@@ -2616,7 +2723,12 @@ achievement(
     title = "Recreating the Legend of Pasaputa",
     description = "Successfully recruit two of your teammates to help recreate the legend of Pasaputa before JPs reconvenes.",
     points = 1,
-    trigger = DAY == 0x05 && bit0(0x00284af9) == 0x01 && bit1(0x00284af9) == 0x01 && bit4(0x00284b12) == 0x01 && prev(IN_GAME_CLOCK) == 0x276 && IN_GAME_CLOCK == 0x294, 
+    trigger = DAY == 0x05 
+        && bit0(0x00284af9) == 0x01 // Please, Hinako
+        && bit1(0x00284af9) == 0x01 // Please, Airi
+        && bit4(0x00284b12) == 0x01 // Airi agrees to be sexy, but only after you've asked Hinako to dance
+        && bit3(0x00284af9) == 0x00 // For the Interception has NOT started
+        && prev(bit2(0x00284af9)) == 0x00 && bit2(0x00284af9) == 0x01, // and Yamato has just called you asking about proggers, 
     type= "missable",
     id = 546546
 )
@@ -2624,16 +2736,19 @@ achievement(
 // kama reduces to 1hp in this mission as the win
 achievement(
     title ="I'm Bringing Sexy Ban",
-    description = "Complete the 'Ananga' mission with Airi as an active and alive team leader.",
+    description = "Have Airi defeat Kama during the 'Ananga' mission.",
     points = 3,
-    trigger = DAY == 0x09,
+    trigger = DAY == 0x05 && on_mission("Ananga") && specific_leader_soft_defeated_by("Kama", "Airi"),
     type = "missable"
 )
 achievement(
-    title = "Shiva Demands Perfect Health",
-    description = "Complete the '' mission with Hinako having never been damaged during her dance.",
+    title = "A Summoning Via Lasya",
+    description = "Complete the 'Nataraja' mission with Hinako having never been damaged during her dance.",
     points = 5,
-    trigger = DAY == 0x09,
+    trigger = DAY == 0x05 
+        && never(!on_mission("Nataraja")) 
+        && unless(prev(word(COMBAT_PTR + 0x1b5e) > word(COMBAT_PTR + 0x1b5c)))
+        && any_friendlies_with_exception_team_alive(0x0a),
     type = "missable"
 )
 achievement(
@@ -2661,9 +2776,7 @@ achievement(
     description = "Defeat Alioth without usage of the neutralizing agent.",
     // in consideration: 25 pointer, if set is underscored by end of dev
     points = 10,
-    trigger = on_mission("Alioth Core") 
-        && bit2(0x00284b58) != 0x01 
-        && trigger_when((attacker_leader_is("Alioth Core") && attacker_leader_defeated()) || defender_leader_is("Alioth Core") && defender_leader_defeated()),
+    trigger = on_mission("Alioth Core") && bit2(0x00284b58) != 0x01 && trigger_when(specific_leader_defeated("Alioth Core")),
     type = "missable",
     id = 547508
 )
@@ -2671,24 +2784,16 @@ achievement(
     title = "Antagonizing Alioth",
     description = "Defeat Alioth Core.",
     points = 10,
-    trigger = on_mission("Alioth Core") && ((attacker_leader_is("Alioth Core") && attacker_leader_defeated()) || defender_leader_is("Alioth Core") && defender_leader_defeated()),
+    trigger = on_mission("Alioth Core") && specific_leader_defeated("Alioth Core"),
     type = "progression",
     id = 546585
 )
-// under consideration still
-// achievement(
-//     title = "Will of the Species",
-//     description = "Discover what Polaris is and what needs to be done to meet him.",
-//     points = 1,
-//     trigger = DAY == 0x09,
-//     type = "progression"
-// )
 
 achievement(
     title = "Let's See Those Wallets",
     description = "Complete the 'God of Luck' mission and receive mail about Bilikin afterward.",
     points = 10,
-    trigger = MOST_RECENT_MISSION == event_id_by_name["God of Luck"] && mail_triggered("Re: Bilikin"), //byte(0x00284cba) != 0xff && prev(bit7(0x00284cba)) == 0x01 && bit7(0x00284cba) == 0x00,
+    trigger = MOST_RECENT_MISSION == event_id_by_name["God of Luck"] && mail_triggered("Re: Bilikin"),
     type = "missable",
     id = 546680
 )
@@ -2713,12 +2818,18 @@ achievement(
 )
 achievement(
     title = "Zeta Ursae Majoris",
-    description = "Defeat Mizar without using the 'Suspend' feature.",
+    description = "Deploy 4 teams to the Food Chain mission and defeat Mizar with all team leaders alive.",
     points = 10,
     trigger = on_mission("Food Chain") 
-        && once(((defender_leader_is("Mizar Tentacle (3R)") && defender_leader_defeated()) || (attacker_leader_is("Mizar Tentacle (3R)") && attacker_leader_defeated())))
-        && once(((defender_leader_is("Mizar Tentacle (3L)") && defender_leader_defeated()) || (attacker_leader_is("Mizar Tentacle (3L)") && attacker_leader_defeated())))
-        && never(!on_mission("Food Chain")),
+        && player_teams_alive(4)
+        && bit1(0x00284b55) == 0x01 
+        && bit2(0x00284b55) == 0x01 
+        && bit3(0x00284b55) == 0x01 
+        && bit4(0x00284b55) == 0x01 
+        && ( 
+            (bit4(0x00284b54) == 0x01 && specific_leader_defeated("Mizar Tentacle (3R)")) ||
+            (bit3(0x00284b54) == 0x01 && specific_leader_defeated("Mizar Tentacle (3L)"))
+        ),
     type = "missable"
 )
 achievement(
@@ -2730,8 +2841,9 @@ achievement(
         bit2(0x00284b55) == 0x01 &&
         bit3(0x00284b55) == 0x01 &&
         bit4(0x00284b55) == 0x01 &&
-        (bit4(0x00284b54) == 0x01 && ((defender_leader_is("Mizar Tentacle (3R)") && defender_leader_defeated()) || (attacker_leader_is("Mizar Tentacle (3R)") && attacker_leader_defeated())) ||
-         bit3(0x00284b54) == 0x01 && ((defender_leader_is("Mizar Tentacle (3L)") && defender_leader_defeated()) || (attacker_leader_is("Mizar Tentacle (3L)") && attacker_leader_defeated()))
+        (
+            (bit4(0x00284b54) == 0x01 && specific_leader_defeated("Mizar Tentacle (3R)")) ||
+            (bit3(0x00284b54) == 0x01 && specific_leader_defeated("Mizar Tentacle (3L)"))
         ),
     type = "progression",
     id = 547043
@@ -2767,7 +2879,7 @@ achievement(
     title = "The Destroyer",
     description = "Defeat Shiva in Vs. Tokyo.",
     points = 10,
-    trigger = on_mission("Vs. Tokyo") && ((attacker_leader_is("Shiva") && attacker_leader_defeated()) || (defender_leader_is("Shiva") && defender_leader_defeated())),
+    trigger = on_mission("Vs. Tokyo") && specific_leader_defeated("Shiva"),
     type = "missable",
     id = 547044
 )
@@ -2775,20 +2887,8 @@ achievement(
 achievement(
     title = ""
 )
-// TODO convince everyone to come back
 achievement(
-    title = "The Band's Back Together",
-    description = "With all death clips averted, persuade all possible party members to aid your cause on Saturday.",
-    points = 10,
-    trigger = all_characters_alive() 
-        && DAY == 0x07
-        // if anguished one's ending
-        // if daichi's way
-        // if ronaldo's way
-        // if yamato's way
-)
-achievement(
-    title = "The Last of the Seven",
+    title = "Only the Administrator Remains",
     description = "Defeat Benetnasch.",
     points = 25,
     trigger = on_mission("Seven Down") && mail_triggered("Re: Trumpeter"),
@@ -2797,7 +2897,7 @@ achievement(
 achievement(
     title = "Eta Ursae Majoris",
     description = "Defeat Benetnasch while Trumpeter is at full HP.",
-    points = 10,
+    points = 5,
     trigger = on_mission("Seven Down")
         // pseudologic: 
         // - enemy slot where Trumpeter is, is actually Trumpeter && never curr_hp < max_hp
@@ -2815,39 +2915,60 @@ achievement(
 
     type = "missable"
 )
+
+COMMON_RECRUITABLE_ENDING_CHARACTERS = [
+    "Io",
+    "Fumi",
+    "Daichi",
+    "Otome",
+    "Jungo",
+    "Makoto",
+    "Keita",
+    "Airi",
+    "Joe",
+    "Hinako",
+]
+
+// TODO convince everyone to come back
+achievement(
+    title = "The Band's Back Together",
+    description = "With all death clips averted, persuade all possible party members to aid your cause.",
+    points = 10,
+    type = "missable",
+    trigger = DAY == 0x08
+        && (
+            (ending_selected("Anguished One") 
+            && characters_recruited(COMMON_RECRUITABLE_ENDING_CHARACTERS + "Anguished One") == len(COMMON_RECRUITABLE_ENDING_CHARACTERS + 1) 
+            && prev(!character_recruited("Joe")) && character_recruited("Joe")) 
+            || (ending_selected("Daichi") 
+            && characters_recruited(COMMON_RECRUITABLE_ENDING_CHARACTERS + "Anguished One" + "Yamato" + "Ronaldo") == len(COMMON_RECRUITABLE_ENDING_CHARACTERS + 3) 
+            && prev(!character_recruited("Yamato")) && character_recruited("Yamato"))
+            || (ending_selected("Ronaldo") && characters_recruited(COMMON_RECRUITABLE_ENDING_CHARACTERS + "Ronaldo") == len(COMMON_RECRUITABLE_ENDING_CHARACTERS + 1) 
+            && prev(!character_recruited("Who Even")) && character_recruited("Who Even"))
+            || (ending_selected("Yamato") && characters_recruited(COMMON_RECRUITABLE_ENDING_CHARACTERS + "Yamato") == len(COMMON_RECRUITABLE_ENDING_CHARACTERS + 1) 
+            && prev(!character_recruited("Joe")) && character_recruited("Joe"))
+        )
+)
 achievement(
     title = "Dragon Tamer",
     description = "Defeat the Dragon.",
     points = 5,
-    trigger = on_mission("Reared Head") && ((attacker_leader_is("Dragon") && attacker_leader_defeated()) || (defender_leader_is("Dragon") && defender_leader_defeated())),
+    trigger = on_mission("Reared Head") && specific_leader_defeated("Dragon"),
     type = "progression"
 )
 achievement(
+    id = 590282,
     title = "Alpha Ursae Minoris",
     description = "Deploy 4 leaders to fight Polaris and win with all team leaders alive.",
     points = 25,
-    trigger = on_mission("New Tomorrow")
-        && word(COMBAT_PTR + 0x284) > 0x00
-        && word(COMBAT_PTR + 0x4f2) > 0x00
-        && word(COMBAT_PTR + 0x500) > 0x00
-        && word(COMBAT_PTR + 0x76e) > 0x00
-        && word(COMBAT_PTR + 0x77c) > 0x00
-        && word(COMBAT_PTR + 0x9ea) > 0x00
-        && word(COMBAT_PTR + 0x9f8) > 0x00 
-        && (
-            (defender_leader_is("Polaris A") && defender_leader_defeated()) 
-            || (attacker_leader_is("Polaris A") && attacker_leader_defeated())
-        )    
+    trigger = on_mission("New Tomorrow") && player_teams_alive(4) && specific_leader_defeated("Polaris A")
 )
 achievement(
-    title = "At Trial's End",
+    id = 590281,
+    title = "Dethroning the Northern Star",
     description = "Defeat Polaris.",
     points = 25,
-    trigger = on_mission("New Tomorrow") 
-        && (
-            (defender_leader_is("Polaris A") && defender_leader_defeated()) 
-            || (attacker_leader_is("Polaris A") && attacker_leader_defeated())
-        ),
+    trigger = on_mission("New Tomorrow") && specific_leader_defeated("Polaris A"),
     type = "win_condition"
 )
 
@@ -2857,7 +2978,9 @@ achievement(
 // ** A New World **
 achievement(
     title = "The World vs. Team Tokyo",
-    description = "Defeat Team Tokyo as Al Saiduq's team."
+    description = "Defeat Team Tokyo as Al Saiduq's team.",
+    points = 5,
+    trigger = ending_selected("Anguished One") && DAY == 0x09
 )
 achievement(
     title = "The World vs. Team Osaka",
@@ -2894,9 +3017,7 @@ achievement(
     title = "Starting Fresh",
     description = "Defeat Polaris and establish your new free world.",
     points = 10,
-    trigger = on_mission("New Tomorrow")
-        && ending_selected("Anguished One")
-        && ((defender_leader_is("Polaris (Complete)") && defender_leader_defeated()) || (attacker_leader_is("Polaris (Complete)") && attacker_leader_defeated())),
+    trigger = on_mission("New Tomorrow") && ending_selected("Anguished One") && specific_leader_defeated("Polaris (Complete)")
     
 )
 // ** Yamato's Way **
@@ -2904,18 +3025,20 @@ achievement(
     title = "Might Shall Make Right",
     description = "Defeat Polaris and establish your meritocracy.",
     points = 10,
-    trigger = on_mission("New Tomorrow")
-        && ending_selected("Yamato")
-        && ((defender_leader_is("Polaris (Complete)") && defender_leader_defeated()) || (attacker_leader_is("Polaris (Complete)") && attacker_leader_defeated())),
+    trigger = on_mission("New Tomorrow") && ending_selected("Yamato") && specific_leader_defeated("Polaris (Complete)")
 )
 // ** Ronaldo's Way **
 achievement(
     title = "Our Egalitarian Order",
     description = "Defeat Polaris and establish your meritocracy.",
     points = 10,
-    trigger = on_mission("New Tomorrow")
-        && ending_selected("Ronaldo")
-        && ((defender_leader_is("Polaris (Complete)") && defender_leader_defeated()) || (attacker_leader_is("Polaris (Complete)") && attacker_leader_defeated())),
+    trigger = on_mission("New Tomorrow") && ending_selected("Ronaldo") && specific_leader_defeated("Polaris (Complete)")
+)
+achievement(
+    title = "<NEEDS TITLE>",
+    description = "Defeat Polaris with your best friend by your side.",
+    points = 10,
+    trigger = on_mission("New Tomorrow") && ending_selected("Daichi") && specific_leader_defeated("Polaris (Complete)")
 )
 
 // True Ending
@@ -2923,10 +3046,7 @@ achievement(
     title = "By the Voices of the People",
     description = "Defeat Polaris with all demon users alive.",
     points = 25,
-    trigger = on_mission("New Tomorrow")
-        && ending_selected("Daichi")
-        && all_characters_alive()
-        && ((defender_leader_is("Polaris (Complete)") && defender_leader_defeated()) || (attacker_leader_is("Polaris (Complete)") && attacker_leader_defeated())),
+    trigger = on_mission("New Tomorrow") && ending_selected("Daichi") && all_characters_alive() && specific_leader_defeated("Polaris (Complete)")
 )
 
 // no Free Battle progression
@@ -2988,22 +3108,8 @@ achievement(
     title = "Wait, You Can Just... Grind?",
     description = "Complete any ending without ever entering any Free Battle on a New Game file.",
     points = 25,
-    trigger = never(is_new_game_plus()) && !entered_free_battle() 
-        && (
-            (defender_leader_is("Polaris A") && defender_leader_defeated()) 
-            || (attacker_leader_is("Polaris A") && attacker_leader_defeated())
-        ),
+    trigger = never(is_new_game_plus()) && !entered_free_battle() && specific_leader_defeated("Polaris (Complete)"),
     type = "missable"
-)
-// FATE stages
-
-achievement(
-    title = "Wanna Borrow This?",
-    description = "Unlock the ability to use SDTP with another team.",
-    points = 3,
-    // needs way more than this for save protection
-    // probably check that exactly one fate stage has recently progressed to 4 and all others are under
-    trigger = prev(bit1(0x00284b19)) == 0x00 && bit1(0x00284b19) == 0x01 
 )
 
 achievement(
@@ -3041,7 +3147,6 @@ achievement(
     trigger = actively_in_event() && char_fate_stage_maxed("Daichi"),
     id = 547050
 )
-// 
 achievement(
     title = "Otome's Best Friend",
     description = "Reach FATE stage 5 with Otome.",
@@ -3161,6 +3266,7 @@ achievement(
 )
 
 // false pop on ng+ sunday 1900 save state on beginning mission
+// also a false pop on Confrontation
 achievement(
     title = "Power Overwhelming",
     description = "Get both of No Damage and Overwhelm bonuses from a single combat.",
@@ -3169,6 +3275,7 @@ achievement(
         && active_mission_in_progress()
         && bit0(0x001c9ff8) == 0x01
         && bit1(0x001c9ff8) == 0x01
+        && valid_teams_on_map()
         && prev(active_unit_in_combat()) 
         && !active_unit_in_combat(),
     id=546537
@@ -3305,12 +3412,12 @@ achievement(
     id = 546534
 
 )
-// TODO needs badge before upload
 achievement(
     title="Honorable Spirits",
     description="Register all four demons of the Mitama race in your compendium.",
     points = 5,
-    trigger = prev(mitamas_registered() == 0x03) && measured(mitamas_registered() == 0x04, when=always_true(), format="raw")
+    trigger = prev(mitamas_registered() == 0x03) && measured(mitamas_registered() == 0x04, when=always_true(), format="raw"),
+    id = 575035
 )
 
 // Skill-Adjacent Achievements
@@ -3347,80 +3454,63 @@ achievement(
 
 // New Game + Stuff
 achievement(
-    title = "[NEEDS_TEST]Super Fast Dubhe",
-    description = "Defeat Dubhe before it enters its second phase.",
-    points = 0,
-    trigger = MOST_RECENT_MISSION == 0x3f4
-        && ((attacker_leader_is("Dubhe (Whole)") && attacker_leader_defeated()) || defender_leader_is("Dubhe (Whole)") && defender_leader_defeated()) 
-)
-achievement(
-    title = "",
-    description = "Defeat Phecda in its complete form.",
-    points = 5,
-    trigger = in_combat_mission("Man of Fury (Phecda)") 
-        && ((attacker_leader_is("")))
-)
-achievement(
+    id = 573794,
     title = "New World, Same Old Geezer",
     description = "In New Game Plus, defeat the Sage of Time on Monday.",
     points = 5,
-    trigger = is_new_game_plus()
-        && DAY == 0x02 
-        && in_combat_mission("Father Time")
-        && ((attacker_leader_is("Sage of Time") && attacker_leader_defeated()) || defender_leader_is("Sage of Time") && defender_leader_defeated())
+    trigger = is_new_game_plus() && DAY == 0x02 && in_combat_mission("Father Time")  && specific_leader_defeated("Sage of Time")
 )
 achievement(
+    id = 575036,
     title = "All For Her",
     description = "Defeat Nebiros on Tuesday on a New Game Plus run.",
+    // This is 25 because Nebiros is a fucker and does the following actions:
+    // - if there is any allied unit dead (his allied unit) he will perform Necromancy and bring them back to life
+    // - if you defeat the Nebiros unit while another enemy is alive, he will take over their team leader and come back to full HP
+    // - he has 2133 hp
+    // It is as obnoxious as it sounds, and the player does deserve to be rewarded for it.
+    points = 25,
+    trigger = is_new_game_plus() && DAY == 0x03 && in_combat_mission("Necromancer") && prev(bit1(0x00284b20)) == 0x00 && bit1(0x00284b20) == 0x01
+)
+achievement(
+    id = 590276,
+    title = "Million-Dollar Smile",
+    // she has 2620 hp
+    description = "Defeat Lilith on Wednesday on a New Game Plus run.",
     points = 10,
-    trigger = is_new_game_plus()
-        && DAY == 0x03
-        && in_combat_mission("Necromancer")
-        && ((attacker_leader_is("Nebiros") && attacker_leader_defeated()) || defender_leader_is("Nebiros") && defender_leader_defeated())
+    trigger = is_new_game_plus() && DAY == 0x04 && in_combat_mission("Original Wife") && specific_leader_defeated("Lilith (Hostile)")
 )
 
 // *** Leaderboards ***
 leaderboard(
-    title = "Biggest Chump", // please don't actually call it this.
-    description = "Highest Extra you've ever agreed to pay during a Demon auction.",
-    start = ptr_valid(FULL_AUCTION_PTR) 
-        && byte(AUCTION_PTR) == 0x1c 
-        && prev(byte(AUCTION_PTR + 0x214)) == 0x00 && byte(AUCTION_PTR + 0x214) == 0x01,
-    cancel = byte(AUCTION_PTR) == 0x04 && prev(MACCA) == MACCA,
-    submit = prev(byte(AUCTION_PTR + 0x214) == 0x01) && (byte(AUCTION_PTR + 0x214) >= 0x02 && byte(AUCTION_PTR + 0x214) <= 0x03),
-    value = dword(AUCTION_PTR + 0x1e4),
-    format="VALUE",
-    lower_is_better=false
-)
-leaderboard(
     title = "Turns Used on Dubhe (New Game)",
-    description = "Fewest number of allied unit turns used to defeat Dubhe on New Game.",
+    description = "Fewest number of allied unit turns used to defeat Dubhe on New Game without using Suspend.",
     start = !loaded_from_suspend() &&
         !is_new_game_plus() && 
         on_mission("Daichi's Resolve") && 
         active_mission_started(),
     cancel = MOST_RECENT_MISSION != event_id_by_name["Daichi's Resolve"],
-    submit = ((attacker_leader_is("Dubhe (Half)") && attacker_leader_defeated()) || defender_leader_is("Dubhe (Half)") && defender_leader_defeated()),
+    submit = specific_leader_defeated("Dubhe (Half)"),
     value = tally(0, allied_turn_starts()),
     format="VALUE",
     lower_is_better=true
 )
 leaderboard(
     title = "Turns Used on Merak (New Game)",
-    description = "Fewest number of allied unit turns used to defeat Merak on New Game.",
+    description = "Fewest number of allied unit turns used to defeat Merak on New Game without using Suspend.",
     start = !loaded_from_suspend() &&
         !is_new_game_plus() &&
         on_mission("Merak Arrives") && 
         active_mission_started(),
     cancel = MOST_RECENT_MISSION != event_id_by_name["Merak Arrives"],
-    submit = ((attacker_leader_is("Merak") && attacker_leader_defeated()) || defender_leader_is("Merak") && defender_leader_defeated()),
+    submit = specific_leader_defeated("Merak"),
     value = tally(0, allied_turn_starts()),
     format="VALUE",
     lower_is_better=true
 )
 leaderboard(
     title = "Turns Used on Phecda (New Game)",
-    description = "Fewest number of allied turns used to defeat both forms of Phecda on New Game.",
+    description = "Fewest number of allied turns used to defeat both forms of Phecda on New Game without using Suspend.",
     start = !loaded_from_suspend() && 
         !is_new_game_plus() &&
         on_mission("Man of Fury") && 
@@ -3449,45 +3539,69 @@ leaderboard(
 )
 leaderboard(
     title = "Turns Used on Megrez (New Game)",
-    description = "Fewest number of allied unit turns used to defeat Merak on New Game.",
+    description = "Fewest number of allied unit turns used to defeat Merak on New Game without using Suspend.",
     start = !loaded_from_suspend() &&
         !is_new_game_plus() &&
         on_mission("Delta Battle") && 
         active_mission_started(),
     cancel = MOST_RECENT_MISSION != event_id_by_name["Delta Battle"],
-    submit = ((attacker_leader_is("Megrez") && attacker_leader_defeated()) || defender_leader_is("Megrez") && defender_leader_defeated()),
+    submit = specific_leader_defeated("Megrez"),
     value = tally(0, allied_turn_starts())
 )
 leaderboard(
     title = "Turns Used on Alioth (New Game)",
-    description="Fewest allied unit turns used to defeat Alioth on New Game.",
+    description="Fewest allied unit turns used to defeat Alioth on New Game without using Suspend.",
     start = !loaded_from_suspend() &&
         !is_new_game_plus() &&
         on_mission("Alioth Core") &&
         active_mission_started(),
         cancel = MOST_RECENT_MISSION != event_id_by_name["Alioth Core"],
-        submit = ((attacker_leader_is("Alioth Core") && attacker_leader_defeated()) || defender_leader_is("Alioth Core") && defender_leader_defeated()),
+        submit = specific_leader_defeated("Alioth Core"),
         value = tally(0, allied_turn_starts())
 )
 leaderboard(
-    title = "Turns used on Mizar (New Game)",
-    description = "Fewest allied turn units used to defeat Mizar on New Game.",
+    title = "Turns Used on Mizar (New Game)",
+    description = "Fewest allied turn units used to defeat Mizar on New Game without using Suspend.",
     start = !loaded_from_suspend() &&
         !is_new_game_plus() &&
         on_mission("Food Chain") &&
         active_mission_started(),
         cancel = MOST_RECENT_MISSION != event_id_by_name["Food Chain"],
-        submit = (
-            once((defender_leader_is("Mizar Tentacle (3R)") && defender_leader_defeated()) || (attacker_leader_is("Mizar Tentacle (3R)") && attacker_leader_defeated()))
-            && once((defender_leader_is("Mizar Tentacle (3L)") && defender_leader_defeated()) || (attacker_leader_is("Mizar Tentacle (3L)") && attacker_leader_defeated()))
-        ),
+        submit = specific_leader_defeated("Mizar Tentacle (3R)") || specific_leader_defeated("Mizar Tentacle (3L)"),
         value = tally(0, allied_turn_starts())
 )
 leaderboard(
     title = "Turns Used on Benetnasch (New Game)",
-    description = "Fewest allied unit turns used to defeat Benetnasch on New Game"
+    description = "Fewest allied unit turns used to defeat Benetnasch on New Game without using Suspend.",
+    start = !loaded_from_suspend() &&
+        !is_new_game_plus() &&
+        on_mission("Seven Down") &&
+        active_mission_started(),
+        cancel = MOST_RECENT_MISSION != event_id_by_name["Seven Down"],
+        submit = (__ornext(byte(COMBAT_PTR + 0x250) <= 0x03 || byte(COMBAT_PTR + 0x250) == 0x05))
+        && (__ornext(byte(COMBAT_PTR + 0x251) <= 0x03 || byte(COMBAT_PTR + 0x251) == 0x05))
+        && (__ornext(byte(COMBAT_PTR + 0x252) <= 0x03 || byte(COMBAT_PTR + 0x252) == 0x05 || byte(COMBAT_PTR + 0x252) == 0xff))
+        && (__ornext(byte(COMBAT_PTR + 0x253) <= 0x03 || byte(COMBAT_PTR + 0x253) == 0x05 || byte(COMBAT_PTR + 0x253) == 0xff))
+        && (__ornext(byte(COMBAT_PTR + 0x254) <= 0x03 || byte(COMBAT_PTR + 0x254) == 0x05 || byte(COMBAT_PTR + 0x254) == 0xff))
+        && (prev(byte(COMBAT_PTR + 0x255)) <= 0x08)
+        && (byte(COMBAT_PTR + 0x255) == 0xff),
+
+        value = tally(0, allied_turn_starts())
 )
 
+leaderboard(
+    title = "In-Game Time - Daichi's Way"
+)
+
+leaderboard(
+    title = "In-Game Time - Ronaldo's Way"
+)
+leaderboard(
+    title = "In-Game Time - Yamato's Way"
+)
+leaderboard(
+    title = "In-Game Time - Anguished One's Way"
+)
 
 // *** Rich Presence ***
 
@@ -3506,103 +3620,25 @@ rich_presence_conditional_display(in_combat() && ptr_valid(FULL_COMBAT_PTR) && a
     rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
 )
 
-// If we could do lookups based on dynamic values, this could be one condition. Alas, it's four.
-rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x00), "{0} {1} | {2} is moving around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", DAY, day_of_week),
-    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
-    rich_presence_lookup("Unit", word(COMBAT_PTR + 0x276), enemy_name_by_id),
-    rich_presence_lookup("Location", CURRENT_LOCATION, location),
-    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
-)
+for i in range(0, 3) {
+    rich_presence_conditional_display(on_grid_map() && expected_team_moving(i), "{0} {1} | {2} is moving around {3} | Time on Mission={4}",
+        rich_presence_lookup("Day", DAY, day_of_week),
+        rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
+        rich_presence_lookup("Unit", word(COMBAT_PTR + 0x276), enemy_name_by_id),
+        rich_presence_lookup("Location", CURRENT_LOCATION, location),
+        rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
+    )
+}
 
-rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x01), "{0} {1} | {2} is moving around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", DAY, day_of_week),
-    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
-    rich_presence_lookup("Unit", word(COMBAT_PTR + 0x4f2), enemy_name_by_id),
-    rich_presence_lookup("Location", CURRENT_LOCATION, location),
-    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
-)
-
-rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x02), "{0} {1} | {2} is moving around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", DAY, day_of_week),
-    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
-    rich_presence_lookup("Unit", word(COMBAT_PTR + 0x76e), enemy_name_by_id),
-    rich_presence_lookup("Location", CURRENT_LOCATION, location),
-    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
-)
-
-rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x03), "{0} {1} | {2} is moving around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", DAY, day_of_week),
-    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
-    rich_presence_lookup("Unit", word(COMBAT_PTR + 0x9ea), enemy_name_by_id),
-    rich_presence_lookup("Location", CURRENT_LOCATION, location),
-    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
-)
-
-// Similar with these, if we could do lookups based on dynamic values, this could be one condition. Alas, it's eight.
-rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x04), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", DAY, day_of_week),
-    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
-    rich_presence_lookup("Unit", word(COMBAT_PTR + 0xc66), enemy_name_by_id),
-    rich_presence_lookup("Location", CURRENT_LOCATION, location),
-    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
-)
-
-rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x05), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", DAY, day_of_week),
-    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
-    rich_presence_lookup("Unit", word(COMBAT_PTR + 0xee2), enemy_name_by_id),
-    rich_presence_lookup("Location", CURRENT_LOCATION, location),
-    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
-)
-
-rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x06), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", DAY, day_of_week),
-    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
-    rich_presence_lookup("Unit", word(COMBAT_PTR + 0x115e), enemy_name_by_id),
-    rich_presence_lookup("Location", CURRENT_LOCATION, location),
-    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
-)
-
-rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x07), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", DAY, day_of_week),
-    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
-    rich_presence_lookup("Unit", word(COMBAT_PTR + 0x13da), enemy_name_by_id),
-    rich_presence_lookup("Location", CURRENT_LOCATION, location),
-    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
-)
-
-rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x08), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", DAY, day_of_week),
-    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
-    rich_presence_lookup("Unit", word(COMBAT_PTR + 0x1656), enemy_name_by_id),
-    rich_presence_lookup("Location", CURRENT_LOCATION, location),
-    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
-)
-
-rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x09), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", DAY, day_of_week),
-    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
-    rich_presence_lookup("Unit", word(COMBAT_PTR + 0x18d2), enemy_name_by_id),
-    rich_presence_lookup("Location", CURRENT_LOCATION, location),
-    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
-)
-
-rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x0a), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", DAY, day_of_week),
-    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
-    rich_presence_lookup("Unit", word(COMBAT_PTR + 0x1b4e), enemy_name_by_id),
-    rich_presence_lookup("Location", CURRENT_LOCATION, location),
-    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
-)
-
-rich_presence_conditional_display(on_grid_map() && expected_team_moving(0x0b), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
-    rich_presence_lookup("Day", DAY, day_of_week),
-    rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
-    rich_presence_lookup("Unit", word(COMBAT_PTR + 0x1dca), enemy_name_by_id),
-    rich_presence_lookup("Location", CURRENT_LOCATION, location),
-    rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
-)
+for i in range(0x04, 0x0b) {
+    rich_presence_conditional_display(on_grid_map() && expected_team_moving(i), "{0} {1} | Watching {2} move around {3} | Time on Mission={4}",
+        rich_presence_lookup("Day", DAY, day_of_week),
+        rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
+        rich_presence_lookup("Unit", word(COMBAT_PTR + 0xc66), enemy_name_by_id),
+        rich_presence_lookup("Location", CURRENT_LOCATION, location),
+        rich_presence_value("Combat Timer", TOTAL_TIME_IN_MISSION / 30, "SECS")
+    )
+}
 
 // Non-combat things
 rich_presence_conditional_display(actively_in_event(), "{0} {1} 💰 {2} | At {3} | IGT={4}",

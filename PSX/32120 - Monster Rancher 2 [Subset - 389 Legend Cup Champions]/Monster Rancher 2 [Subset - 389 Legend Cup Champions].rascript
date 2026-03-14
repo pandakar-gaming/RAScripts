@@ -1,5 +1,6 @@
 // Monster Rancher 2 [Subset - 389 Legend Cup Champions]
-// #ID = 32120
+// #ID = 11287
+// #subset_id=32120
 // md5: 05818755ed7ba092aef2a3bb681d0118
 
 
@@ -53,7 +54,7 @@ items = {
 // Check that the inventory contains Strong Glue
 // item_name: str, should map to items dict
 function inventory_contains_glue() {
-    return byte(0x09923c) == 0x66 ||
+    return __ornext(byte(0x09923c) == 0x66 ||
         byte(0x099240) == 0x66 ||
         byte(0x099244) == 0x66 ||
         byte(0x099248) == 0x66 ||
@@ -72,7 +73,7 @@ function inventory_contains_glue() {
         byte(0x09927c) == 0x66 ||
         byte(0x099280) == 0x66 ||
         byte(0x099284) == 0x66 ||
-        byte(0x099288) == 0x66
+        byte(0x099288) == 0x66)
 }
 
 function primary_breed() => byte(0x97a18)
@@ -316,7 +317,7 @@ function rare_breed_matches(breed_name) {
 // i.e. that they did not use any save editor to pull in a monster they shouldn't have access to
 // or that they didn't modify a monster in the lab to be of the breed they want
 function monster_summonable(monster_breed) {
-    return byte(0x99386 + breeds[monster_breeds]) == 0x01
+    return byte(0x99386 + breeds[monster_breed]) == 0x01
 }
 
 // for dragon: check that the tournament is on the calendar
@@ -330,11 +331,11 @@ function henger_unlocked() => byte(0x99312) == 0x00 && byte(0x99358) == 0x00 && 
 // check that they got the doll and it moved on ranch
 function wracky_unlocked() => byte(0x99350) == 0x00 && byte(0x99351) == 0x00 && monster_summonable("Wracky")
 // check that stable is at least level 1
-function golem_unlocked() => (byte(0x98fc2) == 0x01 || byte(0x98fc2) == 0x02) && monster_summonable("Golem")
+function golem_unlocked() => __ornext(byte(0x98fc2) == 0x01 || byte(0x98fc2) == 0x02) && monster_summonable("Golem")
 // check that the durahan invitational is on calendar
 function durahan_unlocked() => byte(0x99079) == 0x16 && byte(0x99338) == 0x00 && monster_summonable("Durahan")
 // check that stable is at least level 1
-function baku_unlocked() => (byte(0x98fc2) == 0x01 || byte(0x98fc2) == 0x02) && monster_summonable("Baku")
+function baku_unlocked() => __ornext(byte(0x98fc2) == 0x01 || byte(0x98fc2) == 0x02) && monster_summonable("Baku")
 // check that they've been to the shrine after going to IMa vs. FIMBA at least once
 function gali_unlocked() => byte(0x99312) == 0x00 && byte(0x99358) == 0x00 && monster_summonable("Gali")
 // check that they've been told about what zilla beard do
@@ -364,36 +365,6 @@ function worm_unlocked() => byte(0x99312) == 0x00 && byte(0x99358) == 0x00 && mo
 function ducken_unlocked() => byte(0x99322) == 0x00 && monster_summonable("Ducken") && inventory_contains_glue()
 // check that player has seen Bighand
 function jill_unlocked() => byte(0x099344) == 0x00 && byte(0x09921d) == 0x01 && monster_summonable("Jill")
-
-// this is because players are dipshits and insist on cheating.
-// if people want to play dirty, fine - go unlock your shit legitimately. if you know how!
-// this is being workshopped still and may not make it to achievements. if my hand gets forced again for adding more anti-cheat
-// this will be fully fleshed out for every stupid edge case I can think of.
-function save_is_valid() {
-    return
-    // dragon
-        !(monster_summonable("Dragon") && byte(0x099078) == 0xff) &&
-    // centaur
-        !(monster_summonable("Centaur") && byte(0x99359) == 0xff && byte(0x9935a) == 0xff) &&
-    // henger + gali + mew + worm + beaclon
-        !((monster_summonable("Henger") || monster_summonable("Gali") || monster_summonable("Mew") || monster_summonable("Worm") || monster_summonable("Beaclon")) && byte(0x99358) == 0xff) &&
-    // wracky
-        ()
-    // durahan
-        !(monster_summonable("Durahan") && byte(0x99338) == 0xff) &&
-    // bajarl
-    // phoenix
-    // ghost
-    // metalner
-    // joker
-    // undine, niton, zilla
-        !((monster_summonable("Undine") || monster_summonable("Niton") || monster_summonable("Zilla")) && byte(0x99356) == 0xff)
-    // mock
-
-    // ducken
-    // jill
-        !(monster_summonable("Jill") && byte(0x99344) == 0xff)
-}
 
 function m1_grand_prix_won() => dword(0x97a80) >= 0x01
 function greatest_4_won() => dword(0x97a84) >= 0x01
@@ -453,16 +424,12 @@ monster_breeds = {
 }
 
 // 0x98fc4 is the start of trainer data, "Number of X monster raised". 
-function has_trained_breed(breed_name) => word(0x98fde + breeds[breed_name]) >= 1
+function has_trained_breed(breed_name) => word(0x98fde + breeds[breed_name]*2) >= 1
 
 function prereq_tournaments_won() => m1_grand_prix_won() && winners_cup_won() && greatest_4_won() && world_monsters_cup_won()
 function correct_date() => current_month() == 0x04 && current_week() == 0x04
-function prereqs_met() => money_valid() && prereq_tournaments_won() && correct_date() && (current_tournament() == 0x4e || current_tournament() == 0x4f) 
+function prereqs_met() => prereq_tournaments_won() && correct_date() && __ornext(current_tournament() == 0x4e || current_tournament() == 0x4f) 
 year = word(0x99230)
-current_money = dword(0x98fbc)
-// The only way to get a money value not ending in 0 is to hit cap or to edit the value.
-// Additionally, if you get an impossible amount of money early on there's a good chance you edited your save file
-function money_valid() => current_money % 10 == 0x00
 
 // I hate everything about this, but it's needed. Thanks, users who think they can be cute and just modify a monster in the lab repeatedly!
 // Some checks will be able to check more than one card/one trainer stat due to unlock chains. Not all can though :(
@@ -1254,9 +1221,12 @@ function monster_trained(monster_name) {
     }
 }
 
+legend_cup_set = achievement_set("389 Legend Cup Champions", type="BONUS", id=32120)
+
 // ==== Pixie ====
 
 achievement(
+    set = legend_cup_set,
     title = "Spoiled but Not Powerless",
     description = "Win the Legend Cup with a Pixie (Pixie/Pixie).",
     points = 10,
@@ -1264,6 +1234,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "High Pride",
     description = "Win the Legend Cup with a Daina (Pixie/Dragon).",
     points = 10,
@@ -1271,6 +1242,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Unico vs. The World",
     description = "Win the Legend Cup with a Unico (Pixie/Centaur).",
     points = 10,
@@ -1278,6 +1250,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "A Little Tease",
     description = "Win the Legend Cup with a Jilt (Pixie/Wracky).",
     points = 10,
@@ -1285,6 +1258,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Strong-Willed",
     description = "Win the Legend Cup with a Granity (Pixie/Golem).",
     points = 10,
@@ -1292,6 +1266,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Welcome to the Jungle",
     description = "Win the Legend Cup with a Dixie (Pixie/Zuum).",
     points = 10,
@@ -1299,6 +1274,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Brave Yet Delicate",
     description = "Win the Legend Cup with a Janne (Pixie/Durahan).",
     points = 10,
@@ -1306,6 +1282,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Poster Girl",
     description = "Win the Legend Cup with a Mint (Pixie/Tiger).",
     points = 10,
@@ -1313,6 +1290,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Constellation of Legends",
     description = "Win the Legend Cup with a Lepus (Pixie/Hare).",
     points = 10,
@@ -1320,6 +1298,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Today There Is No Mercy",
     description = "Win the Legend Cup with an Angel (Pixie/Gali).",
     points = 10,
@@ -1327,6 +1306,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Second Musical Now in the Works",
     description = "Win the Legend Cup with a Kitten (Pixie/Kato).",
     points = 10,
@@ -1334,6 +1314,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Sloppy, but Efficient",
     description = "Win the Legend Cup with a Jinnee (Pixie/Bajarl).",
     points = 10,
@@ -1341,6 +1322,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "This Is Our Future",
     description = "Win the Legend Cup with a Futurity (Pixie/Metalner).",
     points = 10,
@@ -1348,6 +1330,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Dr. Maccots Greatest Discovery",
     description = "Win the Legend Cup with a Vanity (Pixie/Suezo).",
     points = 10,
@@ -1355,6 +1338,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Northern Legend",
     description = "Win the Legend Cup with a Snowy (Pixie/Jill).",
     points = 10,
@@ -1362,6 +1346,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Little Witch",
     description = "Win the Legend Cup with a Lilim (Pixie/Joker).",
     points = 10,
@@ -1369,6 +1354,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Nagisa Skin",
     description = "Win the Legend Cup with a Nagisa (Pixie/Jell).",
     points = 10,
@@ -1376,6 +1362,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Forest Dweller",
     description = "Win the Legend Cup with a Dryad (Pixie/Mock).",
     points = 10,
@@ -1383,6 +1370,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Time to Soak Some Rays",
     description = "Win the Legend Cup with a Serenity (Pixie/Plant).",
     points = 10,
@@ -1390,6 +1378,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Shield No Longer Needed",
     description = "Win the Legend Cup with a Silhouette (Pixie/Monol).",
     points = 10,
@@ -1397,6 +1386,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Beauty Is in the Eye of the Beholder",
     description = "Win the Legend Cup with a Night Flyer (Pixie/Worm).",
     points = 10,
@@ -1404,6 +1394,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Vampiric Tendencies",
     description = "Win the Legend Cup with an Allure (Pixie/Naga).",
     points = 10,
@@ -1412,6 +1403,7 @@ achievement(
 
 // ??? pixies
 achievement(
+    set = legend_cup_set,
     title = "Power of the Red Pill",
     description = "Win the Legend Cup with a Poison (Pixie/???).",
     points = 10,
@@ -1419,6 +1411,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "The Pixie of Destiny",
     description = "Win the Legend Cup with a Kasumi (Pixie/???).",
     points = 10,
@@ -1426,6 +1419,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "The Woman in Mia",
     description = "Win the Legend Cup with a Mia (Pixie/???).",
     points = 10,
@@ -1435,6 +1429,7 @@ achievement(
 // ==== Dragon ====
 
 achievement(
+    set = legend_cup_set,
     title = "Uncontested Strength",
     description = "Win the Legend Cup with a Tiamat (Dragon/Pixie).",
     points = 10,
@@ -1442,6 +1437,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "One of the Few",
     description = "Win the Legend Cup with a Dragon (Dragon/Dragon).",
     points = 10,
@@ -1449,6 +1445,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Foreign Legend",
     description = "Win the Legend Cup with a Corkasus (Dragon/Beaclon).",
     points = 10,
@@ -1456,6 +1453,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Mix All The Tech!",
     description = "Win the Legend Cup with a Tecno Dragon (Dragon/Henger).",
     points = 10,
@@ -1463,6 +1461,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Destructive Power On Display",
     description = "Win the Legend Cup with a Stone Dragon (Dragon/Golem).",
     points = 10,
@@ -1470,6 +1469,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Relic of a Bygone Era",
     description = "Win the Legend Cup with an Armor Dragon (Dragon/Durahan).",
     points = 10,
@@ -1477,6 +1477,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Lakeside Ruler",
     description = "Win the Legend Cup with a Crab Dragon (Dragon/Arrow Head).",
     points = 10,
@@ -1484,6 +1485,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "It's Gonna Hide the Cup",
     description = "Win the Legend Cup with a Hound Dragon (Dragon/Tiger).",
     points = 10,
@@ -1491,6 +1493,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Like Holography",
     description = "Win the Legend Cup with a Gariel (Dragon/Gali).",
     points = 10,
@@ -1498,6 +1501,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Oil Pot King",
     description = "Win the Legend Cup with an Oscerot (Dragon/Kato).",
     points = 10,
@@ -1505,6 +1509,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Thankfully, Nobody Brought Bombs",
     description = "Win the Legend Cup with a Dodongo (Dragon/Bajarl).",
     points = 10,
@@ -1512,6 +1517,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Mysterious Futuristic Power",
     description = "Win the Legend Cup with a Gidras (Dragon/Metalner).",
     points = 10,
@@ -1519,6 +1525,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Back with a Vengeance",
     description = "Win the Legend Cup with a Death Dragon (Dragon/Joker).",
     points = 10,
@@ -1526,6 +1533,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Apocalypse Bringer",
     description = "Win the Legend Cup with a Ragnaroks (Dragon/Monol).",
     points = 10,
@@ -1533,6 +1541,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Moo-low Gold",
     description = "Win the Legend Cup with a Moo (Dragon/???).",
     points = 10,
@@ -1542,6 +1551,7 @@ achievement(
 // ==== Centaur ====
 
 achievement(
+    set = legend_cup_set,
     title = "Fast & Ferious",
     description = "Win the Legend Cup with a Ferious (Centaur/Pixie).",
     points = 10,
@@ -1549,6 +1559,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Brave and Just",
     description = "Win the Legend Cup with a Dragoon (Centaur/Dragon).",
     points = 10,
@@ -1556,6 +1567,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "They've Got it All",
     description = "Win the Legend Cup with a Centaur (Centaur/Centaur).",
     points = 10,
@@ -1563,6 +1575,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Who Gave the Moai a Spear?",
     description = "Win the Legend Cup with a Trojan (Centaur/Golem).",
     points = 10,
@@ -1570,6 +1583,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Two Souls Means Two Legends",
     description = "Win the Legend Cup with a Chariot (Centaur/Durahan).",
     points = 10,
@@ -1577,6 +1591,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Semi-Aquatic Fighter",
     description = "Win the Legend Cup with an Antares (Centaur/Arrow Head).",
     points = 10,
@@ -1584,6 +1599,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Lonely Warrior",
     description = "Win the Legend Cup with a Celious (Centaur/Tiger).",
     points = 10,
@@ -1591,6 +1607,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Free Spirited",
     description = "Win the Legend Cup with a Bazoo (Centaur/Bajarl).",
     points = 10,
@@ -1598,6 +1615,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "No Love for the Creator",
     description = "Win the Legend Cup with a Reaper (Centaur/Joker).",
     points = 10,
@@ -1605,6 +1623,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Thoroughbred Runner",
     description = "Win the Legend Cup with a Trotter (Centaur/???).",
     points = 10,
@@ -1612,6 +1631,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Under the Table and Dreaming",
     description = "Win the Legend Cup with a Blue Thunder (Centaur/???).",
     points = 10,
@@ -1621,6 +1641,7 @@ achievement(
 // ==== ColorPandora ====
 
 achievement(
+    set = legend_cup_set,
     title = "Loud and Proud",
     description = "Win the Legend Cup with a PeachTreeBug (ColorPandora/Pixie).",
     points = 10,
@@ -1628,6 +1649,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Victory, Love and Effort Prevail",
     description = "Win the Legend Cup with a ColorPandora (ColorPandora/ColorPandora).",
     points = 10,
@@ -1635,6 +1657,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Perfectly Camouflauged",
     description = "Win the Legend Cup with a Liquid Cube (ColorPandora/Jell).",
     points = 10,
@@ -1642,6 +1665,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Devilish Dice",
     description = "Win the Legend Cup with a Dice (ColorPandora/???).",
     points = 10,
@@ -1649,6 +1673,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Downtown Tram",
     description = "Win the Legend Cup with a Tram (ColorPandora/???).",
     points = 10,
@@ -1658,6 +1683,7 @@ achievement(
 // ==== Beaclon ====
 
 achievement(
+    set = legend_cup_set,
     title = "Death's Dance",
     description = "Win the Legend Cup with a Bethelgeus (Beaclon/Dragon).",
     points = 10,
@@ -1665,6 +1691,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Brute Forced It",
     description = "Win the Legend Cup with a Beaclon (Beaclon/Beaclon).",
     points = 5,
@@ -1672,6 +1699,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Pre-Henger Prototype",
     description = "Win the Legend Cup with a Melcarba (Beaclon/Henger).",
     points = 10,
@@ -1679,6 +1707,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Rock On, Rocklon",
     description = "Win the Legend Cup with a Rocklon (Beaclon/Golem).",
     points = 10,
@@ -1686,6 +1715,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Captaining an Army of One",
     description = "Win the Legend Cup with a Centurion (Beaclon/Durahan).",
     points = 10,
@@ -1693,6 +1723,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Minimal Effort Expenditure",
     description = "Win the Legend Cup with a Sloth Beetle (Beaclon/Tiger).",
     points = 10,
@@ -1700,6 +1731,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Top Tier Transit",
     description = "Win the Legend Cup with a KautRoarKaut (Beaclon/Bajarl).",
     points = 10,
@@ -1707,6 +1739,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Fights Like Jagger",
     description = "Win the Legend Cup with a Jaggernaut (Beaclon/Joker).",
     points = 10,
@@ -1714,6 +1747,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Tightly Wound",
     description = "Win the Legend Cup with a Ducklon (Beaclon/Ducken).",
     points = 10,
@@ -1721,6 +1755,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Food Waste Ain't For Legends",
     description = "Win the Legend Cup with an Eggplantern (Beaclon/???).",
     points = 10,
@@ -1730,6 +1765,7 @@ achievement(
 // ==== Henger ====
 
 achievement(
+    set = legend_cup_set,
     title = "Phantom Robotics",
     description = "Win the Legend Cup with a Garlant (Henger/Dragon).",
     points = 10,
@@ -1737,6 +1773,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Fresh Start, Fresh Legend",
     description = "Win the Legend Cup with a Henger (Henger/Henger).",
     points = 10,
@@ -1744,6 +1781,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Rocky Soul",
     description = "Win the Legend Cup with a Gaia (Henger/Golem).",
     points = 10,
@@ -1751,6 +1789,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "The Alpha and the Omega",
     description = "Win the Legend Cup with an Omega (Henger/Zuum).",
     points = 10,
@@ -1758,6 +1797,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Airborne Speedster",
     description = "Win the Legend Cup with a Heuy (Henger/Metalner).",
     points = 10,
@@ -1765,6 +1805,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Evil Predispositions",
     description = "Win the Legend Cup with an End Bringer (Henger/Joker).",
     points = 10,
@@ -1772,6 +1813,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "The First Henger",
     description = "Win the Legend Cup with an Automaton (Henger/Mock).",
     points = 10,
@@ -1779,6 +1821,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Under the Full Moon",
     description = "Win the Legend Cup with a Black Henger (Henger/Monol).",
     points = 10,
@@ -1786,6 +1829,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Mechanical Animal",
     description = "Win the Legend Cup with a Skeleton (Henger/???).",
     points = 10,
@@ -1795,6 +1839,7 @@ achievement(
 // ==== Wracky ====
 
 achievement(
+    set = legend_cup_set,
     title = "Baby-Doll Eyes Did Work",
     description = "Win the Legend Cup with a Baby Doll (Wracky/Pixie).",
     points = 10,
@@ -1802,6 +1847,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Prime Collector Material",
     description = "Win the Legend Cup with a Draco Doll (Wracky/Dragon).",
     points = 10,
@@ -1809,6 +1855,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Buzz Lighthenger",
     description = "Win the Legend Cup with a Henger Doll (Wracky/Henger).",
     points = 10,
@@ -1816,6 +1863,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Charles Becoming a Household Name",
     description = "Win the Legend Cup with a Wracky (Wracky/Wracky).",
     points = 10,
@@ -1823,6 +1871,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "A Little Too Authentic",
     description = "Win the Legend Cup with a Pebbly (Wracky/Golem).",
     points = 10,
@@ -1830,6 +1879,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Small Knight, Significant Value",
     description = "Win the Legend Cup with a Petit Knight (Wracky/Durahan).",
     points = 10,
@@ -1837,6 +1887,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "No Take-Bakkys!",
     description = "Win the Legend Cup with a Bakky (Wracky/Bajarl).",
     points = 10,
@@ -1844,6 +1895,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Favorite Amongst the Children",
     description = "Win the Legend Cup with a Metal Glay (Wracky/Metalner).",
     points = 10,
@@ -1851,6 +1903,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Do Not Trust the Clown Doll",
     description = "Win the Legend Cup with a Tricker (Wracky/Joker).",
     points = 10,
@@ -1858,6 +1911,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "It's Not Cheap, It's Cost Effective",
     description = "Win the Legend Cup with a Mocky (Wracky/Mock).",
     points = 10,
@@ -1865,6 +1919,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "All I Want for Christmas Is This Doll",
     description = "Win the Legend Cup with a Satan Clause (Wracky/???).",
     points = 10,
@@ -1874,6 +1929,7 @@ achievement(
 // ==== Golem ====
 
 achievement(
+    set = legend_cup_set,
     title = "Pacifist at Heart",
     description = "Win the Legend Cup with a Pink Golem (Golem/Pixie).",
     points = 10,
@@ -1881,6 +1937,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Grounded in Reality",
     description = "Win the Legend Cup with a Tyrant (Golem/Dragon).",
     points = 10,
@@ -1888,6 +1945,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Horn's Just For Show",
     description = "Win the Legend Cup with a Strong Horn (Golem/Beaclon).",
     points = 10,
@@ -1895,6 +1953,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Ancient War Weapon",
     description = "Win the Legend Cup with a Gobi (Golem/Henger).",
     points = 10,
@@ -1902,6 +1961,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Tell Me I Looked Cool Out There",
     description = "Win the Legend Cup with a Mariomax (Golem/Wracky).",
     points = 10,
@@ -1909,6 +1969,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "One Punch to Rule Them All",
     description = "Win the Legend Cup with a Golem (Golem/Golem).",
     points = 10,
@@ -1916,6 +1977,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Desirable Scales",
     description = "Win the Legend Cup with a Scaled Golem (Golem/Zuum).",
     points = 10,
@@ -1923,6 +1985,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Sentient Armor",
     description = "Win the Legend Cup with a Battle Rocks (Golem/Durahan).",
     points = 10,
@@ -1930,6 +1993,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "A Body Built for Anything",
     description = "Win the Legend Cup with a Dagon (Golem/Arrow Head).",
     points = 10,
@@ -1937,6 +2001,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Nevermeltice",
     description = "Win the Legend Cup with a Big Blue (Golem/Tiger).",
     points = 10,
@@ -1944,6 +2009,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Turning Point in Our History",
     description = "Win the Legend Cup with a Moaigon (Golem/Hare).",
     points = 10,
@@ -1951,6 +2017,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Sedentary Sleepyhead",
     description = "Win the Legend Cup with a Sleepyhead (Golem/Baku).",
     points = 10,
@@ -1958,6 +2025,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Noble's Best Friend",
     description = "Win the Legend Cup with an Amenhotep (Golem/Gali).",
     points = 10,
@@ -1965,6 +2033,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "In A Weight Class of its Own",
     description = "Win the Legend Cup with a Pressure (Golem/Zilla).",
     points = 10,
@@ -1972,6 +2041,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Perfect Data Access Object Reference",
     description = "Win the Legend Cup with a Dao (Golem/Bajarl).",
     points = 10,
@@ -1979,6 +2049,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Starbound",
     description = "Win the Legend Cup with an Astro (Golem/Metalner).",
     points = 10,
@@ -1986,6 +2057,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Celebrating With Curry Rice",
     description = "Win the Legend Cup with a Titan (Golem/Suezo).",
     points = 10,
@@ -1993,6 +2065,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "I'm the Joker Now",
     description = "Win the Legend Cup with an Angolmor (Golem/Joker).",
     points = 10,
@@ -2000,6 +2073,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "This Sea God's Better on Land",
     description = "Win the Legend Cup with a Poseidon (Golem/Jell).",
     points = 10,
@@ -2007,6 +2081,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Straight Faced Champion",
     description = "Win the Legend Cup with a Wood Golem (Golem/Mock).",
     points = 10,
@@ -2014,6 +2089,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "God of Nature",
     description = "Win the Legend Cup with an Ecologuardia (Golem/Plant).",
     points = 10,
@@ -2021,6 +2097,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Big Brother Is Watching",
     description = "Win the Legend Cup with a Black Golem (Golem/Monol).",
     points = 10,
@@ -2028,6 +2105,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Bearer of Ancient Scriptures",
     description = "Win the Legend Cup with a Magna (Golem/Worm).",
     points = 10,
@@ -2035,6 +2113,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Pure Offense",
     description = "Win the Legend Cup with a Marble Guy (Golem/Naga).",
     points = 10,
@@ -2042,6 +2121,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Tecmo Bowl MVP",
     description = "Win the Legend Cup with a ForwardGolem (Golem/???).",
     points = 10,
@@ -2051,6 +2131,7 @@ achievement(
 // ==== Zuum ====
 
 achievement(
+    set = legend_cup_set,
     title = "Wings Not Needed to Win",
     description = "Win the Legend Cup with a FairySaurian (Zuum/Pixie).",
     points = 10,
@@ -2058,6 +2139,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Explosively Violent",
     description = "Win the Legend Cup with a Salamander (Zuum/Dragon).",
     points = 10,
@@ -2065,6 +2147,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "It Do the Move Good and Fast",
     description = "Win the Legend Cup with a Rock Saurian (Zuum/Golem).",
     points = 10,
@@ -2072,6 +2155,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "The Natural Evolution of Dino",
     description = "Win the Legend Cup with a Zuum (Zuum/Zuum).",
     points = 10,
@@ -2079,6 +2163,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Natural Triathlon Candidate",
     description = "Win the Legend Cup with a Crab Saurian (Zuum/Arrow Head).",
     points = 10,
@@ -2086,6 +2171,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Greatest Delivery Monster",
     description = "Win the Legend Cup with a HoundSaurian (Zuum/Tiger).",
     points = 10,
@@ -2093,6 +2179,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Selective Bravery",
     description = "Win the Legend Cup with a Spot Saurian (Zuum/Hare).",
     points = 10,
@@ -2100,6 +2187,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Smartest Zuum in the Room",
     description = "Win the Legend Cup with a Hachiro (Zuum/Baku).",
     points = 10,
@@ -2107,6 +2195,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Status Symbol",
     description = "Win the Legend Cup with a NobleSaurian (Zuum/Gali).",
     points = 10,
@@ -2114,6 +2203,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Might Is Right",
     description = "Win the Legend Cup with a Tasman (Zuum/Kato).",
     points = 10,
@@ -2121,6 +2211,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "It Loves the Coarse and Rough Sand",
     description = "Win the Legend Cup with a Sand Saurian (Zuum/Bajarl).",
     points = 10,
@@ -2128,6 +2219,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Fully Committed Prankster",
     description = "Win the Legend Cup with a Mustardy (Zuum/Suezo).",
     points = 10,
@@ -2135,6 +2227,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Mezmerising Patterns",
     description = "Win the Legend Cup with a Basilisk (Zuum/Joker).",
     points = 10,
@@ -2142,6 +2235,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Prehistoric Gel",
     description = "Win the Legend Cup with a JellySaurian (Zuum/Jell).",
     points = 10,
@@ -2149,6 +2243,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Even Cowards Can Be Legends",
     description = "Win the Legend Cup with a Wood Saurian (Zuum/Mock).",
     points = 10,
@@ -2156,6 +2251,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Bridal Beast",
     description = "Win the Legend Cup with an AlohaSaurian (Zuum/Plant).",
     points = 10,
@@ -2163,6 +2259,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Fashionista",
     description = "Win the Legend Cup with a BlackSaurian (Zuum/Monol).",
     points = 10,
@@ -2170,6 +2267,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Loyal Steed",
     description = "Win the Legend Cup with a ShellSaurian (Zuum/Worm).",
     points = 10,
@@ -2177,6 +2275,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Inherited Anger",
     description = "Win the Legend Cup with a Naga Saurian (Zuum/Naga).",
     points = 10,
@@ -2184,6 +2283,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Waste of Mind",
     description = "Win the Legend Cup with a ZebraSaurian (Zuum/???).",
     points = 10,
@@ -2193,6 +2293,7 @@ achievement(
 // ==== Durahan ====
 
 achievement(
+    set = legend_cup_set,
     title = "Equal Opportunity Fighting",
     description = "Win the Legend Cup with a Leziena (Durahan/Pixie).",
     points = 10,
@@ -2200,6 +2301,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Powered by the Dragon Head",
     description = "Win the Legend Cup with a Vesuvius (Durahan/Dragon).",
     points = 10,
@@ -2207,6 +2309,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Winning Unscathed",
     description = "Win the Legend Cup with a Hercules (Durahan/Beaclon).",
     points = 10,
@@ -2214,6 +2317,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Anything but Normal",
     description = "Win the Legend Cup with a Kelmadics (Durahan/Golem).",
     points = 10,
@@ -2221,6 +2325,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Armor With a Drive to Win",
     description = "Win the Legend Cup with a Durahan (Durahan/Durahan).",
     points = 10,
@@ -2228,6 +2333,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Crustaceous Armor",
     description = "Win the Legend Cup with a Lorica (Durahan/Arrow Head).",
     points = 10,
@@ -2235,6 +2341,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Molded By the Tiger",
     description = "Win the Legend Cup with a Hound Knight (Durahan/Tiger).",
     points = 10,
@@ -2242,6 +2349,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Garuda's Back With a Vengeance",
     description = "Win the Legend Cup with a Garuda (Durahan/Phoenix).",
     points = 10,
@@ -2249,6 +2357,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Brought a Laser Sword to a Fist Fight",
     description = "Win the Legend Cup with a Metal Glory (Durahan/Metalner).",
     points = 10,
@@ -2256,6 +2365,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Cursed Armaments",
     description = "Win the Legend Cup with a Genocider (Durahan/Joker).",
     points = 10,
@@ -2263,6 +2373,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Forgot to Replace My Starter Equipment",
     description = "Win the Legend Cup with a Wood Knight (Durahan/Mock).",
     points = 10,
@@ -2270,6 +2381,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Musashi's Continued Legacy",
     description = "Win the Legend Cup with a Shogun (Durahan/???).",
     points = 10,
@@ -2277,6 +2389,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Third Eye Blind",
     description = "Win the Legend Cup with a Ruby Knight (Durahan/???).",
     points = 10,
@@ -2284,6 +2397,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "I'll Make a Monster Out of You",
     description = "Win the Legend Cup with a Kokushi Muso (Durahan/???).",
     points = 10,
@@ -2293,6 +2407,7 @@ achievement(
 // ==== Arrow Head ====
 
 achievement(
+    set = legend_cup_set,
     title = "Yet Another Take on the Henger",
     description = "Win the Legend Cup with a Renocraft (Arrow Head/Henger).",
     points = 10,
@@ -2300,6 +2415,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Night Owl",
     description = "Win the Legend Cup with a Priarocks (Arrow Head/Golem).",
     points = 10,
@@ -2307,6 +2423,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Medieval Vaporware",
     description = "Win the Legend Cup with a Plated Arrow (Arrow Head/Durahan).",
     points = 10,
@@ -2314,6 +2431,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Endurance Battler",
     description = "Win the Legend Cup with an Arrow Head (Arrow Head/Arrow Head).",
     points = 10,
@@ -2321,6 +2439,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "It Is the Happy, Not the Sadness!",
     description = "Win the Legend Cup with a MustardArrow (Arrow Head/Suezo).",
     points = 10,
@@ -2328,6 +2447,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Death By A Thousand Thorns",
     description = "Win the Legend Cup with a Selketo (Arrow Head/Joker).",
     points = 10,
@@ -2335,6 +2455,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Imflammable Oak",
     description = "Win the Legend Cup with a Log Sawer (Arrow Head/Mock).",
     points = 10,
@@ -2342,6 +2463,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "We've Come A Long Way",
     description = "Win the Legend Cup with a Sumopion (Arrow Head/???).",
     points = 10,
@@ -2351,6 +2473,7 @@ achievement(
 // ==== Tiger ====
 
 achievement(
+    set = legend_cup_set,
     title = "Work Hard, Play Harder",
     description = "Win the Legend Cup with a Daton (Tiger/Pixie).",
     points = 10,
@@ -2358,6 +2481,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Granite Hound",
     description = "Win the Legend Cup with a Rock Hound (Tiger/Golem).",
     points = 10,
@@ -2365,6 +2489,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Definitely a Triceratops",
     description = "Win the Legend Cup with a Datonare (Tiger/Zuum).",
     points = 10,
@@ -2372,6 +2497,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Ordinary Legend",
     description = "Win the Legend Cup with a Tiger (Tiger/Tiger).",
     points = 10,
@@ -2379,6 +2505,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "This One's a Keeper",
     description = "Win the Legend Cup with a Hare Hound (Tiger/Hare).",
     points = 10,
@@ -2386,6 +2513,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Dignified Fighter",
     description = "Win the Legend Cup with a Balon (Tiger/Gali).",
     points = 10,
@@ -2393,6 +2521,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Depth Perception Is a Crutch",
     description = "Win the Legend Cup with a Mono Eyed (Tiger/Suezo).",
     points = 10,
@@ -2400,6 +2529,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "A Cooler Wind Blows",
     description = "Win the Legend Cup with a Jelly Hound (Tiger/Jell).",
     points = 10,
@@ -2407,6 +2537,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Reppin' the South Side",
     description = "Win the Legend Cup with a Tropical Dog (Tiger/Plant).",
     points = 10,
@@ -2414,6 +2545,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Terrorizing the Ranks",
     description = "Win the Legend Cup with a Terror Dog (Tiger/Monol).",
     points = 10,
@@ -2421,6 +2553,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Can Do This With Half My Eyes Closed!",
     description = "Win the Legend Cup with a Jagd Hound (Tiger/Worm).",
     points = 10,
@@ -2428,6 +2561,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Further Fueling the Prohibition",
     description = "Win the Legend Cup with a Cabalos (Tiger/Naga).",
     points = 10,
@@ -2435,6 +2569,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Nobody Can Dance With Wolves",
     description = "Win the Legend Cup with a White Hound (Tiger/???).",
     points = 10,
@@ -2444,6 +2579,7 @@ achievement(
 // ==== Hopper ====
 
 achievement(
+    set = legend_cup_set,
     title = "Jumping to Victory",
     description = "Win the Legend Cup with a Fairy Hopper (Hopper/Pixie).",
     points = 10,
@@ -2451,6 +2587,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Hopper of the Peaple",
     description = "Win the Legend Cup with a Draco Hopper (Hopper/Dragon).",
     points = 10,
@@ -2458,6 +2595,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Do Not Touch the Horn",
     description = "Win the Legend Cup with a Skipper (Hopper/Tiger).",
     points = 10,
@@ -2465,6 +2603,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Naughty Little Guy",
     description = "Win the Legend Cup with a Hopper (Hopper/Hopper).",
     points = 10,
@@ -2472,6 +2611,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "A Win for One Is a Win for All",
     description = "Win the Legend Cup with a Mustachios (Hopper/Kato).",
     points = 10,
@@ -2479,6 +2619,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Probably Eating the Cup After",
     description = "Win the Legend Cup with an Emerald Eye (Hopper/Bajarl).",
     points = 10,
@@ -2486,6 +2627,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Lustrous Future",
     description = "Win the Legend Cup with a Springer (Hopper/Metalner).",
     points = 10,
@@ -2493,6 +2635,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "It Sees All",
     description = "Win the Legend Cup with a Rear Eyed (Hopper/Suezo).",
     points = 10,
@@ -2500,6 +2643,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "A Real Trendsetter",
     description = "Win the Legend Cup with a Snow Hopper (Hopper/Jill).",
     points = 10,
@@ -2507,6 +2651,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Too Much of a Good Thing",
     description = "Win the Legend Cup with a Pink Hopper (Hopper/Mocchi).",
     points = 10,
@@ -2514,6 +2659,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Self-Centered Fighter",
     description = "Win the Legend Cup with a Sneak Hopper (Hopper/Joker).",
     points = 10,
@@ -2521,6 +2667,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "No Bark, All Bite",
     description = "Win the Legend Cup with a Woody Hopper (Hopper/Mock).",
     points = 10,
@@ -2528,6 +2675,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Deep Cover Hopper",
     description = "Win the Legend Cup with a Frog Hopper (Hopper/???).",
     points = 10,
@@ -2537,6 +2685,7 @@ achievement(
 // ==== Hare ====
 
 achievement(
+    set = legend_cup_set,
     title = "Self-Conscious Legend",
     description = "Win the Legend Cup with a Fairy Hare (Hare/Pixie).",
     points = 10,
@@ -2544,6 +2693,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Dexterity Made Optional",
     description = "Win the Legend Cup with a Rocky Fur (Hare/Golem).",
     points = 10,
@@ -2551,6 +2701,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Jumped to the Top",
     description = "Win the Legend Cup with a Scaled Hare (Hare/Zuum).",
     points = 10,
@@ -2558,6 +2709,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Chic Hare",
     description = "Win the Legend Cup with a Blue Hare (Hare/Tiger).",
     points = 10,
@@ -2565,6 +2717,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Quick Bugger, That One",
     description = "Win the Legend Cup with a Hare (Hare/Hare).",
     points = 10,
@@ -2572,6 +2725,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Divinity Asserting Dominance",
     description = "Win the Legend Cup with a Prince Hare (Hare/Gali).",
     points = 10,
@@ -2579,6 +2733,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "More Eyes Means More Accurate",
     description = "Win the Legend Cup with a Four Eyed (Hare/Suezo).",
     points = 10,
@@ -2586,6 +2741,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Power Lies in Its Flabby Belly",
     description = "Win the Legend Cup with a Jelly Hare (Hare/Jell).",
     points = 10,
@@ -2593,6 +2749,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Embossed Leaves",
     description = "Win the Legend Cup with a Leaf Hare (Hare/Plant).",
     points = 10,
@@ -2600,6 +2757,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Night Brawler",
     description = "Win the Legend Cup with an Evil Hare (Hare/Monol).",
     points = 10,
@@ -2607,6 +2765,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "The Eyebrows Alone Are Legendary",
     description = "Win the Legend Cup with a Wild Hare (Hare/Worm).",
     points = 10,
@@ -2614,6 +2773,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Glass Cannon",
     description = "Win the Legend Cup with a Purple Hare (Hare/Naga).",
     points = 10,
@@ -2621,6 +2781,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "The Next Jackie Chan",
     description = "Win the Legend Cup with a KungFuHare (Hare/???).",
     points = 10,
@@ -2630,6 +2791,7 @@ achievement(
 // ==== Baku ====
 
 achievement(
+    set = legend_cup_set,
     title = "Domesticated Laziness",
     description = "Win the Legend Cup with a Magmax (Baku/Dragon).",
     points = 10,
@@ -2637,6 +2799,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Master of Useless Facts",
     description = "Win the Legend Cup with a Higante (Baku/Golem).",
     points = 10,
@@ -2644,6 +2807,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "The People's Bulwark",
     description = "Win the Legend Cup with a War Baku (Baku/Durahan).",
     points = 10,
@@ -2651,6 +2815,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Glutton for Victory",
     description = "Win the Legend Cup with an Icebergy (Baku/Tiger).",
     points = 10,
@@ -2658,6 +2823,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Challenge of Legends Accepted",
     description = "Win the Legend Cup with a Gontar (Baku/Hare).",
     points = 10,
@@ -2665,6 +2831,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Pure and Innocent",
     description = "Win the Legend Cup with a Baku (Baku/Baku).",
     points = 10,
@@ -2672,6 +2839,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Risk Free Victory",
     description = "Win the Legend Cup with a Nussie (Baku/Kato).",
     points = 10,
@@ -2679,6 +2847,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "It Forgot Its Evil Duties",
     description = "Win the Legend Cup with a Baku Clown (Baku/Joker).",
     points = 10,
@@ -2686,6 +2855,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Patience Leads to Victory",
     description = "Win the Legend Cup with a Giga Pint (Baku/Jell).",
     points = 10,
@@ -2693,6 +2863,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Homogenic",
     description = "Win the Legend Cup with a ShiShi (Baku/???).",
     points = 10,
@@ -2702,6 +2873,7 @@ achievement(
 // ==== Gali ====
 
 achievement(
+    set = legend_cup_set,
     title = "A Strange Tale in the Ogre Battle Saga",
     description = "Win the Legend Cup with a Pink Mask (Gali/Pixie).",
     points = 10,
@@ -2709,6 +2881,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Be Ya Self",
     description = "Win the Legend Cup with a Stone Mask (Gali/Golem).",
     points = 10,
@@ -2716,6 +2889,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Jurassic Scales",
     description = "Win the Legend Cup with a Scaled Mask (Gali/Zuum).",
     points = 10,
@@ -2723,6 +2897,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Framed by Fangs",
     description = "Win the Legend Cup with a Fanged Mask (Gali/Tiger).",
     points = 10,
@@ -2730,6 +2905,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Hare-Brained Guardian",
     description = "Win the Legend Cup with a Furred Mask (Gali/Hare).",
     points = 10,
@@ -2737,6 +2913,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "A Bit Closer to God Now",
     description = "Win the Legend Cup with a Gali (Gali/Gali).",
     points = 10,
@@ -2744,6 +2921,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Decorative Eye",
     description = "Win the Legend Cup with a Suezo Mask (Gali/Suezo).",
     points = 10,
@@ -2751,6 +2929,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "The Gel Is Only Pictured",
     description = "Win the Legend Cup with an Aqua Mask (Gali/Jell).",
     points = 10,
@@ -2758,6 +2937,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Peace Loving Guardian",
     description = "Win the Legend Cup with a Colorful (Gali/Plant).",
     points = 10,
@@ -2765,6 +2945,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Smooth as Silk",
     description = "Win the Legend Cup with a Galirous (Gali/Monol).",
     points = 10,
@@ -2772,6 +2953,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "All Smiles Here",
     description = "Win the Legend Cup with a Brown Mask (Gali/Worm).",
     points = 10,
@@ -2779,6 +2961,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Born to Battle",
     description = "Win the Legend Cup with a Purple Mask (Gali/Naga).",
     points = 10,
@@ -2786,6 +2969,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "A Legend Larger Than Life",
     description = "Win the Legend Cup with a Happy Mask (Gali/???).",
     points = 10,
@@ -2795,6 +2979,7 @@ achievement(
 // ==== Kato ====
 
 achievement(
+    set = legend_cup_set,
     title = "Inherited Violent Tendencies",
     description = "Win the Legend Cup with a Draco Kato (Kato/Dragon).",
     points = 10,
@@ -2802,6 +2987,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Now You See Me, Now You Don't",
     description = "Win the Legend Cup with a Blue Kato (Kato/Tiger).",
     points = 10,
@@ -2809,6 +2995,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Look What the Cat Dragged In",
     description = "Win the Legend Cup with a Gordish (Kato/Gali).",
     points = 10,
@@ -2816,6 +3003,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Olive Oil Fanatic",
     description = "Win the Legend Cup with a Kato (Kato/Kato).",
     points = 10,
@@ -2823,6 +3011,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Befuddling Tactics",
     description = "Win the Legend Cup with a Citronie (Kato/Suezo).",
     points = 10,
@@ -2830,6 +3019,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Story of the Tamamayu",
     description = "Win the Legend Cup with a Pink Kato (Kato/Mocchi).",
     points = 10,
@@ -2837,6 +3027,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Reclusive Cat",
     description = "Win the Legend Cup with a Tainted Cat (Kato/Joker).",
     points = 10,
@@ -2844,6 +3035,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Rikimaru's Ancestor",
     description = "Win the Legend Cup with a Ninja Kato (Kato/???).",
     points = 10,
@@ -2853,6 +3045,7 @@ achievement(
 // ==== Zilla ====
 
 achievement(
+    set = legend_cup_set,
     title = "Immaculate Body Image",
     description = "Win the Legend Cup with a Pink Zilla (Zilla/Pixie).",
     points = 10,
@@ -2860,6 +3053,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Anti-Titanic Terror",
     description = "Win the Legend Cup with a Gooji (Zilla/Tiger).",
     points = 10,
@@ -2867,6 +3061,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Large Lad Wins it All",
     description = "Win the Legend Cup with a Zilla (Zilla/Zilla).",
     points = 10,
@@ -2874,6 +3069,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Eyes of the Sea",
     description = "Win the Legend Cup with a Gigalon (Zilla/Jell).",
     points = 10,
@@ -2881,6 +3077,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Perpetually in Fear of Gooji",
     description = "Win the Legend Cup with a Deluxe Liner (Zilla/???).",
     points = 10,
@@ -2890,6 +3087,7 @@ achievement(
 // ==== Bajarl ====
 
 achievement(
+    set = legend_cup_set,
     title = "Binto's Secret Pulling Through",
     description = "Win the Legend Cup with a Bajarl (Bajarl/Bajarl).",
     points = 10,
@@ -2897,6 +3095,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Made for Assassination",
     description = "Win the Legend Cup with a Jaba (Bajarl/Joker).",
     points = 10,
@@ -2904,6 +3103,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "King of the Ring",
     description = "Win the Legend Cup with a Boxer Bajarl (Bajarl/???).",
     points = 10,
@@ -2911,6 +3111,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "No Further Need to Hide in the Pot",
     description = "Win the Legend Cup with a Magic Bajarl (Bajarl/???).",
     points = 10,
@@ -2918,6 +3119,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Hero of Justice",
     description = "Win the Legend Cup with an Ultrarl (Bajarl/???).",
     points = 10,
@@ -2927,6 +3129,7 @@ achievement(
 // ==== Mew ====
 
 achievement(
+    set = legend_cup_set,
     title = "Lost the Moo Roulette, Still a Winner",
     description = "Win the Legend Cup with a Mum Mew (Mew/Pixie).",
     points = 10,
@@ -2934,6 +3137,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Tiger's Cousin, Twice Removed",
     description = "Win the Legend Cup with a Bowwow (Mew/Tiger).",
     points = 10,
@@ -2941,6 +3145,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Do Not Mess With Its Ears",
     description = "Win the Legend Cup with an Eared Mew (Mew/Hare).",
     points = 10,
@@ -2948,6 +3153,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "It Loves To Sing-a",
     description = "Win the Legend Cup with a Mew (Mew/Mew).",
     points = 10,
@@ -2955,6 +3161,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Dreams Can Come True",
     description = "Win the Legend Cup with an Aqua Mew (Mew/Jell).",
     points = 10,
@@ -2962,6 +3169,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Pool's Smelling Like Teen Spirit",
     description = "Win the Legend Cup with a Swimmer (Mew/???).",
     points = 10,
@@ -2971,6 +3179,7 @@ achievement(
 // ==== Phoenix ====
 
 achievement(
+    set = legend_cup_set,
     title = "Reborn Legend Upholding Its Status",
     description = "Win the Legend Cup with a Phoenix (Phoenix/Phoenix).",
     points = 10,
@@ -2978,6 +3187,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Burning with Rage",
     description = "Win the Legend Cup with a Cinder Bird (Phoenix/???).",
     points = 10,
@@ -2987,6 +3197,7 @@ achievement(
 // ==== Ghost ====
 
 achievement(
+    set = legend_cup_set,
     title = "Second Chance Taken",
     description = "Win the Legend Cup with a Ghost (Ghost/Ghost).",
     points = 10,
@@ -2994,6 +3205,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Iron Chef",
     description = "Win the Legend Cup with a Chef (Ghost/???).",
     points = 10,
@@ -3003,6 +3215,7 @@ achievement(
 // ==== Metalner ====
 
 achievement(
+    set = legend_cup_set,
     title = "What is Love?",
     description = "Win the Legend Cup with a Love Seeker (Metalner/Pixie).",
     points = 10,
@@ -3010,6 +3223,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Intergalactic Champion",
     description = "Win the Legend Cup with a Metalner (Metalner/Metalner).",
     points = 10,
@@ -3017,6 +3231,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Alien on Permanent Vacation",
     description = "Win the Legend Cup with a Metazorl (Metalner/Suezo).",
     points = 10,
@@ -3024,6 +3239,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Agent C's Claim to Fame",
     description = "Win the Legend Cup with a Chinois (Metalner/???).",
     points = 10,
@@ -3033,6 +3249,7 @@ achievement(
 // ==== Suezo ====
 
 achievement(
+    set = legend_cup_set,
     title = "All It Wanted was Equal Treatment",
     description = "Win the Legend Cup with a Pink Eye (Suezo/Pixie).",
     points = 10,
@@ -3040,6 +3257,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Heavyweight Champion",
     description = "Win the Legend Cup with a Rocky Suezo (Suezo/Golem).",
     points = 10,
@@ -3047,6 +3265,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Regular Farm Invader",
     description = "Win the Legend Cup with a Melon Suezo (Suezo/Zuum).",
     points = 10,
@@ -3054,6 +3273,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "The Horn Is a Metaphor",
     description = "Win the Legend Cup with a Horn (Suezo/Tiger).",
     points = 10,
@@ -3061,6 +3281,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Time for a New Adventure",
     description = "Win the Legend Cup with a Furred Suezo (Suezo/Hare).",
     points = 10,
@@ -3068,6 +3289,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Inside Its Eye Is Another Legend",
     description = "Win the Legend Cup with an Orion (Suezo/Gali).",
     points = 10,
@@ -3075,6 +3297,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Endearing Expressions",
     description = "Win the Legend Cup with a Suezo (Suezo/Suezo).",
     points = 10,
@@ -3082,6 +3305,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Modeling After the Ultimate Form",
     description = "Win the Legend Cup with a Clear Suezo (Suezo/Jell).",
     points = 10,
@@ -3089,6 +3313,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Earnest Among Suezos",
     description = "Win the Legend Cup with a Green Suezo (Suezo/Plant).",
     points = 10,
@@ -3096,6 +3321,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Insomniacs Rise Up",
     description = "Win the Legend Cup with a Red Eye (Suezo/Monol).",
     points = 10,
@@ -3103,6 +3329,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Legends Multiply",
     description = "Win the Legend Cup with a Fly Eye (Suezo/Worm).",
     points = 10,
@@ -3110,6 +3337,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Used Only a Fraction of Its Strength",
     description = "Win the Legend Cup with a Purple Suezo (Suezo/Naga).",
     points = 10,
@@ -3117,6 +3345,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "That's Gold, Jerry!",
     description = "Win the Legend Cup with a Gold Suezo (Suezo/???).",
     points = 10,
@@ -3124,6 +3353,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "No, I Don't Want No Scrub",
     description = "Win the Legend Cup with a Silver Suezo (Suezo/???).",
     points = 10,
@@ -3131,6 +3361,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Flush It All Away",
     description = "Win the Legend Cup with a Bronze Suezo (Suezo/???).",
     points = 10,
@@ -3138,6 +3369,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Nice Shot!",
     description = "Win the Legend Cup with a Birdie (Suezo/???).",
     points = 10,
@@ -3147,6 +3379,7 @@ achievement(
 // ==== Jill ====
 
 achievement(
+    set = legend_cup_set,
     title = "Meat Lover",
     description = "Win the Legend Cup with a Pong Pong (Jill/Pixie).",
     points = 10,
@@ -3154,6 +3387,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Finally Off Gathering Duty",
     description = "Win the Legend Cup with a Pierry (Jill/Tiger).",
     points = 10,
@@ -3161,6 +3395,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Huh? Was I Supposed To Win?",
     description = "Win the Legend Cup with a Wondar (Jill/Hare).",
     points = 10,
@@ -3168,6 +3403,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "In Need of a Victory Feast",
     description = "Win the Legend Cup with a Bengal (Jill/Kato).",
     points = 10,
@@ -3175,6 +3411,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Five Steps Ahead",
     description = "Win the Legend Cup with a Zorjil (Jill/Suezo).",
     points = 10,
@@ -3182,6 +3419,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Reppin' the North Side",
     description = "Win the Legend Cup with a Jill (Jill/Jill).",
     points = 10,
@@ -3189,6 +3427,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Enough Smart to Be A Legend",
     description = "Win the Legend Cup with a Skull Capped (Jill/Joker).",
     points = 10,
@@ -3196,6 +3435,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Yabba Dabba Doo!",
     description = "Win the Legend Cup with a Pithecan (Jill/???).",
     points = 10,
@@ -3205,6 +3445,7 @@ achievement(
 // ==== Mocchi ====
 
 achievement(
+    set = legend_cup_set,
     title = "The Most Beautiful Monster of All",
     description = "Win the Legend Cup with a Manna (Mocchi/Pixie).",
     points = 10,
@@ -3212,6 +3453,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Too Cute to Be Violent",
     description = "Win the Legend Cup with a Draco Mocchi (Mocchi/Dragon).",
     points = 10,
@@ -3219,6 +3461,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Natural Armor Coming in Clutch",
     description = "Win the Legend Cup with a KnightMocchi (Mocchi/Durahan).",
     points = 10,
@@ -3226,6 +3469,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Fake It 'Till You Make It",
     description = "Win the Legend Cup with a Fake Penguin (Mocchi/Tiger).",
     points = 10,
@@ -3233,6 +3477,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Taught This Old Cat Every Trick",
     description = "Win the Legend Cup with a Nyankoro (Mocchi/Kato).",
     points = 10,
@@ -3240,6 +3485,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Mascot Material",
     description = "Win the Legend Cup with a Mocchi (Mocchi/Mocchi).",
     points = 10,
@@ -3247,6 +3493,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Partial Fiend, Full Legend",
     description = "Win the Legend Cup with a Hell Pierrot (Mocchi/Joker).",
     points = 10,
@@ -3254,6 +3501,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "It Was Only Pretending To Be Soft",
     description = "Win the Legend Cup with a Gelatine (Mocchi/Jell).",
     points = 10,
@@ -3261,6 +3509,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Every Caloriena Counts",
     description = "Win the Legend Cup with a Caloriena (Mocchi/???).",
     points = 10,
@@ -3268,6 +3517,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Speeding to the Top",
     description = "Win the Legend Cup with a Mocchini (Mocchi/???).",
     points = 10,
@@ -3277,6 +3527,7 @@ achievement(
 // ==== Joker ====
 
 achievement(
+    set = legend_cup_set,
     title = "Famed Atrocity",
     description = "Win the Legend Cup with a Hell Heart (Joker/Pixie).",
     points = 10,
@@ -3284,6 +3535,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Crueler Than a Dragon",
     description = "Win the Legend Cup with a Flare Death (Joker/Dragon).",
     points = 10,
@@ -3291,6 +3543,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Strength Beyond Measure",
     description = "Win the Legend Cup with a Tombstone (Joker/Golem).",
     points = 10,
@@ -3298,6 +3551,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Only One Hit Needed",
     description = "Win the Legend Cup with a Blue Terror (Joker/Tiger).",
     points = 10,
@@ -3305,6 +3559,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Redemption After Disgrace",
     description = "Win the Legend Cup with an Odium (Joker/Bajarl).",
     points = 10,
@@ -3312,6 +3567,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Unsealed Terror",
     description = "Win the Legend Cup with a Joker (Joker/Joker).",
     points = 10,
@@ -3319,6 +3575,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Peak Aggression",
     description = "Win the Legend Cup with a Bloodshed (Joker/???).",
     points = 10,
@@ -3328,6 +3585,7 @@ achievement(
 // ==== Gaboo ====
 
 achievement(
+    set = legend_cup_set,
     title = "Cool as a Gaboo",
     description = "Win the Legend Cup with a Frozen Gaboo (Gaboo/Tiger).",
     points = 10,
@@ -3335,6 +3593,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Secret Numbing Agent Applied",
     description = "Win the Legend Cup with a Dokoo (Gaboo/Joker).",
     points = 10,
@@ -3342,6 +3601,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Shy Blob",
     description = "Win the Legend Cup with a Gaboo (Gaboo/Gaboo).",
     points = 10,
@@ -3349,6 +3609,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Core Not Needed",
     description = "Win the Legend Cup with a Jelly Gaboo (Gaboo/Jell).",
     points = 10,
@@ -3356,6 +3617,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Close Quarter Combat Master",
     description = "Win the Legend Cup with a GabooSoldier (Gaboo/???).",
     points = 10,
@@ -3365,6 +3627,7 @@ achievement(
 // ==== Jell ====
 
 achievement(
+    set = legend_cup_set,
     title = "Jam's Only For Fighting",
     description = "Win the Legend Cup with a Pink Jam (Jell/Pixie).",
     points = 10,
@@ -3372,6 +3635,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Walling the Competition",
     description = "Win the Legend Cup with a Wall Mimic (Jell/Golem).",
     points = 10,
@@ -3379,6 +3643,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Scales Are Only for Show",
     description = "Win the Legend Cup with a Scaled Jell (Jell/Zuum).",
     points = 10,
@@ -3386,6 +3651,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Confectionery Advertising",
     description = "Win the Legend Cup with an Icy Jell (Jell/Tiger).",
     points = 10,
@@ -3393,6 +3659,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Spiritually Related to Gaboo",
     description = "Win the Legend Cup with a Muddy Jell (Jell/Hare).",
     points = 10,
@@ -3400,6 +3667,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Many Reasons to Be Proud",
     description = "Win the Legend Cup with a Noble Jell (Jell/Gali).",
     points = 10,
@@ -3407,6 +3675,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "All-Seeing Eye",
     description = "Win the Legend Cup with an Eye Jell (Jell/Suezo).",
     points = 10,
@@ -3414,6 +3683,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Flexibility is Key For Winning",
     description = "Win the Legend Cup with a Jell (Jell/Jell).",
     points = 10,
@@ -3421,6 +3691,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Fiending for Water",
     description = "Win the Legend Cup with a Chloro Jell (Jell/Plant).",
     points = 10,
@@ -3428,6 +3699,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Coal Tar Making a Name For Itself",
     description = "Win the Legend Cup with a Clay (Jell/Monol).",
     points = 10,
@@ -3435,6 +3707,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Eyes Down Here, Buddy",
     description = "Win the Legend Cup with a Worm Jell (Jell/Worm).",
     points = 10,
@@ -3442,6 +3715,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Living in the Moment",
     description = "Win the Legend Cup with a Purple Jell (Jell/Naga).",
     points = 10,
@@ -3449,6 +3723,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "T-1000 Taking Names",
     description = "Win the Legend Cup with a Metal Jell (Jell/???).",
     points = 10,
@@ -3458,6 +3733,7 @@ achievement(
 // ==== Undine ====
 
 achievement(
+    set = legend_cup_set,
     title = "Wind and Water At Its Call",
     description = "Win the Legend Cup with a Siren (Undine/Joker).",
     points = 10,
@@ -3465,6 +3741,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "She's Talented on Land Too",
     description = "Win the Legend Cup with an Undine (Undine/Undine).",
     points = 10,
@@ -3472,6 +3749,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Now She's Part of That World",
     description = "Win the Legend Cup with a Mermaid (Undine/???).",
     points = 10,
@@ -3481,6 +3759,7 @@ achievement(
 // ==== Niton ====
 
 achievement(
+    set = legend_cup_set,
     title = "That Belongs in a Museum",
     description = "Win the Legend Cup with an Ammon (Niton/Golem).",
     points = 10,
@@ -3488,6 +3767,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Steel Shell",
     description = "Win the Legend Cup with a Knight Niton (Niton/Durahan).",
     points = 10,
@@ -3495,6 +3775,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "A Stripe Per Tournament Won",
     description = "Win the Legend Cup with a Stripe Shell (Niton/Kato).",
     points = 10,
@@ -3502,6 +3783,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Appearing With a Win",
     description = "Win the Legend Cup with an Alabia Niton (Niton/Bajarl).",
     points = 10,
@@ -3509,6 +3791,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "The Future Is Now",
     description = "Win the Legend Cup with a Metal Shell (Niton/Metalner).",
     points = 10,
@@ -3516,6 +3799,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Tough Nut to Crack",
     description = "Win the Legend Cup with a Clear Shell (Niton/Jell).",
     points = 10,
@@ -3523,6 +3807,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Rather Skittish",
     description = "Win the Legend Cup with a Niton (Niton/Niton).",
     points = 10,
@@ -3530,6 +3815,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Tree Cake",
     description = "Win the Legend Cup with a Baum Kuchen (Niton/Mock).",
     points = 10,
@@ -3537,6 +3823,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Kickball Champion",
     description = "Win the Legend Cup with a Dribbler (Niton/???).",
     points = 10,
@@ -3544,6 +3831,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Lightning McQueen",
     description = "Win the Legend Cup with a Radial Niton (Niton/???).",
     points = 10,
@@ -3551,6 +3839,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Best Disc Stone Ever",
     description = "Win the Legend Cup with a Disc Niton (Niton/???).",
     points = 10,
@@ -3560,6 +3849,7 @@ achievement(
 // ==== Mock ====
 
 achievement(
+    set = legend_cup_set,
     title = "Nobody Expects the Tree To Fight Back",
     description = "Win the Legend Cup with an Ebony (Mock/Joker).",
     points = 10,
@@ -3567,6 +3857,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Legendary Crook Gonzales",
     description = "Win the Legend Cup with a Mock (Mock/Mock).",
     points = 10,
@@ -3574,6 +3865,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Comparsa Companion",
     description = "Win the Legend Cup with a White Birch (Mock/???).",
     points = 25,
@@ -3581,6 +3873,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Electric Warrior",
     description = "Win the Legend Cup with a Pole Mock (Mock/???).",
     points = 25,
@@ -3590,6 +3883,7 @@ achievement(
 // ==== Ducken ====
 
 achievement(
+    set = legend_cup_set,
     title = "If Many Rocks Look Like A Duck...",
     description = "Win the Legend Cup with a Blocken (Ducken/Golem).",
     points = 10,
@@ -3597,6 +3891,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Lost Technology Rediscovered",
     description = "Win the Legend Cup with a Ticken (Ducken/Suezo).",
     points = 10,
@@ -3604,6 +3899,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Fun Can Providing So Much Fun",
     description = "Win the Legend Cup with a Ducken (Ducken/Ducken).",
     points = 10,
@@ -3611,6 +3907,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "These Are the Better Days",
     description = "Win the Legend Cup with a Watermelony (Ducken/???).",
     points = 10,
@@ -3618,6 +3915,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Not So Unlucky Now, Are We",
     description = "Win the Legend Cup with a Cawken (Ducken/???).",
     points = 10,
@@ -3627,6 +3925,7 @@ achievement(
 // ==== Plant ====
 
 achievement(
+    set = legend_cup_set,
     title = "Queen of FIMBA, Legend of IMa",
     description = "Win the Legend Cup with a Queen Plant (Plant/Pixie).",
     points = 10,
@@ -3634,6 +3933,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Getting Something Out of Nothing",
     description = "Win the Legend Cup with a Rock Plant (Plant/Golem).",
     points = 10,
@@ -3641,6 +3941,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Dream-Illuminating Lights",
     description = "Win the Legend Cup with a Scaled Plant (Plant/Zuum).",
     points = 10,
@@ -3648,6 +3949,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "This Plant's Got It All!",
     description = "Win the Legend Cup with a Blue Plant (Plant/Tiger).",
     points = 10,
@@ -3655,6 +3957,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Nimble Plant",
     description = "Win the Legend Cup with a Hare Plant (Plant/Hare).",
     points = 10,
@@ -3662,6 +3965,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Styling on the Opposition",
     description = "Win the Legend Cup with a Gold Plant (Plant/Gali).",
     points = 10,
@@ -3669,6 +3973,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "No Challenge Is Too Great",
     description = "Win the Legend Cup with an Usaba (Plant/Suezo).",
     points = 10,
@@ -3676,6 +3981,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Comfortably Numb",
     description = "Win the Legend Cup with a Mirage Plant (Plant/Jell).",
     points = 10,
@@ -3683,6 +3989,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Victory Via Attrition",
     description = "Win the Legend Cup with a Plant (Plant/Plant).",
     points = 10,
@@ -3690,6 +3997,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Sooty Foliage",
     description = "Win the Legend Cup with a Black Plant (Plant/Monol).",
     points = 10,
@@ -3697,6 +4005,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "A Plant By Any Other Name",
     description = "Win the Legend Cup with a Fly Plant (Plant/Worm).",
     points = 10,
@@ -3704,6 +4013,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Resilient Fauna",
     description = "Win the Legend Cup with a Weeds (Plant/Naga).",
     points = 10,
@@ -3711,6 +4021,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Loves Raggae and Winning Equally",
     description = "Win the Legend Cup with a Raggae Plant (Plant/???).",
     points = 10,
@@ -3720,6 +4031,7 @@ achievement(
 // ==== Monol ====
 
 achievement(
+    set = legend_cup_set,
     title = "Smothering All With Kindness",
     description = "Win the Legend Cup with a Romper Wall (Monol/Pixie).",
     points = 10,
@@ -3727,6 +4039,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "The Most Active Wall",
     description = "Win the Legend Cup with an Obelisk (Monol/Golem).",
     points = 10,
@@ -3734,6 +4047,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Noodles Are On It Tonight",
     description = "Win the Legend Cup with a Jura Wall (Monol/Zuum).",
     points = 10,
@@ -3741,6 +4055,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Sleeping Well After That Win",
     description = "Win the Legend Cup with a Blue Sponge (Monol/Tiger).",
     points = 10,
@@ -3748,6 +4063,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Warmest Wall",
     description = "Win the Legend Cup with a Furred Wall (Monol/Hare).",
     points = 10,
@@ -3755,6 +4071,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Deific Representation",
     description = "Win the Legend Cup with an Ivory Wall (Monol/Gali).",
     points = 10,
@@ -3762,6 +4079,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Recognizable From a Mile Away",
     description = "Win the Legend Cup with a Sandy (Monol/Suezo).",
     points = 10,
@@ -3769,6 +4087,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Summertime Champ",
     description = "Win the Legend Cup with an Ice Candy (Monol/Jell).",
     points = 10,
@@ -3776,6 +4095,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Soil Gave It Strength",
     description = "Win the Legend Cup with a New Leaf (Monol/Plant).",
     points = 10,
@@ -3783,6 +4103,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Parts Stronger Than the Whole",
     description = "Win the Legend Cup with a Monol (Monol/Monol).",
     points = 10,
@@ -3790,6 +4111,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "I Swear The Walls Have Eyes!",
     description = "Win the Legend Cup with a Soboros (Monol/Worm).",
     points = 10,
@@ -3797,6 +4119,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Ant-Proof",
     description = "Win the Legend Cup with an Asphaltum (Monol/Naga).",
     points = 10,
@@ -3804,6 +4127,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "The Rise of Darth Monol",
     description = "Win the Legend Cup with a Galaxy (Monol/???).",
     points = 10,
@@ -3811,6 +4135,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "No One Can Stop Mr. Domino",
     description = "Win the Legend Cup with a Dominos (Monol/???).",
     points = 10,
@@ -3818,6 +4143,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Performed Better On The Wall",
     description = "Win the Legend Cup with a Scribble (Monol/???).",
     points = 10,
@@ -3827,6 +4153,7 @@ achievement(
 // ==== Ape ====
 
 achievement(
+    set = legend_cup_set,
     title = "Stone Statue",
     description = "Win the Legend Cup with a Rock Ape (Ape/Golem).",
     points = 10,
@@ -3834,6 +4161,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Honest Techniques Only",
     description = "Win the Legend Cup with a Gibberer (Ape/Hare).",
     points = 10,
@@ -3841,6 +4169,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Lazy Yet Capable",
     description = "Win the Legend Cup with a Bossy (Ape/Gali).",
     points = 10,
@@ -3848,6 +4177,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Using Natural Funk to Its Advantage",
     description = "Win the Legend Cup with a Tropical Ape (Ape/Plant).",
     points = 10,
@@ -3855,6 +4185,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Unparalleled Laziness",
     description = "Win the Legend Cup with an Ape (Ape/Ape).",
     points = 10,
@@ -3862,6 +4193,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "A Warhol & Nico Special",
     description = "Win the Legend Cup with a Gold Dust (Ape/???).",
     points = 10,
@@ -3871,6 +4203,7 @@ achievement(
 // ==== Worm====
 
 achievement(
+    set = legend_cup_set,
     title = "Rare Beauty",
     description = "Win the Legend Cup with a Red Worm (Worm/Pixie).",
     points = 10,
@@ -3878,6 +4211,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Coveted Eyes",
     description = "Win the Legend Cup with a Rock Worm (Worm/Golem).",
     points = 10,
@@ -3885,6 +4219,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Didn't Even Need Its Legs",
     description = "Win the Legend Cup with a Scaled Worm (Worm/Zuum).",
     points = 10,
@@ -3892,6 +4227,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Tusks to Be Feared",
     description = "Win the Legend Cup with a Drill Tusk (Worm/Tiger).",
     points = 10,
@@ -3899,6 +4235,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Orayo!",
     description = "Win the Legend Cup with a Corone (Worm/Hare).",
     points = 10,
@@ -3906,6 +4243,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Tougher Than Advertised",
     description = "Win the Legend Cup with a Mask Worm (Worm/Gali).",
     points = 10,
@@ -3913,6 +4251,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Good Luck Finding the Real Eye",
     description = "Win the Legend Cup with an Eye Worm (Worm/Suezo).",
     points = 10,
@@ -3920,6 +4259,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Flabby Body Saving the Day",
     description = "Win the Legend Cup with a Jelly Worm (Worm/Jell).",
     points = 10,
@@ -3927,6 +4267,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Red and Blue Contrasting Well",
     description = "Win the Legend Cup with a Flower Worm (Worm/Plant).",
     points = 10,
@@ -3934,6 +4275,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Carrying Itself to Victory",
     description = "Win the Legend Cup with a Black Worm (Worm/Monol).",
     points = 10,
@@ -3941,6 +4283,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "No Weaknesses Found",
     description = "Win the Legend Cup with a Worm (Worm/Worm).",
     points = 10,
@@ -3948,6 +4291,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "The Shiny Eyes Are Still Scary",
     description = "Win the Legend Cup with a Purple Worm (Worm/Naga).",
     points = 10,
@@ -3955,6 +4299,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "This Express is Licensed to Ill",
     description = "Win the Legend Cup with an Express Worm (Worm/???).",
     points = 10,
@@ -3964,6 +4309,7 @@ achievement(
 // ==== Naga ====
 
 achievement(
+    set = legend_cup_set,
     title = "Almost Forgot It Was a Monster",
     description = "Win the Legend Cup with a Ripper (Naga/Pixie).",
     points = 10,
@@ -3971,6 +4317,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "A Single Strike Won It All",
     description = "Win the Legend Cup with a Trident (Naga/Golem).",
     points = 10,
@@ -3978,6 +4325,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Blowing Raspberries at the Competition",
     description = "Win the Legend Cup with a Stinger (Naga/Zuum).",
     points = 10,
@@ -3985,6 +4333,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Rare Obedience",
     description = "Win the Legend Cup with a Striker (Naga/Tiger).",
     points = 10,
@@ -3992,6 +4341,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Don't Cut Yourself on That Edge",
     description = "Win the Legend Cup with an Edgehog (Naga/Hare).",
     points = 10,
@@ -3999,6 +4349,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Slow and Steady Wins the Fight",
     description = "Win the Legend Cup with a Bazula (Naga/Gali).",
     points = 10,
@@ -4006,6 +4357,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "It Agreed To This One Goal",
     description = "Win the Legend Cup with a Cyclops (Naga/Suezo).",
     points = 10,
@@ -4013,6 +4365,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Adopting a Slithery Form",
     description = "Win the Legend Cup with an Aqua Cutter (Naga/Jell).",
     points = 10,
@@ -4020,6 +4373,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Broke the Cycle of Jungle Hunting",
     description = "Win the Legend Cup with a Jungler (Naga/Plant).",
     points = 10,
@@ -4027,6 +4381,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "In For a Long Fight",
     description = "Win the Legend Cup with a Crimson Eyed (Naga/Monol).",
     points = 10,
@@ -4034,6 +4389,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Nature's Strongest Protector",
     description = "Win the Legend Cup with an Earth Keeper (Naga/Worm).",
     points = 10,
@@ -4041,6 +4397,7 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "Cruel and Unusual Tactics",
     description = "Win the Legend Cup with a Naga (Naga/Naga).",
     points = 10,
@@ -4048,9 +4405,9 @@ achievement(
 )
 
 achievement(
+    set = legend_cup_set,
     title = "One Step Closer to Immortality",
     description = "Win the Legend Cup with a Time Noise (Naga/???).",
     points = 10,
     trigger = monster_trained("Time Noise") && is_primary_breed("Naga") && rare_breed_matches("Time Noise") && prereqs_met() && prev(legend_cup() == 0x00) && legend_cup() == 0x01
 )
-

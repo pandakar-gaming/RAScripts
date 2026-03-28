@@ -139,7 +139,7 @@ function on_branching_mission(mission_name, ending) {
         } else if (mission_name == "Correct Tomorrow") {
             identified_mission = 0x1faa
         }
-    } else if (ending == "Al Saiduq") {
+    } else if (ending == "Al Saiduq" || ending == "Anguished One") {
         if (mission_name == "Vs. Tokyo") {
             identified_mission = 0x1c85
         // I would put these in order but RATools is freaking out on me for some nondescript reason if this is where I want it to be
@@ -442,6 +442,45 @@ function only_friendly_teams_left_with_exception_team(exception_team_index) {
         )
 }
 
+// non trigger-y version of above
+function only_friendly_teams_and_exception_team(exception_team_index) {
+        return (
+            // Case 1: one party member alive
+            (
+                __ornext(byte(COMBAT_PTR + 0x250) <= 0x03 || byte(COMBAT_PTR + 0x250) == exception_team_index)
+                && __ornext(byte(COMBAT_PTR + 0x251) <= 0x03 || byte(COMBAT_PTR + 0x251) == exception_team_index)
+                && byte(COMBAT_PTR + 0x252) == 0xff
+            )
+            ||
+            // Case 2: two party members alive
+            (
+                __ornext(byte(COMBAT_PTR + 0x250) <= 0x03 || byte(COMBAT_PTR + 0x250) == exception_team_index)
+                && __ornext(byte(COMBAT_PTR + 0x251) <= 0x03 || byte(COMBAT_PTR + 0x251) == exception_team_index)
+                && __ornext(byte(COMBAT_PTR + 0x252) <= 0x03 || byte(COMBAT_PTR + 0x252) == exception_team_index)
+                && byte(COMBAT_PTR + 0x253) == 0xff
+            )
+            ||
+            // Case 3: three party members alive
+            (
+                __ornext(byte(COMBAT_PTR + 0x250) <= 0x03 || byte(COMBAT_PTR + 0x250) == exception_team_index)
+                && __ornext(byte(COMBAT_PTR + 0x251) <= 0x03 || byte(COMBAT_PTR + 0x251) == exception_team_index)
+                && __ornext(byte(COMBAT_PTR + 0x252) <= 0x03 || byte(COMBAT_PTR + 0x252) == exception_team_index)
+                && __ornext(byte(COMBAT_PTR + 0x253) <= 0x03 || byte(COMBAT_PTR + 0x253) == exception_team_index)
+                && byte(COMBAT_PTR + 0x254) == 0xff
+            )
+            ||
+            // Case 4: four party members alive
+            (
+                __ornext(byte(COMBAT_PTR + 0x250) <= 0x03 || byte(COMBAT_PTR + 0x250) == exception_team_index)
+                && __ornext(byte(COMBAT_PTR + 0x251) <= 0x03 || byte(COMBAT_PTR + 0x251) == exception_team_index)
+                && __ornext(byte(COMBAT_PTR + 0x252) <= 0x03 || byte(COMBAT_PTR + 0x252) == exception_team_index)
+                && __ornext(byte(COMBAT_PTR + 0x253) <= 0x03 || byte(COMBAT_PTR + 0x253) == exception_team_index)
+                && __ornext(byte(COMBAT_PTR + 0x254) <= 0x03 || byte(COMBAT_PTR + 0x254) == exception_team_index)
+                && byte(COMBAT_PTR + 0x255) == 0xff
+            )
+        )
+}
+
 // Checks if a specific team is alive in the current combat mission.
 // Usually, if you care about this, you know that the unit is "special" so you should have a good idea
 // of what order they got spawned in. I.e. you SHOULD know the index of the unit.
@@ -626,35 +665,39 @@ function true_auction_cost() => dword(FULL_AUCTION_PTR + 0x1cc) + dword(FULL_AUC
 
 // Many perks are available from New Game Plus. Sometimes, we even care which ones are enabled!
 function new_game_plus_perk_enabled(perk) {
+    flag = always_true()
+
     if (perk == "Carry over 1 demon") {
-
+        flag = bit0(0x00287074)
     } else if (perk == "Carry over 4 demons") {
-
+        flag =  bit1(0x00287074)
     } else if (perk == "Carry over 8 demons") {
-
+        flag = bit2(0x00287074)
     } else if (perk == "Carry over all demons") {
-
+        flag = bit3(0x00287074)
     } else if (perk == "Carry over skills") {
-
+        flag = bit4(0x00287074)
     } else if (perk == "Carry over Macca") {
-
+        flag = bit5(0x00287074)
     } else if (perk == "Carry over auction") {
-
+        flag = bit6(0x00287074)
     } else if (perk == "Remove EXP limit") {
-
+        flag = bit7(0x00287074)
     } else if (perk == "10% off Compendium") {
-
+        flag = bit0(0x00287075)
     } else if (perk == "30% off Compendium") {
-
+        flag = bit1(0x00287075)
     } else if (perk == "50% off Compendium") {
-
+        flag = bit2(0x00287075)
     } else if (perk == "Remove fusion LV limit") {
-
+        flag = bit3(0x00287075)
     } else if (perk == "New Tuesday enemy") {
-
+        flag = bit6(0x00287075)
     } else if (perk == "Unlock Mitama fusion") {
-
+        flag = bit7(0x00287075)
     }
+
+    return flag == 1
 }
 
 // Stub for now until I have logic for this.
@@ -924,29 +967,29 @@ monster_addr_by_name = {
 
 demons_by_race = {
     "Omega": ["Shiva", "Beiji-Weng", "Susano-o", "Kartikeya", "Wu Kong", "Chernobog", "Tonatiuh"],
-    "Megami": [],
-    "Deity": [],
-    "Vile": [],
-    "Snake": [],
-    "Dragon": [],
-    "Divine": [],
-    "Avian": [],
-    "Fallen": [],
-    "Avatar": [],
-    "Beast": [],
-    "Wilder": [],
-    "Genma": [],
-    "Fairy": [],
-    "Tyrant": [],
-    "Kishin": [],
-    "Touki": [],
-    "Jaki": [],
-    "Femme": [],
-    "Ghost": [],
-    "Fiend": [],
-    "Hero": [],
-    "Element": [],
-    "Mitama": [],
+    "Megami": ["Amaterasu", "Pallas Athena", "Norn", "Parvati", "Isis", "Laksmi", "Scathach", "Brigid", "Hathor", "Kikuri-Hime", "Sarasvati"],
+    "Deity": ["Asura", "Lord Nan Dou", "Baal", "Alilat", "Lugh", "Osiris", "Mithra", "Inti", "Yama", "Odin", "Arahabaki", "Thor", "Mahakala"],
+    "Vile": ["Nyarlathotep", "Tezcatlipoca", "Tao Tie", "Abaddon", "Pazuzu", "Baphomet", "Orcus"],
+    "Snake": ["Hoyau Kamui", "Ananta", "Orochi", "Gucumatz", "Seiryuu", "Quetzalcoatl", "Gui Xian", "Pendragon", "Nozuchi", "Makara"],
+    "Dragon": ["Vasuki", "Vritra", "Culebre", "Python", "Ym", "Asp", "Basilisk", "Bai Suzhen", "Toubyou"],
+    "Divine": ["Metatron", "Remiel", "Kazfiel", "Aniel", "Lailah", "Power", "Angel"],
+    "Avian": ["Da Peng", "Garuda", "Feng Huang", "Anzu", "Badb Catha", "Vidofnir", "Suparna", "Hamsa", "Moh Shuvuu", "Itsumade"],
+    "Fallen": ["Satan", "Nebiros", "Agares", "Murmur", "Decarabia", "Orobas", "Bifrons", "Nisroc", "Botis", "Barbatos", "Flauros", "Abraxas", "Gagyson"],
+    "Avatar": ["Anubis", "Barong", "Ukano Mitama", "Airavata", "Baihu", "Pabilsag", "Bai Ze", "Kamapua'a", "Shiisaa", "Apis", "Heqet"],
+    "Beast": ["Fenrir", "Cerberus", "Myrmecolion", "Nue", "Cait Sith", "Orthrus", "Nekomata", "Hairy Jack", "Kabuso"],
+    "Wilder": ["Ammut", "Behemoth", "Sleipnir", "Taown", "Mothman", "Xiezhai", "Afanc", "Garm", "Waira", "Hare of Inaba"],
+    "Genma": ["Heimdall", "Jarilo", "Ganesha", "Kangiten", "Kresnik", "Kama", "Cu Chulainn", "Hanuman", "Tlaloc", "Ictinike", "Jambavan", "Tam Lin"],
+    "Fairy": ["Oberon", "Titania", "Vivian", "Silky", "Lorelei", "Pyro Jack", "Jack Frost", "Kijimunaa", "Knocker", "Pixie"],
+    "Tyrant": ["Lucifer", "Beelzebub", "Belial", "Nergal", "Astaroth", "Mot", "Loki", "Tzitzmitl", "Hecate", "Balor", "Moloch", "King Frost"],
+    "Kishin": ["Zaou Gongen", "Ometeotl", "Bishamonten", "Koumokuten", "Jikokuten", "Zouchouten", "Take-Mikazuchi", "Hitokotonusi", "Nalagiri", "Ubelluris"],
+    "Touki": ["Oumitsunu", "Nata Taishi", "Yaksa", "Lham Dearg", "Berserker", "Ikusa", "Mezuki", "Gozuki", "Bilwis", "Kobold"],
+    "Jaki": ["Black Frost", "Grendel", "Rakshasa", "Girimehkala", "Legion", "Wendigo", "Ogun", "Mokoi", "Ogre", "Obariyon"],
+    "Femme": ["Lilith", "Kali", "Anat", "Rangda", "Dzelarhons", "Hariti", "Ixtab", "Peri", "Yuki Jyorou", "Leanan Sidhe", "Lilim", "Kikimora"],
+    "Ghost": ["Purple Mirror", "Kudlak", "Pisaca", "Loa", "Kumbhanda", "Tenong Cut", "Agathion", "Poltergeist"],
+    "Fiend": ["Alice", "Trumpeter", "Billiken", "Sage of Time", "Ghost Q"],
+    "Hero": ["Masakado", "Guan Yu", "Yoshitsune", "Jeanne d'Arc", "Hagen", "Neko Shogun"],
+    "Element": ["Flaemis", "Aquans", "Aeros", "Erthys"],
+    "Mitama": ["Nigi Mitama", "Ara Mitama", "Kusi Mitama", "Saki Mitama"],
 }
 
 function num_demons_of_race_registered(race) {
@@ -1202,6 +1245,7 @@ enemy_id_by_name = {
     "Punk":           0xf9,  // Specifically from App Abuser Snipe/Mana Bonus/Hustle
     "Phecda (Magic)": 0xff,
     "Phecda (Phys)":  0x100,
+    "Megrez Bud":     0x101,
     "Dragon":         0x103,
     "Young Man":      0x10c, // Specifically from App Abuser Extra Cancel/Extra Bonus/Hustle
     "Dubhe (Whole)":  0x114, // Dubhe that can reflect phys and null others
@@ -1225,6 +1269,7 @@ enemy_id_by_name = {
     "Mizar Tentacle (2R)": 0x128,
     "Mizar Tentacle (2L)": 0x129,
     "Mizar Tentacle (3L)": 0x12a,
+    "Benetnasch Bud": 0x12b,
     "Alcor (Alternate)": 0x130, // Alcor on Yamato's Way
     "Polaris A":        0x131,
     "Tall Woman":     0x134, // Makoto in Daichi's Crisis
@@ -1233,6 +1278,7 @@ enemy_id_by_name = {
     "Lilith (Hostile)": 0x162, // Version of Lilith that shows up in Original Wife
     "Polaris (Complete)": 0x163, // the actual fr fr final boss
     "Vacant Woman":   0x164, // Fumi in Demon-Hacked
+    "Fumi (Hacking)": 0x167, // Fumi in Vs. Osaka, Ronaldo
 }
 
 // This map exists for RP purposes, that's it
@@ -1476,6 +1522,7 @@ enemy_name_by_id = {
     0xfc: "Yakuza",
     0xff: "Phecda",
     0x100: "Phecda",
+    0x101: "Megrez",
     0x103: "Dragon",
     0x10a: "Worker",
     0x10b: "Student",
@@ -1527,7 +1574,8 @@ enemy_name_by_id = {
     0x161: "Fumi",        // in Hacker Revealed
     0x162: "Lilith",      // in Original Wife
     0x163: "Polaris",
-    0x164: "Vacant Woman" // Fumi in Demon-Hacked
+    0x164: "Vacant Woman", // Fumi in Demon-Hacked
+    0x167: "Fumi" // Fumi in Vs. Osaka, Ronaldo edition
 }
 
 // Check if the player has access to the demon compendium
@@ -2086,6 +2134,18 @@ function mail_triggered(mail_name) {
     }
 
     return byte(addr) != 0xff && prev(bit7(addr)) == 0x01 && bit7(addr) == 0x00
+}
+
+// For Saturday/Last Day, when everyone has literally the same mission name
+function on_shared_mission(event_name) {
+    if (event_name == "Seven Down") {
+        return (
+            MOST_RECENT_MISSION == 0x1c31 || // Daichi's Way
+            MOST_RECENT_MISSION == 0x1c96 || // Al Saiduq
+            MOST_RECENT_MISSION == 0x1bcc || // Yamato
+            MOST_RECENT_MISSION == 0x1b68 // Ronaldo 
+        )
+    }
 }
 
 achievement(
@@ -2685,18 +2745,23 @@ achievement(
     id=530972
 )
 
+// Check if the given unit is using Diastrophism.
+// This is an ability specific to buds of septentriones. Megrez or Benetnasch.
+// This ability can be dodged in one of a few ways:
+// - nullify phys
+// - be Avian
+// - be Divine
 function unit_using_diastrophism(team_id) {
     offset_to_team = 0x26c + (0x27c * team_id)
-
-    diastrophism_users = [
-        "Megrez Bud", // Bud of Malice
-        "", // Delta Attack
-        "" // Seven Down
-    ]
+    offset_to_team_lead_id = 0xa
+    offset_to_diastrophism_indicator = 0x5
 
     return byte(COMBAT_PTR + 0x250) == team_id
-        && word(COMBAT_PTR + offset_to_team + offset_to_team_lead_id) == megrez_bud_id
-        && word(COMBAT_PTR + offset_to_team + offset_to_ability) == 0x40
+        && __ornext(
+            word(COMBAT_PTR + offset_to_team + offset_to_team_lead_id) == enemy_id_by_name["Megrez Bud"]
+            || word(COMBAT_PTR + offset_to_team + offset_to_team_lead_id) == enemy_id_by_name["Benetnasch Bud"]
+        )
+        && word(COMBAT_PTR + offset_to_team + offset_to_diastrophism_indicator) == 0x40
 }
 
 // Test cases:
@@ -2721,15 +2786,21 @@ achievement(
         && __ornext(
             MOST_RECENT_MISSION == event_id_by_name["Bud of Malice"] ||
             MOST_RECENT_MISSION == event_id_by_name["Delta Battle"] ||
-            on_branching_mission("Seven Down", "Daichi") ||
-            on_branching_mission("Seven Down", "Anguished One") ||
-            on_branching_mission("Seven Down", "Yamato") ||
-            on_branching_mission("Seven Down", "Ronaldo")
+            on_shared_mission("Seven Down")
         )
         && ptr_valid(FULL_COMBAT_PTR)
         // This part also needs to change
         // "It is this unit's turn and their action has flipped to this unique ability id" 
         && byte(COMBAT_PTR + 0xc61) == 0x40
+        && (unit_using_diastrophism(4) 
+            || unit_using_diastrophism(5) 
+            || unit_using_diastrophism(6) 
+            || unit_using_diastrophism(7)
+            || unit_using_diastrophism(8)
+            || unit_using_diastrophism(9)
+            || unit_using_diastrophism(10)
+            || unit_using_diastrophism(11)
+        )
         && (
                 // team 0
                 (
@@ -3099,54 +3170,54 @@ achievement(
 )
 
 achievement(
-    title = "An End In Sight",
-    // Fumi can in fact run out of demons! She did it for me on Ronaldo's path.
-    // I need to test further but she might be able to do it on the other paths too!
+    id = 597869,
+    title = "How Many Demons Could a Phone Hold, Anyway?",
     description = "On Vs. Osaka, defeat Fumi last.",
     points = 5,
-    trigger = __ornext(
-        on_branching_mission("Vs. Osaka", "Daichi") ||
-        on_branching_mission("Vs. Osaka", "Anguished One") ||
+    // do this one at a time
+    trigger = (
+        __ornext(on_branching_mission("Vs. Osaka", "Anguished One") || on_branching_mission("Vs. Osaka", "Daichi"))
+        && bit2(COMBAT_PTR + 0xc5c) == 0x00 
+        && bit2(COMBAT_PTR + 0xed8) == 0x00
+        && bit2(COMBAT_PTR + 0x1154) == 0x00
+        && bit2(COMBAT_PTR + 0x13d0) == 0x00
+        && byte(COMBAT_PTR + 0x164c) == 0x07
+        && word(COMBAT_PTR + 0x1656) == enemy_id_by_name["Fumi"] 
+        && bit2(COMBAT_PTR + 0x18c8) == 0x00
+        && bit2(COMBAT_PTR + 0x1b44) == 0x00
+        && bit2(COMBAT_PTR + 0x1dc0) == 0x00
+        && combat_actively_occurring()
+        && specific_leader_defeated("Fumi")
+    ) || (
         on_branching_mission("Vs. Osaka", "Ronaldo")
-    )  && (
-        // todo confirm fumi's unit id in every mission
-        // if it's different per mission, then the or_branching_mission check goes in each block check
-        byte(COMBAT_PTR + 0x250) <= 0x04 &&
-        byte(COMBAT_PTR + 0x251) <= 0x04 &&
-        __ornext(byte(COMBAT_PTR + 0x252) <= 0x04 || byte(COMBAT_PTR + 0x252) == 0xff) &&
-        __ornext(byte(COMBAT_PTR + 0x253) <= 0x04 || byte(COMBAT_PTR + 0x253) == 0xff) &&
-        __ornext(byte(COMBAT_PTR + 0x254) <= 0x04 || byte(COMBAT_PTR + 0x254) == 0xff)
-    ) 
-    && combat_actively_occurring()
-    && specific_leader_defeated("Fumi")
+        && byte(COMBAT_PTR + 0xc5c) == 0x07 
+        && word(COMBAT_PTR + 0xc66) == enemy_id_by_name["Fumi (Hacking)"]
+        && bit2(COMBAT_PTR + 0xed8) == 0x00
+        && bit2(COMBAT_PTR + 0x1154) == 0x00
+        && bit2(COMBAT_PTR + 0x13d0) == 0x00
+        && bit2(COMBAT_PTR + 0x164c) == 0x00
+        && bit2(COMBAT_PTR + 0x18c8) == 0x00
+        && bit2(COMBAT_PTR + 0x1b44) == 0x00
+        && bit2(COMBAT_PTR + 0x1dc0) == 0x00
+        && combat_actively_occurring()
+        && specific_leader_defeated("Fumi (Hacking)")
+    )
 )
 
-// For Saturday/Last Day, when everyone has literally the same mission name
-function on_shared_mission(event_name) {
-    eligible_events = []
 
-    if (event_name == "Seven Down") {
-        return __ornext(
-            MOST_RECENT_MISSION == 0x1c31 || // Daichi's Way
-            MOST_RECENT_MISSION == 0x1c96 || // Al Saiduq
-            MOST_RECENT_MISSION == 0x1bcc || // Yamato
-            MOST_RECENT_MISSION == 0x1b68 // Ronaldo 
-        )
-    }
-}
 achievement(
     title = "Eta Ursae Majoris",
     description = "Defeat Benetnasch with Trumpeter having been hit no more than two times.",
     points = 10,
     trigger = actively_in_event()
-        && on_shared_mission("Seven Down")
+        && __ornext(on_shared_mission("Seven Down"))
         // pseudologic: 
         // - enemy slot where Trumpeter is, is actually Trumpeter && never curr_hp < max_hp
         // - main Benetnasch defeated
         // - each child Benetnasch defeated
         && word(COMBAT_PTR + 0xef2) == 561
         && word(COMBAT_PTR + 0xee2) == 0xbe
-        && disable_when(tally(3, prev(word(COMBAT_PTR + 0xef0)) > word(COMBAT_PTR + 0xef0)), until=!on_shared_mission("Seven Down"))
+        && disable_when(tally(3, prev(word(COMBAT_PTR + 0xef0)) > word(COMBAT_PTR + 0xef0)), until=!__ornext(on_shared_mission("Seven Down")))
         // sanity checking that at least one of the Benetnasch splits is on the field. presuming they can spawn in any order
         && trigger_when(__ornext(
             (word(COMBAT_PTR + 0xc66) == 0x12c) ||
@@ -3169,7 +3240,7 @@ achievement(
     description = "Defeat Benetnasch.",
     points = 25,
     trigger = actively_in_event()
-        && on_shared_mission("Seven Down")
+        && __ornext(on_shared_mission("Seven Down"))
         && mail_triggered("Re: Trumpeter"),
     type = "progression"
 )
@@ -3241,6 +3312,7 @@ achievement(
     && specific_leader_defeated("Alcor (Alternate)")
 )
 achievement(
+    id = 597442,
     title = "Earth's Cepheid",
     description = "Defeat the first form of Polaris without releasing any of its weaknesses.",
     points = 25,
@@ -3358,6 +3430,7 @@ achievement(
         ) && character_died("Anguished One")
 )
 achievement(
+    id = 597443,
     title = "Dreamed Future",
     description = "Overcome the administrator's test and win an opportunity to try this all again.",
     points = 25,
@@ -3377,6 +3450,7 @@ achievement(
         && specific_leader_defeated("Polaris A")
 )
 achievement(
+    id = 597444,
     title = "Will of the Species",
     description = "Defeat Polaris with all possible demon users alive and recruited.",
     points = 25,
@@ -3556,7 +3630,7 @@ achievement(
 achievement(
     title = "Sunday's Melancholy",
     // Reach the end of Day 1 without ever entering any Free Battle. [No Demon carry over] [No Macca carry over] [No Compendium discount]
-    description = "Reach the end of Day 1 without ever entering any Free Battle (No Demon carry over / No Macca carry over / No compendium discount).",
+    description = "Reach the end of Day 1 without ever entering any Free Battle and with no Demon carry over, no Macca carry over or no compendium discount.",
     points = 5,
     trigger = !new_game_plus_perk_enabled("Carry over 1 demon")
         && !new_game_plus_perk_enabled("Carry over 4 demons")
@@ -3566,10 +3640,11 @@ achievement(
         && !new_game_plus_perk_enabled("10% off Compendium")
         && !new_game_plus_perk_enabled("30% off Compendium")
         && !new_game_plus_perk_enabled("50% off Compendium")
-        && never(is_new_game_plus()) 
         && !entered_free_battle() 
-        && is_time_of_day(21, 0)
-        && is_day("Sunday") 
+        && prev(is_time_of_day(21, 0))
+        && is_time_of_day(0, 0)
+        && prev(is_day("Sunday"))
+        && is_day("Monday") 
         && prev(bit0(0x00284aec)) == 0x00 
         && bit0(0x00284aec) == 0x01,
     type = "missable",
@@ -3577,12 +3652,21 @@ achievement(
 )
 achievement(
     title = "Monday's Turmoil",
-    description = "Reach the end of Day 2 without ever entering any Free Battle  (No Demon carry over / No Macca carry over / No compendium discount).",
+    description = "Reach the end of Day 2 without ever entering any Free Battle and with no Demon carry over, no Macca carry over or no compendium discount..",
     points = 10,
-    trigger = never(is_new_game_plus()) 
+    trigger = !new_game_plus_perk_enabled("Carry over 1 demon")
+        && !new_game_plus_perk_enabled("Carry over 4 demons")
+        && !new_game_plus_perk_enabled("Carry over 8 demons")
+        && !new_game_plus_perk_enabled("Carry over all demons")
+        && !new_game_plus_perk_enabled("Carry over Macca")
+        && !new_game_plus_perk_enabled("10% off Compendium")
+        && !new_game_plus_perk_enabled("30% off Compendium")
+        && !new_game_plus_perk_enabled("50% off Compendium")
         && !entered_free_battle() 
-        && is_time_of_day(21, 0)
-        && is_day("Monday") 
+        && prev(is_time_of_day(21, 0))
+        && is_time_of_day(0, 0)
+        && prev(is_day("Monday"))
+        && is_day("Tuesday") 
         && prev(bit2(0x00284aef)) == 0x00 
         && bit2(0x00284aef) == 0x01,
     type = "missable",
@@ -3590,12 +3674,21 @@ achievement(
 )
 achievement(
     title = "Tuesday's Disquiet",
-    description = "Reach the end of Day 3 without ever entering any Free Battle  (No Demon carry over / No Macca carry over / No compendium discount).",
+    description = "Reach the end of Day 3 without ever entering any Free Battle and with no Demon carry over, no Macca carry over or no compendium discount.",
     points = 10,
-    trigger = never(is_new_game_plus()) 
+    trigger = !new_game_plus_perk_enabled("Carry over 1 demon")
+        && !new_game_plus_perk_enabled("Carry over 4 demons")
+        && !new_game_plus_perk_enabled("Carry over 8 demons")
+        && !new_game_plus_perk_enabled("Carry over all demons")
+        && !new_game_plus_perk_enabled("Carry over Macca")
+        && !new_game_plus_perk_enabled("10% off Compendium")
+        && !new_game_plus_perk_enabled("30% off Compendium")
+        && !new_game_plus_perk_enabled("50% off Compendium")
         && !entered_free_battle()
-        && is_time_of_day(21, 0)
-        && is_day("Tuesday") 
+        && prev(is_time_of_day(21, 0))
+        && is_time_of_day(0, 0)
+        && prev(is_day("Tuesday"))
+        && is_day("Wednesday") 
         && prev(bit1(0x00284af2)) == 0x00 
         && bit1(0x00284af2) == 0x01,
     type = "missable",
@@ -3603,9 +3696,16 @@ achievement(
 )
 achievement(
     title = "Wednesday's Changes",
-    description = "Reach the end of Day 4 without ever entering any Free Battle  (No Demon carry over / No Macca carry over / No compendium discount).",
+    description = "Reach the end of Day 4 without ever entering any Free Battle and with no Demon carry over, no Macca carry over or no compendium discount.",
     points = 10,
-    trigger = never(is_new_game_plus()) 
+    trigger = !new_game_plus_perk_enabled("Carry over 1 demon")
+        && !new_game_plus_perk_enabled("Carry over 4 demons")
+        && !new_game_plus_perk_enabled("Carry over 8 demons")
+        && !new_game_plus_perk_enabled("Carry over all demons")
+        && !new_game_plus_perk_enabled("Carry over Macca")
+        && !new_game_plus_perk_enabled("10% off Compendium")
+        && !new_game_plus_perk_enabled("30% off Compendium")
+        && !new_game_plus_perk_enabled("50% off Compendium")
         && !entered_free_battle() 
         && prev(is_time_of_day(21, 0)) 
         && is_time_of_day(0, 0) 
@@ -3616,9 +3716,16 @@ achievement(
 )
 achievement(
     title = "Thursday's Shock",
-    description = "Reach the end of Day 5 without ever entering any Free Battle  (No Demon carry over / No Macca carry over / No compendium discount).",
+    description = "Reach the end of Day 5 without ever entering any Free Battle and with no Demon carry over, no Macca carry over or no compendium discount.",
     points = 10,
-    trigger = never(is_new_game_plus()) 
+    trigger = !new_game_plus_perk_enabled("Carry over 1 demon")
+        && !new_game_plus_perk_enabled("Carry over 4 demons")
+        && !new_game_plus_perk_enabled("Carry over 8 demons")
+        && !new_game_plus_perk_enabled("Carry over all demons")
+        && !new_game_plus_perk_enabled("Carry over Macca")
+        && !new_game_plus_perk_enabled("10% off Compendium")
+        && !new_game_plus_perk_enabled("30% off Compendium")
+        && !new_game_plus_perk_enabled("50% off Compendium")
         && !entered_free_battle() 
         && prev(is_time_of_day(23, 30)) 
         && is_time_of_day(0, 0) 
@@ -3629,9 +3736,16 @@ achievement(
 )
 achievement(
     title = "Friday's Partings",
-    description = "Reach the end of Day 6 without ever entering any Free Battle  (No Demon carry over / No Macca carry over / No compendium discount).",
+    description = "Reach the end of Day 6 without ever entering any Free Battle and with no Demon carry over, no Macca carry over or no compendium discount.",
     points = 10,
-    trigger = never(is_new_game_plus()) 
+    trigger = !new_game_plus_perk_enabled("Carry over 1 demon")
+        && !new_game_plus_perk_enabled("Carry over 4 demons")
+        && !new_game_plus_perk_enabled("Carry over 8 demons")
+        && !new_game_plus_perk_enabled("Carry over all demons")
+        && !new_game_plus_perk_enabled("Carry over Macca")
+        && !new_game_plus_perk_enabled("10% off Compendium")
+        && !new_game_plus_perk_enabled("30% off Compendium")
+        && !new_game_plus_perk_enabled("50% off Compendium")
         && !entered_free_battle() 
         && prev(is_time_of_day(23, 30)) 
         && is_time_of_day(0, 0) 
@@ -3641,9 +3755,16 @@ achievement(
 )
 achievement(
     title = "A Saturday Towards A New World",
-    description = "Reach the end of Day 7 without ever entering any Free Battle  (No Demon carry over / No Macca carry over / No compendium discount).",
+    description = "Reach the end of Day 7 without ever entering any Free Battle and with no Demon carry over, no Macca carry over or no compendium discount.",
     points = 25,
-    trigger = never(is_new_game_plus()) 
+    trigger = !new_game_plus_perk_enabled("Carry over 1 demon")
+        && !new_game_plus_perk_enabled("Carry over 4 demons")
+        && !new_game_plus_perk_enabled("Carry over 8 demons")
+        && !new_game_plus_perk_enabled("Carry over all demons")
+        && !new_game_plus_perk_enabled("Carry over Macca")
+        && !new_game_plus_perk_enabled("10% off Compendium")
+        && !new_game_plus_perk_enabled("30% off Compendium")
+        && !new_game_plus_perk_enabled("50% off Compendium")
         && !entered_free_battle() 
         && prev(is_time_of_day(23, 30)) 
         && is_time_of_day(0, 0) 
@@ -3653,12 +3774,19 @@ achievement(
 )
 achievement(
     title = "Wait, You Can Just... Grind?",
-    description = "Complete any ending without ever entering any Free Battle  (No Demon carry over / No Macca carry over / No compendium discount).",
+    description = "Complete any ending without ever entering any Free Battle and with no Demon carry over, no Macca carry over or no compendium discount.",
     points = 25,
-    trigger = never(is_new_game_plus()) 
+    trigger = !new_game_plus_perk_enabled("Carry over 1 demon")
+        && !new_game_plus_perk_enabled("Carry over 4 demons")
+        && !new_game_plus_perk_enabled("Carry over 8 demons")
+        && !new_game_plus_perk_enabled("Carry over all demons")
+        && !new_game_plus_perk_enabled("Carry over Macca")
+        && !new_game_plus_perk_enabled("10% off Compendium")
+        && !new_game_plus_perk_enabled("30% off Compendium")
+        && !new_game_plus_perk_enabled("50% off Compendium")
         && !entered_free_battle()
         && combat_actively_occurring()
-        && specific_leader_defeated("Polaris (Complete)"),
+        && specific_leader_defeated("Polaris A"),
     type = "missable"
 )
 
@@ -3843,91 +3971,6 @@ achievement(
         ))
 )
 
-// Anime Teams
-// TODO revisit these and decide if I want them in the set. Few reasons why I might not follow through:
-// - they're kind of arbitrary in assignment without the anime context
-// - they don't really add anything amazing to the set
-// If I do keep these, I will probably pivot them to be "Defeat using the FATE 3 stage demon and the person who gave it to you"
-achievement(
-    title = "A Few Episodes Too Late",
-    description = "Use a team composed of the protagonist and his anime signature demon Baihu to defeat any enemy team leader.",
-    points = 3,
-    trigger = pairing_present("Hero", "Baihu") && ((attacker_leader_is("Hero") && defender_leader_defeated()) || defender_leader_is("Hero") && attacker_leader_defeated())
-)
-achievement(
-    title = "\"If It Will Help Us...\"",
-    description = "Use a team composed of Makoto and her anime signature demon Power to defeat any enemy team leader.",
-    points = 3,
-    trigger = pairing_present("Makoto", "Power") && ((attacker_leader_is("Makoto") && defender_leader_defeated()) || defender_leader_is("Makoto") && attacker_leader_defeated())
-)
-achievement(
-    title = "\"Don't Be Thankin' Me\"",
-    description = "Use a team composed of Keita and his anime signature demon Berserker to defeat any team leader.",
-    points = 3,
-    trigger = pairing_present("Keita", "Berserker") && ((attacker_leader_is("Keita") && defender_leader_defeated()) || defender_leader_is("Keita") && attacker_leader_defeated())
-)
-achievement(
-    title = "\"You See... I Can't Just Sit Still\"",
-    description = "Use a team composed of Hinako and her anime signature demon Lilim to defeat any team leader.",
-    points = 3,
-    trigger = pairing_present("Hinako", "Lilim") && ((attacker_leader_is("Hinako") && defender_leader_defeated()) || defender_leader_is("Hinako") && attacker_leader_defeated())
-)
-achievement(
-    title = "\"Like You, I Want To Try Hard\"",
-    description = "Use a team composed of Io and her anime signature demon Kikuri-Hime to defeat any team leader.",
-    points = 3,
-    trigger = pairing_present("Io", "Kikuri-Hime") && ((attacker_leader_is("Io") && defender_leader_defeated()) || defender_leader_is("Io") && attacker_leader_defeated())
-)
-// "Kuze Hibiki... He's Our Hope"
-achievement(
-    title = "\"Think About It. What Is Proper?\"",
-    description = "Use a team composed of Ronaldo and his anime signature demon Hagen to defeat any team leader.",
-    points = 10,
-    trigger = pairing_present("Ronaldo", "Hagen") && ((attacker_leader_is("Ronaldo") && defender_leader_defeated()) || defender_leader_is("Ronaldo") && attacker_leader_defeated())
-)
-achievement(
-    title = "\"Well, This Has Gotten Crazy, Huh?\"",
-    description = "Use a team composed of Joe and his anime signature demon Orcus to defeat any team leader.",
-    points = 3,
-    trigger = pairing_present("Joe", "Orcus") && ((attacker_leader_is("Joe") && defender_leader_defeated()) || defender_leader_is("Joe") && attacker_leader_defeated())
-)
-achievement(
-    title = "\"I'm a Mysterious Woman, Aren't I?\"",
-    description = "Use a team compoed of Otome and her anime signature demon Sarasvati to defeat any team leader.",
-    points = 3,
-    trigger = pairing_present("Otome", "Sarasvati") && ((attacker_leader_is("Otome") && defender_leader_defeated()) || defender_leader_is("Otome") && attacker_leader_defeated())
-)
-achievement(
-    title = "\"Violence Is Not Good\"",
-    description = "Use a team composed of Jungo and his anime signature demon Neko Shogun to defeat any team leader.",
-    points = 3,
-    trigger = pairing_present("Jungo", "Neko Shogun") && ((attacker_leader_is("Jungo") && defender_leader_defeated()) || defender_leader_is("Jungo") && attacker_leader_defeated())
-)
-achievement(
-    title = "\"Don't Make Me Do That Again\"",
-    description = "Use a team composed of Yamato and his anime signature demon Cerberus to defeat any team leader.",
-    points = 3,
-    trigger = pairing_present("Yamato", "Cerberus") && ((attacker_leader_is("Yamato") && defender_leader_defeated()) || defender_leader_is("Yamato") && attacker_leader_defeated())
-)
-achievement(
-    title = "No Forgiveness",
-    description = "Use a team composed of Airi and her anime signature demon Lorelei to defeat any team leader.",
-    points = 3,
-    trigger = pairing_present("Airi", "Lorelei") && ((attacker_leader_is("Airi") && defender_leader_defeated()) || defender_leader_is("Airi") && attacker_leader_defeated())
-)
-achievement(
-    title = "Fighting Frequency with Frequency",
-    description = "Use a team composed of Fumi and her anime signature demon Trumpeter to defeat any team leader.",
-    points = 5,
-    trigger = pairing_present("Fumi", "Trumpeter") && ((attacker_leader_is("Fumi") && defender_leader_defeated()) || defender_leader_is("Fumi") && attacker_leader_defeated())
-)
-achievement(
-    title = "\"Hee. HO.\"",
-    description = "Use a team composed of Daichi and his anime signature demon Black Frost to defeat any team leader.",
-    points = 5,
-    trigger = pairing_present("Daichi", "Black Frost") && ((attacker_leader_is("Daichi") && defender_leader_defeated()) || defender_leader_is("Daichi") && attacker_leader_defeated())
-)
-
 // Skill-Adjacent Achievements
 achievement(
     title = "Fast-tracked Learning",
@@ -3961,21 +4004,6 @@ achievement(
 )
 
 // Compendium and Demon Recruitment
-achievement(
-    title = "The Purest of Form",
-    description = "Register all four demons of the Element race in your compendium.",
-    points = 5,
-    trigger = prev(elements_registered() == 0x03) && measured(elements_registered() == 0x04, when=always_true(), format="raw"),
-    id = 546534
-
-)
-achievement(
-    title="Honorable Spirits",
-    description="Register all four demons of the Mitama race in your compendium.",
-    points = 5,
-    trigger = prev(mitamas_registered() == 0x03) && measured(mitamas_registered() == 0x04, when=always_true(), format="raw"),
-    id = 575035
-)
 // New Game + Stuff
 achievement(
     id = 573794,
@@ -4034,41 +4062,199 @@ achievement(
     points = 10,
     trigger = prev(new_game_plus_bosses_registered() == 0x05) && measured(new_game_plus_bosses_registered() == 0x06, when=always_true(), format="raw") 
 )
-// achievement(
-//     title = "",
-//     description = "Record all 7 demons of the Omega race in your compendium.",
-//     points = 5,
-//     trigger = prev(num_demons_of_race_registered("Omega") == length(demons_by_race["Omega"]) - 1)
-//         && measured(num_demons_of_race_registered("Omega") == length(demons_by_race["Omega"]), when=always_true(), format="raw")
-// )
-// achievement(
-//     title = "",
-//     description = "",
-//     points = 5,
-//     trigger = prev(num_demons_of_race_registered("?") == length(demons_by_race["?"]) - 1)
-//         && measured(num_demons_of_race_registered("?") == length(demons_by_race["?"]), when=always_true(), format="raw")
-// )
 
 achievement(
-    title = "Quarter-Filled Compendium",
-    description = "Complete 25% of the Demon compendium.",
+    id = 546538,
+    title = "Power Seekers",
+    description = "Record all 7 demons of the Omega race in your compendium.",
     points = 5,
-    trigger = prev(num_registered_compendium() == 55) && measured(num_registered_compendium() == 56, when=always_true(), format="raw"),
-    id = 546538
+    trigger = prev(num_demons_of_race_registered("Omega") == length(demons_by_race["Omega"]) - 1)
+        && measured(num_demons_of_race_registered("Omega") == length(demons_by_race["Omega"]), when=always_true(), format="raw")
 )
 achievement(
-    title = "Halfway There",
-    description = "Complete 50% of the Demon compendium.",
-    points = 10,
-    trigger = prev(num_registered_compendium() == 110) && measured(num_registered_compendium() == 111, when=always_true(), format="raw"),
-    id = 546539
+    id = 546539,
+    title = "Grace of the Affectionate",
+    description = "Record all 11 demons of the Megami race in your compendium.",
+    points = 5,
+    trigger = prev(num_demons_of_race_registered("Megami") == length(demons_by_race["Megami"]) - 1)
+        && measured(num_demons_of_race_registered("Megami") == length(demons_by_race["Megami"]), when=always_true(), format="raw")
 )
 achievement(
-    title = "That's a Lot of Demons",
-    description = "Complete 75% of the Demon compendium.",
-    points = 25,
-    trigger = prev(num_registered_compendium() == 165) && measured(num_registered_compendium() == 166, when=always_true(), format="raw"),
-    id = 546540
+    id = 546540,
+    title = "Awakening the Enlightened",
+    description = "Record all 13 demons of the Deity race in your compendium.",
+    points = 5,
+    trigger = prev(num_demons_of_race_registered("Deity") == length(demons_by_race["Deity"]) - 1)
+        && measured(num_demons_of_race_registered("Deity") == length(demons_by_race["Deity"]), when=always_true(), format="raw")
+)
+
+achievement(
+    id = 530987,
+    title = "Chaotic Beings",
+    description = "Record all 8 demons of the Vile race in your compendium.",
+    points = 5,
+    trigger = prev(num_demons_of_race_registered("Vile") == length(demons_by_race["Vile"]) - 1)
+        && measured(num_demons_of_race_registered("Vile") == length(demons_by_race["Vile"]), when=always_true(), format="raw")
+)
+achievement(
+    id = 530988,
+    title = "Those That Constrict",
+    description = "Record all 10 demons of the Snake race in your compendium.",
+    points = 5,
+    trigger = prev(num_demons_of_race_registered("Snake") == length(demons_by_race["Snake"]) - 1)
+        && measured(num_demons_of_race_registered("Snake") == length(demons_by_race["Snake"]), when=always_true(), format="raw")
+)
+
+achievement(
+    id = 530989,
+    title = "Evil Serpents",
+    description = "Record all 9 demons of the Dragon race in your compendium.",
+    points = 5,
+    trigger = prev(num_demons_of_race_registered("Dragon") == length(demons_by_race["Dragon"]) - 1)
+        && measured(num_demons_of_race_registered("Dragon") == length(demons_by_race["Dragon"]), when=always_true(), format="raw")
+)
+
+achievement(
+    id = 530991,
+    title = "Stigma of the Divine",
+    description = "Record all 7 demons of the Divine race in your compendium.",
+    points = 5,
+    trigger = prev(num_demons_of_race_registered("Divine") == length(demons_by_race["Divine"]) - 1)
+        && measured(num_demons_of_race_registered("Divine") == length(demons_by_race["Divine"]), when=always_true(), format="raw")
+)
+achievement(
+    id = 530992,
+    title = "Taking Flight",
+    description = "Record all 10 demons of the Avian race in your compendium.",
+    points = 5,
+    trigger = prev(num_demons_of_race_registered("Avian") == length(demons_by_race["Avian"]) - 1)
+        && measured(num_demons_of_race_registered("Avian") == length(demons_by_race["Avian"]), when=always_true(), format="raw")
+)
+achievement(
+    id = 530996,
+    title = "Feasting With the Fallen",
+    description = "Record all 13 demons of the Fallen race in your compendium.",
+    points = 5,
+    trigger = prev(num_demons_of_race_registered("Fallen") == length(demons_by_race["Fallen"]) - 1)
+        && measured(num_demons_of_race_registered("Fallen") == length(demons_by_race["Fallen"]), when=always_true(), format="raw")
+)
+achievement(
+    id = 530997,
+    title = "Switching Forms For Their Believers",
+    description = "Record all 11 demons of the Avatar race in your compendium.",
+    points = 5,
+    trigger = prev(num_demons_of_race_registered("Avatar") == length(demons_by_race["Avatar"]) - 1)
+        && measured(num_demons_of_race_registered("Avatar") == length(demons_by_race["Avatar"]), when=always_true(), format="raw")
+)
+achievement(
+    id = 530998,
+    title = "Brutish Beasts",
+    description = "Record all 9 demons of the Beast race in your compendium.",
+    points = 5,
+    trigger = prev(num_demons_of_race_registered("Beast") == length(demons_by_race["Beast"]) - 1)
+        && measured(num_demons_of_race_registered("Beast") == length(demons_by_race["Beast"]), when=always_true(), format="raw")
+)
+achievement(
+    id = 530999,
+    title = "Devils Closing In",
+    description = "Record all 10 demons of the Wilder race in your compendium.",
+    points = 5,
+    trigger = prev(num_demons_of_race_registered("Wilder") == length(demons_by_race["Wilder"]) - 1)
+        && measured(num_demons_of_race_registered("Wilder") == length(demons_by_race["Wilder"]), when=always_true(), format="raw")
+)
+achievement(
+    id = 531000,
+    title = "No Obstacles Shall Bar Them",
+    description = "Record all 12 demons of the Genma race in your compendium.",
+    points = 5,
+    trigger = prev(num_demons_of_race_registered("Genma") == length(demons_by_race["Genma"]) - 1)
+        && measured(num_demons_of_race_registered("Genma") == length(demons_by_race["Genma"]), when=always_true(), format="raw")
+)
+achievement(
+    id = 531001,
+    title = "Glamorous Beings",
+    description = "Record all 10 demons of the Fairy race in your compendium.",
+    points = 5,
+    trigger = prev(num_demons_of_race_registered("Fairy") == length(demons_by_race["Fairy"]) - 1)
+        && measured(num_demons_of_race_registered("Fairy") == length(demons_by_race["Fairy"]), when=always_true(), format="raw")
+)
+achievement(
+    id = 531002,
+    title = "Relentless Rulers",
+    description = "Record all 12 demons of the Tyrant race in your compendium.",
+    points = 5,
+    trigger = prev(num_demons_of_race_registered("Tyrant") == length(demons_by_race["Tyrant"]) - 1)
+        && measured(num_demons_of_race_registered("Tyrant") == length(demons_by_race["Tyrant"]), when=always_true(), format="raw")
+)
+achievement(
+    id = 530990,
+    title = "Peerless Fighters",
+    description = "Record all 10 demons of the Kishin race in your compendium.",
+    points = 5,
+    trigger = prev(num_demons_of_race_registered("Kishin") == length(demons_by_race["Kishin"]) - 1)
+        && measured(num_demons_of_race_registered("Kishin") == length(demons_by_race["Kishin"]), when=always_true(), format="raw")
+)
+achievement(
+    id = 597448,
+    title = "Easily Agitated",
+    description = "Record all 10 demons of the Touki race in your compendium.",
+    points = 5,
+    trigger = prev(num_demons_of_race_registered("Touki") == length(demons_by_race["Touki"]) - 1)
+        && measured(num_demons_of_race_registered("Touki") == length(demons_by_race["Touki"]), when=always_true(), format="raw")
+)
+achievement(
+    id = 597447,
+    title = "Bound By Evil",
+    description = "Record all 10 demons of the Jaki race in your compendium.",
+    points = 5,
+    trigger = prev(num_demons_of_race_registered("Jaki") == length(demons_by_race["Jaki"]) - 1)
+        && measured(num_demons_of_race_registered("Jaki") == length(demons_by_race["Jaki"]), when=always_true(), format="raw")
+)
+achievement(
+    id = 597446,
+    title = "Maternal Devotion",
+    description = "Record all 12 demons of the Femme race in your compendium.",
+    points = 5,
+    trigger = prev(num_demons_of_race_registered("Femme") == length(demons_by_race["Femme"]) - 1)
+        && measured(num_demons_of_race_registered("Femme") == length(demons_by_race["Femme"]), when=always_true(), format="raw")
+)
+achievement(
+    id = 597449,
+    title = "Possessing the Possessors",
+    description = "Record all 8 demons of the Ghost race in your compendium.",
+    points = 5,
+    trigger = prev(num_demons_of_race_registered("Ghost") == length(demons_by_race["Ghost"]) - 1)
+        && measured(num_demons_of_race_registered("Ghost") == length(demons_by_race["Ghost"]), when=always_true(), format="raw")
+)
+achievement(
+    id = 597445,
+    title = "Uncanny Characters",
+    description = "Record all 5 demons of the Fiend race in your compendium.",
+    points = 5,
+    trigger = prev(num_demons_of_race_registered("Fiend") == length(demons_by_race["Fiend"]) - 1)
+        && measured(num_demons_of_race_registered("Fiend") == length(demons_by_race["Fiend"]), when=always_true(), format="raw")
+)
+achievement(
+    id = 597450,
+    title = "Proof of Heroism",
+    description = "Record all 6 demons of the Hero race in your compendium.",
+    points = 5,
+    trigger = prev(num_demons_of_race_registered("Hero") == length(demons_by_race["Hero"]) - 1)
+        && measured(num_demons_of_race_registered("Hero") == length(demons_by_race["Hero"]), when=always_true(), format="raw")
+)
+achievement(
+    title = "The Purest of Form",
+    description = "Register all four demons of the Element race in your compendium.",
+    points = 5,
+    trigger = prev(elements_registered() == 0x03) && measured(elements_registered() == 0x04, when=always_true(), format="raw"),
+    id = 546534
+)
+achievement(
+    title="Honorable Spirits",
+    description="Register all four demons of the Mitama race in your compendium.",
+    points = 5,
+    trigger = prev(mitamas_registered() == 0x03) && measured(mitamas_registered() == 0x04, when=always_true(), format="raw"),
+    id = 575035
 )
 achievement(
     title = "Finally, Fully Filled",

@@ -2126,7 +2126,7 @@ function mailbox_hunt_helper() {
 function mail_triggered(mail_name) {
     if (mail_name == "Re: Jikoku") {
         addr = 0x00284cbc
-    } else if (mail_name == "Re: Bilikin") {
+    } else if (mail_name == "Re: Billiken") {
         addr = 0x00284cba
     } else if (mail_name == "Re: Hitokotonusi") {
         addr = 0x00284cb8
@@ -2459,7 +2459,7 @@ achievement(
 
 achievement(
     title = "False Alarm",
-    description = "Avert the crisis shown in your death clip.",
+    description = "Prevent the death foretold in your own death clip.",
     points = 1,
     trigger =  is_day("Sunday") && on_mission("Death Clip") && all_allied_teams_last_standing(3),
     type = "progression",
@@ -2468,7 +2468,7 @@ achievement(
 achievement(
     title = "Just Needed Moral Support",
     description = "Have Daichi's team land the killing blow on Bai Suzhen in Daichi's Crisis.",
-    points = 5,
+    points = 3,
     trigger = on_mission("Daichi's Crisis")
         && (
             (attacker_leader_is("Daichi") && defender_leader_is("Bai Suzhen") && defender_leader_defeated()) || 
@@ -2479,7 +2479,7 @@ achievement(
 )
 achievement(
     title = "She's Sealed Away for a Reason",
-    description = "Avert the crisis shown in the second death clip on Sunday.",
+    description = "Prevent the death foretold by the second death clip on Sunday.",
     points = 1,
     trigger = on_mission("Daichi's Crisis") && active_mission_completed("Daichi's Crisis"),
     type = "progression",
@@ -2495,7 +2495,7 @@ achievement(
 )
 achievement(
     title = "Alpha Ursae Majoris",
-    description = "Get all allies to the escape area in Daichi's Worth without Dubhe killing any demons and without using the Suspend feature.",
+    description = "Get all allies to the escape area in Daichi's Worth without Dubhe killing any demons and without using Suspend.",
     points = 5,
     trigger = never(MOST_RECENT_MISSION != 0x3f4)
         && bit3(0x00284aec) == 0x01
@@ -2522,7 +2522,7 @@ achievement(
 )
 achievement(
     title = "I Take My Volunteer Work Seriously",
-    description = "Without using the Suspend feature, defeat all human enemies in App Abuser before any have a chance to escape.",
+    description = "Defeat all human enemies in App Abuser before any escape and without using Suspend.",
     points = 3,
     trigger = never(MOST_RECENT_MISSION != 0x7d4)
         && on_mission("App Abuser")
@@ -2561,20 +2561,15 @@ achievement(
 achievement(
     title = "Take Me to the Men in Yellow",
     description = "Recruit Hinako to the party.",
-    points = 3,
+    points = 2,
     trigger = on_mission("Never Say Die") && character_recruited("Hinako"),
     type = "progression",
     id=530962
 )
-// todo test both Osaka Soul and Too Late
-// Osaka Soul, pass: works
-// Osaka Soul, fail: works
-// Too Late, pass:
-// Too Late, fail:
 achievement(
     id=597372,
     title = "Miasma Maestro",
-    description = "On either of 'Osaka Soul' or 'Too Late', clear all of the miasma before any additional enemy teams are summoned and complete the mission without using the Suspend feature.",
+    description = "On either of 'Osaka Soul' or 'Too Late', clear all of the miasma before any additional enemy teams are summoned and complete the mission without using Suspend.",
     points = 5,
     trigger = __ornext(MOST_RECENT_MISSION == event_id_by_name["Osaka Soul"] || MOST_RECENT_MISSION == event_id_by_name["Too Late"]) 
         && never(loaded_from_suspend())
@@ -2596,7 +2591,7 @@ achievement(
 )
 achievement(
     title = "Beta Ursae Majoris",
-    description = "Defeat Merak without it ever using Circumpolarity and without using the Suspend feature.",
+    description = "Defeat Merak without it ever using Circumpolarity and without using Suspend.",
     points = 5,
     trigger = on_grid_map() && on_mission("Merak Arrives") 
             && never(loaded_from_suspend())
@@ -2671,7 +2666,7 @@ achievement(
 achievement(
     title = "Solid Snake Would Be Proud",
     description = "Escort Daichi to the rescue point in Saving Daichi.",
-    points = 5,
+    points = 3,
     trigger = on_mission("Saving Daichi")
         && in_combat()
         && bit4(0x00284b1f) == 0x01 
@@ -2695,17 +2690,18 @@ achievement(
     // Loose high level idea here:
     // Normally I would detect when HP hits 0, but HP actually hits 1 here
     // Instead of going through and adding that edge case, we'll rely on combat flags flipping while all other teams are up
-    trigger = on_mission("Man of Fury") && num_teams_on_map(0x0a) &&
-        in_combat_mission("Man of Fury (Ronaldo)") &&
+    trigger = on_mission("Man of Fury") 
+        && num_teams_on_map(0x0a)
+        && in_combat_mission("Man of Fury (Ronaldo)")
         // The underlying pointers here continue pointing to the associated defender/attacker until next combat is entered, so this is fine
-        trigger_when((defender_leader_is("Ronaldo") || attacker_leader_is("Ronaldo"))) &&
-        trigger_when(prev(bit6(0x00284b59) == 0x00)) && trigger_when(bit6(0x00284b59) == 0x01) &&
-        trigger_when(prev(bit7(0x00284b59) == 0x00)) && trigger_when(bit7(0x00284b59) == 0x01),
+        && trigger_when((defender_leader_is("Ronaldo") || attacker_leader_is("Ronaldo")))
+        && trigger_when(prev(bit6(0x00284b59) == 0x00)) && trigger_when(bit6(0x00284b59) == 0x01)
+        && trigger_when(prev(bit7(0x00284b59) == 0x00)) && trigger_when(bit7(0x00284b59) == 0x01),
     type = "missable"
 )
 achievement(
     title = "Gamma Ursae Majoris",
-    description = "Defeat Phecda without using the Suspend feature.",
+    description = "Defeat Phecda without using Suspend.",
     points = 10,
     trigger = never(loaded_from_suspend()) && on_mission("Man of Fury") &&
         // Phys already defeated, Magic being defeated
@@ -2772,7 +2768,7 @@ function unit_using_diastrophism(team_id, enemy_name) {
 achievement(
     title = "If Only People Could Float",
     // On any team with all members alive, have (at most) the team leader be damaged during Diastrophism.
-    description = "On any team with all members alive, have only the team leader be damaged during Megrez's Diastrophism.",
+    description = "On any team with all members alive, have only the team leader be damaged during Diastrophism.",
     points = 5,
     trigger = 
         (
@@ -2915,8 +2911,7 @@ achievement(
     type = "missable"
 )
 achievement(
-    // TODO revisit title and see if we can name this based on how Otome describes it
-    title = "Truly a Hard Choice",
+    title = "Warm and Fuzzy Foe",
     description = "Defeat Neko Shogun in A Hard Choice.",
     points = 5,
     trigger = on_mission("A Hard Choice")
@@ -2998,7 +2993,7 @@ achievement(
 )
 achievement(
     id = 593551,
-    title = "A Summoning Via Lasya",
+    title = "A Summoning via Lasya",
     description = "Complete the 'Nataraja' mission with Hinako having never been damaged during her dance and without using Suspend.",
     points = 5,
     trigger = is_day("Thursday") 
@@ -3063,9 +3058,9 @@ achievement(
 
 achievement(
     title = "Let's See Those Wallets",
-    description = "Complete the 'God of Luck' mission and receive mail about Bilikin afterward.",
+    description = "Complete the 'God of Luck' mission and receive mail about Billiken afterward.",
     points = 10,
-    trigger = MOST_RECENT_MISSION == event_id_by_name["God of Luck"] && mail_triggered("Re: Bilikin"),
+    trigger = MOST_RECENT_MISSION == event_id_by_name["God of Luck"] && mail_triggered("Re: Billiken"),
     type = "missable",
     id = 546680
 )
@@ -3160,7 +3155,7 @@ achievement(
     type = "missable"
 )
 achievement(
-    title = "Trial of The Dragon",
+    title = "Trial of the Dragon",
     description = "Call forth the Dragon Stream using Lugh's power.",
     points = 10,
     trigger = on_mission("The Dragon") 
@@ -3286,7 +3281,7 @@ achievement(
 achievement(
     title = "Eta Ursae Majoris",
     description = "Defeat Benetnasch with Trumpeter having been hit no more than two times.",
-    points = 10,
+    points = 5,
     trigger = actively_in_event()
         && __ornext(on_shared_mission("Seven Down"))
         // pseudologic: 
@@ -3340,9 +3335,9 @@ achievement(
 )
 achievement(
     id = 596774,
-    title = "Saving the Best For Last",
+    title = "Saving the Best for Last",
     description = "Defeat the Dragon last on either of 'Unexpected Battle' or 'Reared Head.'",
-    points = 10,
+    points = 5,
     trigger = __ornext(
         on_mission("Reared Head") ||
         on_branching_mission("Unexpected Battle", "Daichi (Restorer)") ||
@@ -3365,7 +3360,7 @@ achievement(
     title = "Dragon Tamer",
     description = "Defeat the Dragon.",
     type = "progression",
-    points = 5,
+    points = 10,
     trigger = __ornext(
         on_mission("Reared Head") ||
         on_branching_mission("Unexpected Battle", "Daichi (Restorer)") ||
@@ -3459,14 +3454,14 @@ achievement(
 // ** Daichi's Way **
 achievement(
     id=596129,
-    title = "Coexisting with Team Osaka",
+    title = "Coexisting With Team Osaka",
     description = "Defeat the helping members of Team Osaka as Daichi's team.",
     points = 5,
     trigger = ending_selected("Daichi") && on_branching_mission("Vs. Osaka", "Daichi") && only_friendly_teams_left()
 )
 achievement(
     id=596130,
-    title = "Coexisting with Team Nagoya",
+    title = "Coexisting With Team Nagoya",
     description = "Defeat the helping members of Team Nagoya as Daichi's team.",
     points = 5,
     trigger = ending_selected("Daichi") && on_branching_mission("Vs. Nagoya", "Daichi") && only_friendly_teams_left()
@@ -3480,9 +3475,9 @@ achievement(
 )
 achievement(
     id = 596134,
-    title = "Coexisting with the Strong Breaker",
+    title = "Coexisting With the Strong Breaker",
     description = "Defeat the leading faction of Team Osaka as Daichi's team.",
-    points = 10,
+    points = 5,
     trigger = ending_selected("Daichi") 
         && on_branching_mission("Strong Breaker", "Daichi") 
         && combat_actively_occurring()
@@ -3491,7 +3486,7 @@ achievement(
 achievement(
     id = 596135,
     title = "The Band's Back Together",
-    description = "With all death clips averted, persuade all party members to aid your cause.",
+    description = "With all death clips prevented and all characters alive, persuade all former party members to aid your cause.",
     points = 25,
     type = "missable",
     trigger = is_day("Saturday") 
@@ -3557,7 +3552,7 @@ achievement(
     id = 596490,
     title = "The World vs. Team Tokyo",
     description = "Defeat the helping members of Team Tokyo as Al Saiduq's team.",
-    points = 5,
+    points = 10,
     trigger = ending_selected("Anguished One") && on_branching_mission("Vs. Tokyo", "Al Saiduq") && only_friendly_teams_left()
 )
 achievement(
@@ -3583,14 +3578,14 @@ achievement(
 )
 achievement(
     id = 596626,
-    title = "Dreams Crushed By The World",
+    title = "Dreams Crushed by the World",
     description = "Defeat the leading faction of Team Nagoya as Al Saiduq's team.",
     trigger = ending_selected("Anguished One") && on_branching_mission("Dream's End", "Al Saiduq") && character_died("Ronaldo"),        
     points = 5
 )
 achievement(
     id = 596630,
-    title = "Tying Up This World's Last Loose End",
+    title = "Tying up This World's Last Loose End",
     description = "Defeat Yamato as Al Saiduq's team.",
     points = 5,
     trigger = ending_selected("Anguished One") && on_branching_mission("Strong Breaker", "Al Saiduq") && character_died("Yamato")
@@ -3629,7 +3624,7 @@ achievement(
 )
 achievement(
     id = 596687,
-    title = "The Only Path Forward is Through Merit",
+    title = "The Only Path Forward Is Through Merit",
     description = "Defeat the leading faction of Team Nagoya as Yamato's team.",
     points = 5,
     trigger = ending_selected("Yamato") && on_branching_mission("Last Stand", "Yamato") && character_died("Ronaldo")
@@ -3643,7 +3638,7 @@ achievement(
 )
 achievement(
     id = 596777,
-    title = "Quelling Heretics",
+    title = "Quelling a Stellar Heretic",
     description = "With resolve to establish your world of merit, defeat the administrator's final guardian.",
     points = 5,
     trigger = ending_selected("Yamato") && on_branching_mission("Last Assassin", "Yamato") && character_died("Anguished One")
@@ -3651,7 +3646,7 @@ achievement(
 achievement(
     id = 597428,
     title = "Might Shall Make Right",
-    description = "Defeat Polaris and establish your meritocracy.",
+    description = "Overcome the administrator's test and establish your meritocracy.",
     points = 25,
     trigger = ending_selected("Yamato") 
         && on_branching_mission("Correct Tomorrow", "Yamato") 
@@ -3661,7 +3656,7 @@ achievement(
 // ** Ronaldo's Way **
 achievement(
     id = 596060,
-    title = "Equality Vs. Tokyo",
+    title = "Equality vs. Tokyo",
     description = "Defeat the helping members of Team Tokyo as Ronaldo's team.",
     points = 5,
     trigger = ending_selected("Ronaldo") && on_branching_mission("Vs. Tokyo", "Ronaldo") && only_friendly_teams_left()
@@ -3675,7 +3670,7 @@ achievement(
 )
 achievement(
     id = 596688,
-    title = "Equality Vs. Osaka",
+    title = "Equality vs. Osaka",
     description = "Defeat the helping members of Team Osaka as Ronaldo's team.",
     points = 5,
     trigger = ending_selected("Ronaldo") && on_branching_mission("Vs. Osaka", "Ronaldo") && only_friendly_teams_left()
@@ -3684,7 +3679,7 @@ achievement(
     id = 596494,
     title = "A Test of Might",
     description = "Defeat the leading faction of Team Osaka as Ronaldo's team.",
-    points = 10,
+    points = 5,
     trigger = ending_selected("Ronaldo") 
         && on_branching_mission("Test of Might", "Ronaldo") 
         && combat_actively_occurring()
@@ -3706,8 +3701,8 @@ achievement(
 )
 achievement(
     id = 597427,
-    title = "All For One and One For All",
-    description = "With resolve to make the world equal for all, defeat Polaris.",
+    title = "All for One and One for All",
+    description = "Overcome the administrator's test and establish your society built on equality.",
     points = 25,
     trigger = ending_selected("Ronaldo") 
         && on_branching_mission("Unseen Tomorrow", "Ronaldo") 
@@ -3835,7 +3830,7 @@ achievement(
     type = "missable"
 )
 achievement(
-    title = "A Saturday Towards A New World",
+    title = "A Saturday Towards a New World",
     description = "Reach the end of Day 7 without ever entering any Free Battle and with no Demon carry over, no Macca carry over or no compendium discount.",
     points = 25,
     trigger = !new_game_plus_perk_enabled("Carry over 1 demon")
@@ -3854,7 +3849,7 @@ achievement(
     type = "missable"
 )
 achievement(
-    title = "Wait, You Can Just... Grind?",
+    title = "I Have a Severe Allergy to Grinding",
     description = "Complete any ending without ever entering any Free Battle and with no Demon carry over, no Macca carry over or no compendium discount.",
     points = 25,
     trigger = !new_game_plus_perk_enabled("Carry over 1 demon")
@@ -3881,7 +3876,7 @@ achievement(
 achievement(
     title = "Io's Best Friend",
     description = "Reach FATE stage 5 with Io.",
-    points = 10,
+    points = 5,
     trigger = char_fate_stage_maxed("Io"),
     id = 547052
 )
@@ -3895,63 +3890,63 @@ achievement(
 achievement(
     title = "Fumi's Best Friend",
     description = "Reach FATE stage 5 with Fumi.",
-    points = 10,
+    points = 5,
     trigger = char_fate_stage_maxed("Fumi"),
     id = 547054
 )
 achievement(
     title = "Daichi's Best Friend",
     description = "Reach FATE stage 5 with Daichi.",
-    points = 10,
+    points = 5,
     trigger = char_fate_stage_maxed("Daichi"),
     id = 547050
 )
 achievement(
     title = "Otome's Best Friend",
     description = "Reach FATE stage 5 with Otome.",
-    points = 10,
+    points = 5,
     trigger = char_fate_stage_maxed("Otome"),
     id = 547055
 )
 achievement(
     title = "Jungo's Best Friend",
     description = "Reach FATE stage 5 with Jungo.",
-    points = 10,
+    points = 5,
     trigger = char_fate_stage_maxed("Jungo"),
     id = 547051
 )
 achievement(
     title = "Makoto's Best Friend",
     description = "Reach FATE stage 5 with Makoto.",
-    points = 10,
+    points = 5,
     trigger = char_fate_stage_maxed("Makoto"),
     id = 547056
 )
 achievement(
     title = "Keita's Best Friend",
     description = "Reach FATE stage 5 with Keita.",
-    points = 10,
+    points = 5,
     trigger = char_fate_stage_maxed("Keita"),
     id = 547058
 )
 achievement(
     title = "Airi's Best Friend",
     description = "Reach FATE stage 5 with Airi.",
-    points = 10,
+    points = 5,
     trigger = char_fate_stage_maxed("Airi"),
     id = 547057
 )
 achievement(
     title = "Joe's Best Friend",
     description = "Reach FATE stage 5 with Joe.",
-    points = 10,
+    points = 5,
     trigger = char_fate_stage_maxed("Joe"),
     id = 547059
 )
 achievement(
     title = "Hinako's Best Friend",
     description = "Reach FATE stage 5 with Hinako.",
-    points = 10,
+    points = 5,
     trigger = char_fate_stage_maxed("Hinako"),
     id = 547060
 )
@@ -3964,7 +3959,7 @@ achievement(
 )
 // *** Auctions ***
 achievement(
-    "Blind Bidder",
+    title = "Blind Bidder",
     description = "In an auction with 3 other bidders, place a successful bid and pay for the demon before seeing any of the reactions from other bidders.",
     points = 2,
     trigger = ptr_valid(FULL_AUCTION_PTR) 
@@ -3976,7 +3971,7 @@ achievement(
     id=530977
 )
 achievement(
-    title = "Math Is Not its Strong Suit",
+    title = "Math Is Not Its Strong Suit",
     description = "Have a demon give you back more Macca than the Extra it demanded.",
     points = 2,
     trigger = ptr_valid(FULL_AUCTION_PTR)
@@ -4062,7 +4057,7 @@ achievement(
 
 achievement(
     title = "The Power to Do Anything",
-    description = "Learn all Command skills from Skill Break.",
+    description = "Learn all Command skills.",
     points = 25,
     trigger = prev(num_learned_command_skills()) == 0x42 && measured(num_learned_command_skills() == 0x43, when=always_true(), format="raw"),
     id=530983
@@ -4070,7 +4065,7 @@ achievement(
 
 achievement(
     title = "Sedentary Strength",
-    description = "Learn all Passive Skills from Skill Break.",
+    description = "Learn all Passive Skills.",
     points = 25,
     trigger = prev(num_learned_passive_skills()) == 0x4b && measured(num_learned_passive_skills() == 0x4c, when=always_true(), format="raw"),
     id=530984
@@ -4078,7 +4073,7 @@ achievement(
 
 achievement(
     title = "Automating the Helpful Things",
-    description = "Learn all Auto Skills from Skill Break.",
+    description = "Learn all Auto Skills.",
     points = 25,
     trigger = prev(num_learned_auto_skills()) == 0x1f && measured(num_learned_auto_skills() == 0x20, when=always_true(), format="raw"),
     id=530985
@@ -4095,7 +4090,7 @@ achievement(
 )
 achievement(
     id = 575036,
-    title = "All For Her",
+    title = "All for Her",
     description = "Defeat Nebiros on Tuesday on a New Game Plus file.",
     // This is 25 because Nebiros is a fucker and does the following actions:
     // - if there is any allied unit dead (his allied unit) he will perform Necromancy and bring them back to life
@@ -4117,7 +4112,7 @@ achievement(
 achievement(
     title = "Braving Gomorrah's Fire",
     description = "Defeat Belial on Thursday on a New Game Plus file.",
-    points = 10,
+    points = 25,
     trigger = is_new_game_plus() && is_day("Thursday") && in_combat_mission("The Inferno") && specific_leader_defeated("Belial")
 )
 // 6666 hp, you cheeky little devs...
@@ -4140,7 +4135,7 @@ achievement(
     id = 596780,
     title = "We've Become the Best of Friends",
     description = "Record all New Game Plus bosses in your Compendium.",
-    points = 10,
+    points = 5,
     trigger = prev(new_game_plus_bosses_registered() == 0x05) && measured(new_game_plus_bosses_registered() == 0x06, when=always_true(), format="raw") 
 )
 
@@ -4221,7 +4216,7 @@ achievement(
 )
 achievement(
     id = 530997,
-    title = "Switching Forms For Their Believers",
+    title = "Switching Forms for Their Believers",
     description = "Record all 11 demons of the Avatar race in your compendium.",
     points = 5,
     trigger = prev(num_demons_of_race_registered("Avatar") == length(demons_by_race["Avatar"]) - 1)
@@ -4285,7 +4280,7 @@ achievement(
 )
 achievement(
     id = 597447,
-    title = "Bound By Evil",
+    title = "Bound by Evil",
     description = "Record all 10 demons of the Jaki race in your compendium.",
     points = 5,
     trigger = prev(num_demons_of_race_registered("Jaki") == length(demons_by_race["Jaki"]) - 1)
@@ -4345,114 +4340,6 @@ achievement(
     id = 546541
 )
 
-// *** Leaderboards ***
-leaderboard(
-    title = "Turns Used on Dubhe (New Game)",
-    description = "Fewest number of allied unit turns used to defeat Dubhe on New Game without using Suspend.",
-    start = !loaded_from_suspend() &&
-        !is_new_game_plus() && 
-        on_mission("Daichi's Resolve") && 
-        active_mission_started(),
-    cancel = MOST_RECENT_MISSION != event_id_by_name["Daichi's Resolve"],
-    submit = specific_leader_defeated("Dubhe (Half)"),
-    value = tally(0, allied_turn_starts()),
-    format="VALUE",
-    lower_is_better=true
-)
-leaderboard(
-    title = "Turns Used on Merak (New Game)",
-    description = "Fewest number of allied unit turns used to defeat Merak on New Game without using Suspend.",
-    start = !loaded_from_suspend() &&
-        !is_new_game_plus() &&
-        on_mission("Merak Arrives") && 
-        active_mission_started(),
-    cancel = MOST_RECENT_MISSION != event_id_by_name["Merak Arrives"],
-    submit = specific_leader_defeated("Merak"),
-    value = tally(0, allied_turn_starts()),
-    format="VALUE",
-    lower_is_better=true
-)
-leaderboard(
-    title = "Turns Used on Phecda (New Game)",
-    description = "Fewest number of allied turns used to defeat both forms of Phecda on New Game without using Suspend.",
-    start = !loaded_from_suspend() && 
-        !is_new_game_plus() &&
-        on_mission("Man of Fury") && 
-        in_combat_mission("Man of Fury (Phecda)") && 
-        prev(bit3(0x00284b5a)) == 0x00 && 
-        bit3(0x00284b5a) == 0x01,
-    cancel = MOST_RECENT_MISSION != event_id_by_name["Man of Fury"],
-    submit = 
-        // Phys already defeated, Magic being defeated
-        ((
-            bit0(0x00284b56) == 0x01 
-            && (attacker_leader_is("Phecda (Magic)") || defender_leader_is ("Phecda (Magic)")) 
-            && prev(bit6(0x00284b55) == 0x00) 
-            && bit6(0x00284b55) == 0x01
-        ) ||
-        // Magic already defeated, Phys being defeated
-        (
-            bit6(0x00284b55) == 0x01 
-            && (attacker_leader_is("Phecda (Phys)") || defender_leader_is("Phecda (Phys)")) 
-            && prev(bit0(0x00284b56)) == 0x00 
-            && bit0(0x00284b56) == 0x01
-        )),
-    value = tally(0, allied_turn_starts()),
-    format="VALUE",
-    lower_is_better=true
-)
-leaderboard(
-    title = "Turns Used on Megrez (New Game)",
-    description = "Fewest number of allied unit turns used to defeat Merak on New Game without using Suspend.",
-    start = !loaded_from_suspend() &&
-        !is_new_game_plus() &&
-        on_mission("Delta Battle") && 
-        active_mission_started(),
-    cancel = MOST_RECENT_MISSION != event_id_by_name["Delta Battle"],
-    submit = specific_leader_defeated("Megrez"),
-    value = tally(0, allied_turn_starts())
-)
-leaderboard(
-    title = "Turns Used on Alioth (New Game)",
-    description="Fewest allied unit turns used to defeat Alioth on New Game without using Suspend.",
-    start = !loaded_from_suspend() &&
-        !is_new_game_plus() &&
-        on_mission("Alioth Core") &&
-        active_mission_started(),
-        cancel = MOST_RECENT_MISSION != event_id_by_name["Alioth Core"],
-        submit = specific_leader_defeated("Alioth Core"),
-        value = tally(0, allied_turn_starts())
-)
-leaderboard(
-    title = "Turns Used on Mizar (New Game)",
-    description = "Fewest allied turn units used to defeat Mizar on New Game without using Suspend.",
-    start = !loaded_from_suspend() &&
-        !is_new_game_plus() &&
-        on_mission("Food Chain") &&
-        active_mission_started(),
-        cancel = MOST_RECENT_MISSION != event_id_by_name["Food Chain"],
-        submit = specific_leader_defeated("Mizar Tentacle (3R)") || specific_leader_defeated("Mizar Tentacle (3L)"),
-        value = tally(0, allied_turn_starts())
-)
-leaderboard(
-    title = "Turns Used on Benetnasch (New Game)",
-    description = "Fewest allied unit turns used to defeat Benetnasch on New Game without using Suspend.",
-    start = !loaded_from_suspend() &&
-        !is_new_game_plus() &&
-        on_mission("Seven Down") &&
-        active_mission_started(),
-        cancel = MOST_RECENT_MISSION != event_id_by_name["Seven Down"],
-        submit = (__ornext(byte(COMBAT_PTR + 0x250) <= 0x03 || byte(COMBAT_PTR + 0x250) == 0x05))
-        && (__ornext(byte(COMBAT_PTR + 0x251) <= 0x03 || byte(COMBAT_PTR + 0x251) == 0x05))
-        && (__ornext(byte(COMBAT_PTR + 0x252) <= 0x03 || byte(COMBAT_PTR + 0x252) == 0x05 || byte(COMBAT_PTR + 0x252) == 0xff))
-        && (__ornext(byte(COMBAT_PTR + 0x253) <= 0x03 || byte(COMBAT_PTR + 0x253) == 0x05 || byte(COMBAT_PTR + 0x253) == 0xff))
-        && (__ornext(byte(COMBAT_PTR + 0x254) <= 0x03 || byte(COMBAT_PTR + 0x254) == 0x05 || byte(COMBAT_PTR + 0x254) == 0xff))
-        && (prev(byte(COMBAT_PTR + 0x255)) <= 0x08)
-        && (byte(COMBAT_PTR + 0x255) == 0xff),
-
-        value = tally(0, allied_turn_starts())
-)
-
 // *** Rich Presence ***
 
 rich_presence_conditional_display(is_day("Sunday") && is_time_of_day(0, 0) && MACCA == 0x00, "On the title screen")
@@ -4491,7 +4378,7 @@ for i in range(0x04, 0x0b) {
 }
 
 // Non-combat things
-rich_presence_conditional_display(actively_in_event(), "{0} {1} 💰 {2} | At {3} | IGT={4}",
+rich_presence_conditional_display(actively_in_event(), "{0} {1} 💰 {2} | At {3}",
     rich_presence_lookup("Day", DAY, day_of_week),
     rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
     rich_presence_value("Macca", MACCA),
@@ -4499,7 +4386,7 @@ rich_presence_conditional_display(actively_in_event(), "{0} {1} 💰 {2} | At {3
     rich_presence_value("In-Game Time", IN_GAME_TIME / 60, "SECS")
 )
 
-rich_presence_display("{0} {1} 💰 {2} | Thinking about where to go next | IGT={3}",
+rich_presence_display("{0} {1} 💰 {2} | Thinking about where to go next",
     rich_presence_lookup("Day", DAY, day_of_week),
     rich_presence_value("Time", IN_GAME_CLOCK, "SECS"),
     rich_presence_value("Macca", MACCA),

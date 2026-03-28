@@ -225,9 +225,9 @@ function active_character(region) {
 
 function is_active_character(region, char_name) {
     if (char_name == "Kisuke") { 
-        return byte(ptr_character_details("PAL") + 0x1d4) == 0x00
+        return byte(ptr_character_details(region) + 0x1d4) == 0x00
     } else if (char_name == "Momohime") {
-        return byte(ptr_character_details("PAL") + 0x1d4) == 0x01
+        return byte(ptr_character_details(region) + 0x1d4) == 0x01
     }
 }
 
@@ -1994,7 +1994,8 @@ achievement(
             || (prev(hot_spring_phase("NTSC", "Momohime")) == 0x02 && hot_spring_phase("NTSC", "Momohime") == 0x03)
             || (prev(hot_spring_phase("NTSC", "Momohime")) == 0x03 && hot_spring_phase("NTSC", "Momohime") == 0x04)
         )
-    ) || (is_pal()
+    ) || 
+    (is_pal()
         && is_active_character("PAL", "Momohime")
         && in_zone("PAL", "Onsen")
         && (
@@ -2002,9 +2003,6 @@ achievement(
             || (prev(hot_spring_phase("PAL", "Momohime")) == 0x02 && hot_spring_phase("PAL", "Momohime") == 0x03)
             || (prev(hot_spring_phase("PAL", "Momohime")) == 0x03 && hot_spring_phase("PAL", "Momohime") == 0x04)
         )
-        
-        
-        // && something to denote Kisuke
     )
 )
 

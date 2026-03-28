@@ -223,6 +223,14 @@ function active_character(region) {
     }
 }
 
+function is_active_character(region, char_name) {
+    if (char_name == "Kisuke") { 
+        return byte(ptr_character_details("PAL") + 0x1d4) == 0x00
+    } else if (char_name == "Momohime") {
+        return byte(ptr_character_details("PAL") + 0x1d4) == 0x01
+    }
+}
+
 CharacterLookup = {
     0x00: "Kisuke",
     0x01: "Momohime"
@@ -1979,26 +1987,23 @@ achievement(
     description = "As Momohime, find Kisuke in a hot spring.",
     points = 1,
     trigger = (is_ntsc()
-        && active_character("NTSC") == 0x01
+        && is_active_character("NTSC", "Momohime")
         && in_zone("NTSC", "Onsen")
-        && prev(hot_spring_phase("NTSC", "Momohime")) == 0x01
-        && hot_spring_phase("NTSC", "Momohime") == 0x02
-        // && something to denote Kisuke
-        // Loose thought here for future me: the two notable difference between this Onsen scene and others are:
-        // 1. Kisuke is present (obviously), but...
-        // 2. You can't leave
-        // If you can't detect that some flag has changed, detect if you can leave?
-        // Alternate explanations:
-        // - game is recording "number of hot spring visits"
-        // - game is recording "number of unique hot spring visits"
-        // - game is recording "number of times other character has been seen in hot spring"
-    )
-    ||
-        (is_pal()
-        && active_character("PAL") == 0x01
+        && (
+            (prev(hot_spring_phase("NTSC", "Momohime")) == 0x01 && hot_spring_phase("NTSC", "Momohime") == 0x02)
+            || (prev(hot_spring_phase("NTSC", "Momohime")) == 0x02 && hot_spring_phase("NTSC", "Momohime") == 0x03)
+            || (prev(hot_spring_phase("NTSC", "Momohime")) == 0x03 && hot_spring_phase("NTSC", "Momohime") == 0x04)
+        )
+    ) || (is_pal()
+        && is_active_character("PAL", "Momohime")
         && in_zone("PAL", "Onsen")
-        && prev(hot_spring_phase("PAL", "Momohime")) == 0x01
-        && hot_spring_phase("PAL", "Momohime") == 0x02
+        && (
+            (prev(hot_spring_phase("PAL", "Momohime")) == 0x01 && hot_spring_phase("PAL", "Momohime") == 0x02)
+            || (prev(hot_spring_phase("PAL", "Momohime")) == 0x02 && hot_spring_phase("PAL", "Momohime") == 0x03)
+            || (prev(hot_spring_phase("PAL", "Momohime")) == 0x03 && hot_spring_phase("PAL", "Momohime") == 0x04)
+        )
+        
+        
         // && something to denote Kisuke
     )
 )
@@ -2009,15 +2014,21 @@ achievement(
     description = "As Kisuke, find Momohime in a hot spring.",
     points = 1,
     trigger = (is_ntsc()
-        && active_character("NTSC") == 0x00
+        && is_active_character("NTSC", "Kisuke")
         && in_zone("NTSC", "Onsen")
-        && prev(hot_spring_phase("NTSC", "Kisuke")) == 0x01
-        && hot_spring_phase("NTSC", "Kisuke") == 0x02) 
+        && (
+            (prev(hot_spring_phase("NTSC", "Kisuke")) == 0x01 && hot_spring_phase("NTSC", "Kisuke") == 0x02)
+            || (prev(hot_spring_phase("NTSC", "Kisuke")) == 0x03 && hot_spring_phase("NTSC", "Kisuke") == 0x04)
+        )
+    )
     || (is_pal()
-        && active_character("PAL") == 0x01
+        && is_active_character("PAL", "Kisuke")
         && in_zone("PAL", "Onsen")
-        && prev(hot_spring_phase("PAL", "Kisuke")) == 0x01
-        && hot_spring_phase("PAL", "Kisuke") == 0x02)
+        && (
+            (prev(hot_spring_phase("PAL", "Kisuke")) == 0x01 && hot_spring_phase("PAL", "Kisuke") == 0x02) 
+            || (prev(hot_spring_phase("PAL", "Kisuke")) == 0x03 && hot_spring_phase("PAL", "Kisuke") == 0x04) 
+        )
+    )
 )
 
 achievement(
@@ -2344,7 +2355,7 @@ achievement(
         && is_in_game("NTSC")
         && active_character("NTSC") == 0x01 
         && current_difficulty("NTSC") == 0x01
-        && unless(once(any_blade_broke("NTSC")))
+        && disable_when(once(any_blade_broke("NTSC")), until=active_zone("NTSC") != 0x34)
         // the trigger as before
         && prev(sword_acquired("NTSC", "Tsukiotoshi") == 0x00)
         && trigger_when(sword_acquired("NTSC", "Tsukiotoshi") == 0x01))
@@ -2353,7 +2364,7 @@ achievement(
         && is_in_game("PAL")
         && active_character("PAL") == 0x01 
         && current_difficulty("PAL") == 0x01
-        && unless(once(any_blade_broke("PAL")))
+        && disable_when(once(any_blade_broke("PAL")), until=active_zone("PAL") != 0x34)
         // the trigger as before
         && prev(sword_acquired("PAL", "Tsukiotoshi") == 0x00)
         && trigger_when(sword_acquired("PAL", "Tsukiotoshi") == 0x01))
@@ -3192,7 +3203,7 @@ rich_presence_conditional_display(
 
 rich_presence_conditional_display(
     is_pal() && in_zone("PAL", "Onsen") && is_shigurui("PAL"),
-    "[Shigurui] lv. {0} {1} is relaxing in an onsen | {2} / 108 ⚔️ | {3} / 20 📖 | {4} / 55 💍 | {5} ryo, {6} mon",
+    "[Shigurui] lv. {0} {1} is resting in an onsen | {2} / 108 ⚔️ | {3} / 20 📖 | {4} / 55 💍 | {5} ryo, {6} mon",
     rich_presence_lookup("Difficulty", current_difficulty("PAL"), DifficultyLookup),
     rich_presence_value("CurrLevel", current_level("PAL"), "VALUE"),
     rich_presence_lookup("Character", active_character("PAL"), CharacterLookup),

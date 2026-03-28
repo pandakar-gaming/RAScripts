@@ -273,6 +273,11 @@ function unit_respawns() {
     return cond && running_total == 0x01
 }
 
+// Check if a specific team is being led by a specific unit.
+function team_leader_is(index, team_leader_name) {
+    return word(COMBAT_PTR + 0x26c + (0x27c)*index + 0x0a) == enemy_id_by_name[team_leader_name]
+}
+
 // [8-bit] State of combat
 // 0x01 = Setting up for Dispatch;
 // 0x03 = Dialogue mid combat;
@@ -2362,12 +2367,10 @@ achievement(
         (prev(bit4(0x00284b1b)) == 0x00 && bit4(0x00284b1b) == 0x01) ||
         // 0x00284b1c
         (prev(bit3(0x00284b1c)) == 0x00 && bit3(0x00284b1c) == 0x01) ||
-        (prev(bit4(0x00284b1c)) == 0x00 && bit4(0x00284b1c) == 0x01) ||
         (prev(bit5(0x00284b1c)) == 0x00 && bit5(0x00284b1c) == 0x01) ||
         (prev(bit6(0x00284b1c)) == 0x00 && bit6(0x00284b1c) == 0x01) ||
         (prev(bit7(0x00284b1c)) == 0x00 && bit7(0x00284b1c) == 0x01) ||
         // 0x00284b1d
-        (prev(bit1(0x00284b1d)) == 0x00 && bit1(0x00284b1d) == 0x01) ||
         (prev(bit3(0x00284b1d)) == 0x00 && bit3(0x00284b1d) == 0x01) ||
         (prev(bit4(0x00284b1d)) == 0x00 && bit4(0x00284b1d) == 0x01) ||
         (prev(bit5(0x00284b1d)) == 0x00 && bit5(0x00284b1d) == 0x01) ||
@@ -2751,17 +2754,14 @@ achievement(
 // - nullify phys
 // - be Avian
 // - be Divine
-function unit_using_diastrophism(team_id) {
+function unit_using_diastrophism(team_id, enemy_name) {
     offset_to_team = 0x26c + (0x27c * team_id)
     offset_to_team_lead_id = 0xa
     offset_to_diastrophism_indicator = 0x5
 
     return byte(COMBAT_PTR + 0x250) == team_id
-        && __ornext(
-            word(COMBAT_PTR + offset_to_team + offset_to_team_lead_id) == enemy_id_by_name["Megrez Bud"]
-            || word(COMBAT_PTR + offset_to_team + offset_to_team_lead_id) == enemy_id_by_name["Benetnasch Bud"]
-        )
-        && word(COMBAT_PTR + offset_to_team + offset_to_diastrophism_indicator) == 0x40
+        && word(COMBAT_PTR + offset_to_team + offset_to_team_lead_id) == enemy_id_by_name[enemy_name]
+        && byte(COMBAT_PTR + offset_to_team + offset_to_diastrophism_indicator) == 0x40
 }
 
 // Test cases:
@@ -2769,68 +2769,149 @@ function unit_using_diastrophism(team_id) {
 // Bud of Malice, dodge/invuln/dodge:
 // Delta Battle, dodge/hit/dodge:
 // Delta Battle, dodge/invuln/dodge:
-// Seven Down, dodge/hit/dodge:
-// Seven Down, dodge/invuln/dodge:
 achievement(
     title = "If Only People Could Float",
-    // "When any enemy uses Diastrophism, have only the team leader be damaged on any team."
-    // "Have (at most) the team leader be hit when any enemy uses Diastrophism."
-    // Missions where Diastrophism can occur:
-    // - Bud of Malice 
-    // - Delta Battle
-    // - Seven Down
-    description = "When Megrez Bud uses Diastrophism, have only the team leader be damaged on any team.",
+    // On any team with all members alive, have (at most) the team leader be damaged during Diastrophism.
+    description = "On any team with all members alive, have only the team leader be damaged during Megrez's Diastrophism.",
     points = 5,
-    trigger = is_day("Wednesday")
-        && actively_in_event()
-        && __ornext(
-            MOST_RECENT_MISSION == event_id_by_name["Bud of Malice"] ||
-            MOST_RECENT_MISSION == event_id_by_name["Delta Battle"] ||
-            on_shared_mission("Seven Down")
+    trigger = 
+        (
+            is_day("Wednesday")
+            && on_mission("Bud of Malice")
+            && unit_using_diastrophism(4, "Megrez Bud") 
+            && (
+                    (
+                        word(COMBAT_PTR + 0x284) > 0 
+                        && prev(word(COMBAT_PTR + 0x284)) > word(COMBAT_PTR + 0x284) 
+                        && prev(word(COMBAT_PTR + 0x328)) == word(COMBAT_PTR + 0x328)
+                        && word(COMBAT_PTR + 0x328) > 0
+                        && prev(word(COMBAT_PTR + 0x3c8)) == word(COMBAT_PTR + 0x3c8)
+                        && word(COMBAT_PTR + 0x3c8) > 0
+                    ) ||
+                    // team 1
+                    (
+                        word(COMBAT_PTR + 0x500) > 0 
+                        && prev(word(COMBAT_PTR + 0x500)) > word(COMBAT_PTR + 0x500) 
+                        && prev(word(COMBAT_PTR + 0x5a4)) == word(COMBAT_PTR + 0x5a4) 
+                        && word(COMBAT_PTR + 0x5a4) > 0
+                        && prev(word(COMBAT_PTR + 0x646)) == word(COMBAT_PTR + 0x646)
+                        && word(COMBAT_PTR + 0x646) > 0
+                    ) ||
+                    // team 2
+                    (
+                        word(COMBAT_PTR + 0x77c) > 0 
+                        && prev(word(COMBAT_PTR + 0x77c)) > word(COMBAT_PTR + 0x77c) 
+                        && prev(word(COMBAT_PTR + 0x820)) == word(COMBAT_PTR + 0x820)
+                        && word(COMBAT_PTR + 0x820) > 0 
+                        && prev(word(COMBAT_PTR + 0x8c4)) == word(COMBAT_PTR + 0x8c4)
+                        && word(COMBAT_PTR + 0x8c4) > 0
+                    ) ||
+                    // team 3
+                    (
+                        word(COMBAT_PTR + 0x9f8) > 0 
+                        && prev(word(COMBAT_PTR + 0x9f8)) > word(COMBAT_PTR + 0x9f8) 
+                        && prev(word(COMBAT_PTR + 0xa9c)) == word(COMBAT_PTR + 0xa9c) 
+                        && word(COMBAT_PTR + 0xa9c) > 0
+                        && prev(word(COMBAT_PTR + 0xb40)) == word(COMBAT_PTR + 0xb40)
+                        && word(COMBAT_PTR + 0xb40) > 0
+                    )
+            )
         )
-        && ptr_valid(FULL_COMBAT_PTR)
-        // This part also needs to change
-        // "It is this unit's turn and their action has flipped to this unique ability id" 
-        && byte(COMBAT_PTR + 0xc61) == 0x40
-        && (unit_using_diastrophism(4) 
-            || unit_using_diastrophism(5) 
-            || unit_using_diastrophism(6) 
-            || unit_using_diastrophism(7)
-            || unit_using_diastrophism(8)
-            || unit_using_diastrophism(9)
-            || unit_using_diastrophism(10)
-            || unit_using_diastrophism(11)
+        ||
+        (
+            is_day("Wednesday")
+            && on_mission("Delta Battle")
+            && (unit_using_diastrophism(5, "Megrez Bud") 
+                || unit_using_diastrophism(6, "Megrez Bud") 
+                || unit_using_diastrophism(7, "Megrez Bud")
+                || unit_using_diastrophism(8, "Megrez Bud")
+                || unit_using_diastrophism(9, "Megrez Bud")
+                || unit_using_diastrophism(10, "Megrez Bud")
+                || unit_using_diastrophism(11, "Megrez Bud")
+            )
+            && (
+                    (
+                        word(COMBAT_PTR + 0x284) > 0 
+                        && prev(word(COMBAT_PTR + 0x284)) > word(COMBAT_PTR + 0x284) 
+                        && prev(word(COMBAT_PTR + 0x328)) == word(COMBAT_PTR + 0x328)
+                        && word(COMBAT_PTR + 0x328) > 0
+                        && prev(word(COMBAT_PTR + 0x3c8)) == word(COMBAT_PTR + 0x3c8)
+                        && word(COMBAT_PTR + 0x3c8) > 0
+                    ) ||
+                    // team 1
+                    (
+                        word(COMBAT_PTR + 0x500) > 0 
+                        && prev(word(COMBAT_PTR + 0x500)) > word(COMBAT_PTR + 0x500) 
+                        && prev(word(COMBAT_PTR + 0x5a4)) == word(COMBAT_PTR + 0x5a4) 
+                        && word(COMBAT_PTR + 0x5a4) > 0
+                        && prev(word(COMBAT_PTR + 0x646)) == word(COMBAT_PTR + 0x646)
+                        && word(COMBAT_PTR + 0x646) > 0
+                    ) ||
+                    // team 2
+                    (
+                        word(COMBAT_PTR + 0x77c) > 0 
+                        && prev(word(COMBAT_PTR + 0x77c)) > word(COMBAT_PTR + 0x77c) 
+                        && prev(word(COMBAT_PTR + 0x820)) == word(COMBAT_PTR + 0x820)
+                        && word(COMBAT_PTR + 0x820) > 0 
+                        && prev(word(COMBAT_PTR + 0x8c4)) == word(COMBAT_PTR + 0x8c4)
+                        && word(COMBAT_PTR + 0x8c4) > 0
+                    ) ||
+                    // team 3
+                    (
+                        word(COMBAT_PTR + 0x9f8) > 0 
+                        && prev(word(COMBAT_PTR + 0x9f8)) > word(COMBAT_PTR + 0x9f8) 
+                        && prev(word(COMBAT_PTR + 0xa9c)) == word(COMBAT_PTR + 0xa9c) 
+                        && word(COMBAT_PTR + 0xa9c) > 0
+                        && prev(word(COMBAT_PTR + 0xb40)) == word(COMBAT_PTR + 0xb40)
+                        && word(COMBAT_PTR + 0xb40) > 0
+                    )
+            )
         )
-        && (
-                // team 0
-                (
-                    word(COMBAT_PTR + 0x284) > 0 
-                    && prev(word(COMBAT_PTR + 0x284)) >= word(COMBAT_PTR + 0x284) 
-                    && prev(word(COMBAT_PTR + 0x328)) == word(COMBAT_PTR + 0x328) 
-                    && prev(word(COMBAT_PTR + 0x3c8)) == word(COMBAT_PTR + 0x3c8)
-                ) ||
-                // team 1
-                (
-                    word(COMBAT_PTR + 0x500) > 0 
-                    && prev(word(COMBAT_PTR + 0x500)) >= word(COMBAT_PTR + 0x500) 
-                    && prev(word(COMBAT_PTR + 0x5a4)) == word(COMBAT_PTR + 0x5a4) 
-                    && prev(word(COMBAT_PTR + 0x646)) == word(COMBAT_PTR + 0x646)
-                ) ||
-                // team 2
-                (
-                    word(COMBAT_PTR + 0x77c) > 0 
-                    && prev(word(COMBAT_PTR + 0x77c)) >= word(COMBAT_PTR + 0x77c) 
-                    && prev(word(COMBAT_PTR + 0x820)) == word(COMBAT_PTR + 0x820) 
-                    && prev(word(COMBAT_PTR + 0x8c4)) == word(COMBAT_PTR + 0x8c4)
-                ) ||
-                // team 3
-                (
-                    word(COMBAT_PTR + 0x9f8) > 0 
-                    && prev(word(COMBAT_PTR + 0x9f8)) >= word(COMBAT_PTR + 0x9f8) 
-                    && prev(word(COMBAT_PTR + 0xa9c)) == word(COMBAT_PTR + 0xa9c) 
-                    && prev(word(COMBAT_PTR + 0xb4a)) == word(COMBAT_PTR + 0xb4a)
-                )
-            ), // Here, we will also want to change this to "or the diastrophism went off but nobody got hurt at all"
+        ||
+        // case: Seven Down
+        (
+            is_day("Saturday")
+            && on_shared_mission("Seven Down")
+            && (unit_using_diastrophism(9, "Benetnasch Bud")|| unit_using_diastrophism(10, "Benetnasch Bud"))
+            && (
+                    (
+                        word(COMBAT_PTR + 0x284) > 0 
+                        && prev(word(COMBAT_PTR + 0x284)) > word(COMBAT_PTR + 0x284) 
+                        && prev(word(COMBAT_PTR + 0x328)) == word(COMBAT_PTR + 0x328)
+                        && word(COMBAT_PTR + 0x328) > 0
+                        && prev(word(COMBAT_PTR + 0x3c8)) == word(COMBAT_PTR + 0x3c8)
+                        && word(COMBAT_PTR + 0x3c8) > 0
+                    ) ||
+                    // team 1
+                    (
+                        word(COMBAT_PTR + 0x500) > 0 
+                        && prev(word(COMBAT_PTR + 0x500)) > word(COMBAT_PTR + 0x500) 
+                        && prev(word(COMBAT_PTR + 0x5a4)) == word(COMBAT_PTR + 0x5a4) 
+                        && word(COMBAT_PTR + 0x5a4) > 0
+                        && prev(word(COMBAT_PTR + 0x646)) == word(COMBAT_PTR + 0x646)
+                        && word(COMBAT_PTR + 0x646) > 0
+                    ) ||
+                    // team 2
+                    (
+                        word(COMBAT_PTR + 0x77c) > 0 
+                        && prev(word(COMBAT_PTR + 0x77c)) > word(COMBAT_PTR + 0x77c) 
+                        && prev(word(COMBAT_PTR + 0x820)) == word(COMBAT_PTR + 0x820)
+                        && word(COMBAT_PTR + 0x820) > 0 
+                        && prev(word(COMBAT_PTR + 0x8c4)) == word(COMBAT_PTR + 0x8c4)
+                        && word(COMBAT_PTR + 0x8c4) > 0
+                    ) ||
+                    // team 3
+                    (
+                        word(COMBAT_PTR + 0x9f8) > 0 
+                        && prev(word(COMBAT_PTR + 0x9f8)) > word(COMBAT_PTR + 0x9f8) 
+                        && prev(word(COMBAT_PTR + 0xa9c)) == word(COMBAT_PTR + 0xa9c) 
+                        && word(COMBAT_PTR + 0xa9c) > 0
+                        && prev(word(COMBAT_PTR + 0xb40)) == word(COMBAT_PTR + 0xb40)
+                        && word(COMBAT_PTR + 0xb40) > 0
+                    )
+            )        
+        )
+        ,
     type = "missable"
 )
 achievement(
@@ -2866,12 +2947,10 @@ achievement(
     description = "Win the Delta Battle mission without clearing any of the miasma.",
     points = 5,
     trigger = on_mission("Delta Battle")
-        && ptr_valid(FULL_COMBAT_PTR)
         && bit1(0x00284b58) == 0x00
         && bit2(0x00284b58) == 0x00
         && bit3(0x00284b58) == 0x00
         && bit4(0x00284b58) == 0x00
-        && valid_teams_on_map()
         && trigger_when(combat_actively_occurring())
         && trigger_when(specific_leader_defeated("Megrez")),
     type = "missable"
@@ -3204,7 +3283,6 @@ achievement(
     )
 )
 
-
 achievement(
     title = "Eta Ursae Majoris",
     description = "Defeat Benetnasch with Trumpeter having been hit no more than two times.",
@@ -3264,7 +3342,7 @@ achievement(
     id = 596774,
     title = "Saving the Best For Last",
     description = "Defeat the Dragon last on either of 'Unexpected Battle' or 'Reared Head.'",
-    points = 5,
+    points = 10,
     trigger = __ornext(
         on_mission("Reared Head") ||
         on_branching_mission("Unexpected Battle", "Daichi (Restorer)") ||
@@ -3272,14 +3350,15 @@ achievement(
         on_branching_mission("Unexpected Battle", "Yamato") ||
         on_branching_mission("Unexpected Battle", "Ronaldo")
     ) && (
-        byte(COMBAT_PTR + 0x250) <= 0x04 &&
-        byte(COMBAT_PTR + 0x251) <= 0x04 &&
-        __ornext(byte(COMBAT_PTR + 0x252) <= 0x04 || byte(COMBAT_PTR + 0x252) == 0xff) &&
-        __ornext(byte(COMBAT_PTR + 0x253) <= 0x04 || byte(COMBAT_PTR + 0x253) == 0xff) &&
-        __ornext(byte(COMBAT_PTR + 0x254) <= 0x04 || byte(COMBAT_PTR + 0x254) == 0xff)
-    ) 
-    && combat_actively_occurring()
-    && specific_leader_defeated("Dragon")
+        trigger_when(byte(COMBAT_PTR + 0x250) <= 0x04) &&
+        trigger_when(byte(COMBAT_PTR + 0x251) <= 0x04) &&
+        trigger_when(__ornext(byte(COMBAT_PTR + 0x252) <= 0x04 || byte(COMBAT_PTR + 0x252) == 0xff)) &&
+        trigger_when(__ornext(byte(COMBAT_PTR + 0x253) <= 0x04 || byte(COMBAT_PTR + 0x253) == 0xff)) &&
+        trigger_when(__ornext(byte(COMBAT_PTR + 0x254) <= 0x04 || byte(COMBAT_PTR + 0x254) == 0xff))
+    )
+    && team_leader_is(4, "Dragon")
+    && trigger_when(combat_actively_occurring())
+    && trigger_when(specific_leader_defeated("Dragon"))
 )
 achievement(
     id = 575409,
@@ -3293,7 +3372,7 @@ achievement(
         on_branching_mission("Unexpected Battle", "Daichi (Liberator)") ||
         on_branching_mission("Unexpected Battle", "Yamato") ||
         on_branching_mission("Unexpected Battle", "Ronaldo")
-    ) 
+    )
     && combat_actively_occurring()
     && specific_leader_defeated("Dragon")
 )
@@ -3307,9 +3386,19 @@ achievement(
         on_branching_mission("Last Assassin", "Daichi (Liberator)") ||
         on_branching_mission("Last Assassin", "Yamato") ||
         on_branching_mission("Last Assassin", "Ronaldo")
-    ) 
-    && combat_actively_occurring()
-    && specific_leader_defeated("Alcor (Alternate)")
+    )
+    && __ornext(
+        team_leader_is(4, "Alcor (Alternate)") 
+        || team_leader_is(5, "Alcor (Alternate)") 
+        || team_leader_is(6, "Alcor (Alternate)") 
+        || team_leader_is(7, "Alcor (Alternate)") 
+        || team_leader_is(8, "Alcor (Alternate)") 
+        || team_leader_is(9, "Alcor (Alternate)") 
+        || team_leader_is(10, "Alcor (Alternate)") 
+        || team_leader_is(11, "Alcor (Alternate)") 
+    )
+    && trigger_when(combat_actively_occurring())
+    && trigger_when(specific_leader_defeated("Alcor (Alternate)"))
 )
 achievement(
     id = 597442,
@@ -3625,11 +3714,9 @@ achievement(
         && combat_actively_occurring()
         && specific_leader_defeated("Polaris A")
 )
-// no Free Battle progression
-// Note for future me: we need to not just detect the transition to the next day, but we need to detect it from Bedtime
+
 achievement(
     title = "Sunday's Melancholy",
-    // Reach the end of Day 1 without ever entering any Free Battle. [No Demon carry over] [No Macca carry over] [No Compendium discount]
     description = "Reach the end of Day 1 without ever entering any Free Battle and with no Demon carry over, no Macca carry over or no compendium discount.",
     points = 5,
     trigger = !new_game_plus_perk_enabled("Carry over 1 demon")
@@ -3644,9 +3731,7 @@ achievement(
         && prev(is_time_of_day(21, 0))
         && is_time_of_day(0, 0)
         && prev(is_day("Sunday"))
-        && is_day("Monday") 
-        && prev(bit0(0x00284aec)) == 0x00 
-        && bit0(0x00284aec) == 0x01,
+        && is_day("Monday"), 
     type = "missable",
     id=530973
 )
@@ -3666,9 +3751,7 @@ achievement(
         && prev(is_time_of_day(21, 0))
         && is_time_of_day(0, 0)
         && prev(is_day("Monday"))
-        && is_day("Tuesday") 
-        && prev(bit2(0x00284aef)) == 0x00 
-        && bit2(0x00284aef) == 0x01,
+        && is_day("Tuesday"), 
     type = "missable",
     id=530974
 )
@@ -3688,9 +3771,7 @@ achievement(
         && prev(is_time_of_day(21, 0))
         && is_time_of_day(0, 0)
         && prev(is_day("Tuesday"))
-        && is_day("Wednesday") 
-        && prev(bit1(0x00284af2)) == 0x00 
-        && bit1(0x00284af2) == 0x01,
+        && is_day("Wednesday"), 
     type = "missable",
     id=530975
 )
@@ -3707,7 +3788,7 @@ achievement(
         && !new_game_plus_perk_enabled("30% off Compendium")
         && !new_game_plus_perk_enabled("50% off Compendium")
         && !entered_free_battle() 
-        && prev(is_time_of_day(21, 0)) 
+        && prev(is_time_of_day(23, 30)) 
         && is_time_of_day(0, 0) 
         && prev(is_day("Wednesday")) 
         && is_day("Thursday"),

@@ -349,7 +349,7 @@ function all_allied_teams_last_standing(num_starting_teams) {
 // Check how many player teams are alive.
 // This is different from #all_allied_teams_last_standing because this strictly checks player teams, not enemy teams.
 function player_teams_alive(num_teams) {
-    cond = ptr_valid(FULL_COMBAT_PTR)
+    cond = always_true()
     for i in range(0, num_teams - 1) {
         offset = 0x27c * i
         cond = cond && bit0(COMBAT_PTR + 0x26c + offset) == 0x01
@@ -1891,7 +1891,7 @@ function char_fate_stage_maxed(char_name) {
 // because sometimes characters move around to different spots mid event.
 location = {
     0x00: "Aoyama Cemetary",
-    0x01: "??? 0x01",
+    0x01: "a mysterious place", // No, I don't know where this is, it never popped up.
     0x02: "Akasaka Tunnel",
     0x03: "Akihabara Street",
     0x04: "Sensouji",
@@ -1909,9 +1909,9 @@ location = {
     0x10: "Hanzoumon Line Platform",
     0x11: "Shibuya 901",
     0x12: "Shibuya Station",
-    0x13: "??? 0x13",
-    0x14: "??? 0x14",
-    0x15: "??? 0x15",
+    0x13: "a strange place", // I also don't know where this is.
+    0x14: "a bizarre place", // Or this!
+    0x15: "an unknown location", // Or even this!
     0x16: "Miyashita Park",
     0x17: "Cine City Plaza",
     0x18: "Kannagi-cho",
@@ -1921,17 +1921,17 @@ location = {
     0x1c: "Diet Building",
     0x1d: "Nagata-cho, Tokyo Branch",
     0x1e: "Hibiya Park",
-    0x1f: "??? 0x1f",
+    0x1f: "some unforetold destination", // So rather than RP look weird, I'm going to 
     0x20: "Roppongi Crosswalk",
     0x21: "99 Plaza",
-    0x22: "??? 0x22",
+    0x22: "some unforeseen place", // leave a cryptic message
     0x23: "Tokyo Station, Central Exit",
     0x24: "Shinjuku Govt Plaza",
     0x25: "Multipurpose Hall",
-    0x26: "??? 0x26",
+    0x26: "a dangerous locale", // on every line
     0x27: "Miyashita Park",
     0x28: "Room ",
-    0x29: "??? 0x29",
+    0x29: "an unimpressive destination", // that I have no idea about!
     0x2a: "Roppongi Hills",
     0x2b: "Akasaka Palace",
     0x2c: "Nagata-cho, Tokyo Branch",
@@ -1944,7 +1944,7 @@ location = {
     0x33: "the Festgate", // The real name is "Festival Gate" but one of the characters calls it Festgate
     0x34: "Tsuutenkaku",
     0x35: "Shinsekai",
-    0x36: "??? 0x36",
+    0x36: "a forgotten corner of Japan", // Maybe one day we'll figure out what all of this means.
     0x37: "Akasaka Mall",
     0x38: "Ebisu Bridge",
     0x39: "OCUT Plaza",
@@ -3431,6 +3431,7 @@ achievement(
         on_branching_mission("Correct Tomorrow", "Yamato") ||
         on_branching_mission("Unseen Tomorrow", "Ronaldo")
     ) 
+    && ptr_valid(FULL_COMBAT_PTR)
     && combat_actively_occurring()
     && player_teams_alive(4) 
     && specific_leader_defeated("Polaris A")

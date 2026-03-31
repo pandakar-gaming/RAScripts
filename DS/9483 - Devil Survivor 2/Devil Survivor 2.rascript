@@ -2542,8 +2542,8 @@ achievement(
     description = "Complete 'Demon-Hacked'.",
     points = 5,
     trigger = on_mission("Demon-Hacked") 
-        && in_combat() 
-        && active_mission_completed("Demon-Hacked"),
+        && in_combat()
+        && only_friendly_teams_left(),
     type = "progression",
     id = 546725
 )

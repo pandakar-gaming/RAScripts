@@ -2085,7 +2085,7 @@ event_id_by_name = {
     "Death Clip":           0x3e9,
     "Daichi's Crisis":      0x3f1,
     "A Man Named Joe":      0x3f3,
-    "Daichi's Resolve":     0x3f4,
+    "Daichi's Worth":     0x3f4,
     "App Abuser":           0x7d4,
     "Never Say Die":        0x7d8,
     "Demon-Hacked":         0x7da,
@@ -2588,7 +2588,9 @@ achievement(
     title = "Alpha Ursae Majoris",
     description = "Get all allies to the escape area in Daichi's Worth without Dubhe killing any demons and without using Suspend.",
     points = 5,
-    trigger = never(MOST_RECENT_MISSION != 0x3f4)
+    trigger = on_mission("Daichi's Worth")
+        && never(loaded_from_suspend())
+        // && disable_when(loaded_from_suspend(), until=MOST_RECENT_MISSION != 0x3f4)
         && bit3(0x00284aec) == 0x01
         && trigger_when(prev(word(TEAM_ARRAY_PTR + (0x27c * 0x04) + 0x0a)) == 0x114 && word(TEAM_ARRAY_PTR + (0x27c * 0x04) + 0x0a) == 0x115)
         && (
@@ -2596,8 +2598,7 @@ achievement(
             && disable_when(attacker_leader_is("Dubhe (Whole)") && defender_right_unit_defeated())
             && disable_when(defender_leader_is("Dubhe (Whole)") && attacker_left_unit_defeated())
             && disable_when(defender_leader_is("Dubhe (Whole)") && attacker_right_unit_defeated())
-        )
-        && disable_when(loaded_from_suspend(), until=MOST_RECENT_MISSION != 0x3f4),
+        ),
     type = "missable",
     id=530960
 )
@@ -2606,7 +2607,7 @@ achievement(
     description = "Defeat Dubhe.",
     points = 5,
     trigger = actively_in_event() 
-        && on_mission("Daichi's Resolve") 
+        && on_mission("Daichi's Worth") 
         && combat_actively_occurring()
         && specific_leader_defeated("Dubhe (Half)"),
     type = "progression",
@@ -4023,7 +4024,7 @@ achievement(
 )
 achievement(
     title = "I Have a Severe Allergy to Grinding",
-    description = "Without ever entering any Free Battle, complete any ending without carrying over Demons or Macca and no compendium discount."
+    description = "Without ever entering any Free Battle, complete any ending without carrying over Demons or Macca and no compendium discount.",
     points = 25,
     trigger = !new_game_plus_perk_enabled("Carry over 1 demon")
         && !new_game_plus_perk_enabled("Carry over 4 demons")

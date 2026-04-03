@@ -90,7 +90,7 @@ function actively_in_event() => byte(0x00284ab8) == 0x1e
 
 // This does not confirm what combat mission you're on, just that you're in one.
 // @param mission_name the String name of the mission that the player would see.
-function on_mission(mission_name) => actively_in_event() && MOST_RECENT_MISSION == event_id_by_name[mission_name]
+function on_mission(mission_name) => MOST_RECENT_MISSION == event_id_by_name[mission_name]
 
 // This exists because it turns out, mission names are NOT UNIQUE.
 // Isn't that fun to find out several months into developing a set?
@@ -1625,6 +1625,95 @@ function new_game_plus_bosses_registered() {
         + demon_registered("Alice")
 }
 
+// Ordered in the order that the game stores them, not in the order listed by the game's Command Skill folder
+COMMAND_SKILLS = {
+    "Agi": bit2(0x00284a56),
+    "Agidyne": bit3(0x00284a56),
+    "Maragi": bit4(0x00284a56),
+    "Maragidyne": bit5(0x00284a56),
+    "Bufu": bit6(0x00284a56),
+    "Bufudyne": bit7(0x00284a56),
+
+    "Mabufu": bit0(0x00284a57),
+    "Mabufudyne": bit1(0x00284a57),
+    "Zio": bit2(0x00284a57),
+    "Ziodyne": bit3(0x00284a57),
+    "Mazio": bit4(0x00284a57),
+    "Maziodyne": bit5(0x00284a57),
+    "Zan": bit6(0x00284a57),
+    "Zandyne": bit7(0x00284a57),
+
+    "Mazan": bit0(0x00284a58),
+    "Mazandyne": bit1(0x00284a58),
+    "Megido": bit2(0x00284a58),
+    "Megidolaon": bit3(0x00284a58),
+    "Fire Dance": bit4(0x00284a58),
+    "Ice Dance": bit5(0x00284a58),
+    "Elec Dance": bit6(0x00284a58),
+    "Force Dance": bit7(0x00284a58),
+
+    "Holy Dance": bit0(0x00284a59),
+    "Drain": bit1(0x00284a59),
+    "Judgement": bit2(0x00284a59),
+    "Petra Eyes": bit3(0x00284a59),
+    "Paral Eyes": bit5(0x00284a59),
+    "Death Call": bit6(0x00284a59),
+    "Power Hit": bit7(0x00284a59),
+
+    "Berserk": bit0(0x00284a5a),
+    "Mighty Hit": bit1(0x00284a5a),
+    "Anger Hit": bit2(0x00284a5a),
+    "Brutal Hit": bit3(0x00284a5a),
+    "Hassohappa": bit4(0x00284a5a),
+    "Deathbound": bit5(0x00284a5a),
+    "Weak Kill": bit6(0x00284a5a),
+
+    "Gigajama": bit1(0x00284a5b),
+    "Makarakarn": bit3(0x00284a5b),
+    "Tetrakarn": bit4(0x00284a5b),
+    "Might Call": bit5(0x00284a5b),
+    "Shield All": bit6(0x00284a5b),
+    "Taunt": bit7(0x00284a5b),
+
+    "Dia": bit0(0x00284a5c),
+    "Diarahan": bit1(0x00284a5c),
+    "Media": bit2(0x00284a5c),
+    "Mediarahan": bit3(0x00284a5c),
+    "Amrita": bit4(0x00284a5c),
+    "Prayer": bit5(0x00284a5c),
+    "Recarm": bit6(0x00284a5c),
+    "Samarecarm": bit7(0x00284a5c),
+
+    "Piercing Hit ": bit2(0x00284a5e),
+    "Multi-Hit": bit3(0x00284a5e),
+    "Holy Strike": bit4(0x00284a5e),
+    "Power Charge": bit5(0x00284a5e),
+    "Sexy Gaze": bit6(0x00284a5e),
+    "Marin Karin": bit7(0x00284a5e),
+
+    "Extra Cancel": bit0(0x00284a5f),
+    "Assassinate": bit1(0x00284a5f),
+    "Fatal Strike": bit2(0x00284a5f),
+    "Diarama": bit3(0x00284a5f),
+    "Nigayomogi": bit4(0x00284a5f),
+    "Recarmloss": bit5(0x00284a5f),
+    "Mow Down": bit6(0x00284a5f),
+    "Snipe": bit7(0x00284a5f),
+
+    "Life Drain": bit0(0x00284a60),
+    "Multi-Strike": bit1(0x00284a60),
+    "Inferno": bit2(0x00284a60),
+}
+
+function check_num_command_skills() {
+    total_learned = 0
+    for skill in COMMAND_SKILLS {
+        total_learned = total_learned + COMMAND_SKILLS[skill]
+    }
+
+    return total_learned
+}
+
 // Total of 67 skills
 function num_learned_command_skills() {
     return
@@ -1668,7 +1757,7 @@ function num_learned_command_skills() {
         bit3(0x00284a5b) + // Makarakarn
         bit4(0x00284a5b) + // Tetrakarn
         bit5(0x00284a5b) + // Might Call
-        bit6(0x00284a5b) + // Shield Call
+        bit6(0x00284a5b) + // Shield All
         bit7(0x00284a5b) + // Taunt
         bit0(0x00284a5c) + // Dia
         bit1(0x00284a5c) + // Diarahan
@@ -1688,7 +1777,7 @@ function num_learned_command_skills() {
         bit1(0x00284a5f) + // Assassinate
         bit2(0x00284a5f) + // Fatal Strike
         bit3(0x00284a5f) + // Diarama
-        bit4(0x00284a5f) + // Nagayomogi
+        bit4(0x00284a5f) + // Nigayomogi
         bit5(0x00284a5f) + // Recarmloss
         bit6(0x00284a5f) + // Mow Down
         bit7(0x00284a5f) + // Snipe
@@ -1817,7 +1906,7 @@ function num_learned_auto_skills() {
 
 // Check the total number of skills learned by the player.
 // There is a total of 32 auto + 67 command + 76 passive skills to learn.
-function num_learned_skills() => num_learned_auto_skills() + num_learned_command_skills() + num_learned_passive_skills()
+function num_learned_skills() => num_learned_auto_skills() + check_num_command_skills() + num_learned_passive_skills()
 
 chararacter_ids_by_name = {
     "Ronaldo": 0x03,
@@ -2049,6 +2138,7 @@ function active_mission_in_progress() => ptr_valid(FULL_COMBAT_PTR) && byte(COMB
 // [0x00284b54, 0x00284b55, 0x00284b56, 0x00284b57, 0x00284b58].
 // As we only need a generic check for some missions, for a given mission we'll check if the associated flag flipped.
 function active_mission_completed(mission_name) {
+
     if (mission_name == "Daichi's Crisis") {
         return prev(bit2(0x00284b55)) == 0x00 && bit2(0x00284b55) == 0x01
     }
@@ -2461,7 +2551,7 @@ achievement(
     title = "False Alarm",
     description = "Prevent the death foretold in your own death clip.",
     points = 1,
-    trigger =  is_day("Sunday") && on_mission("Death Clip") && all_allied_teams_last_standing(3),
+    trigger =  is_day("Sunday") && actively_in_event() && on_mission("Death Clip") && all_allied_teams_last_standing(3),
     type = "progression",
     id=530957
 )
@@ -2469,7 +2559,8 @@ achievement(
     title = "Just Needed Moral Support",
     description = "Have Daichi's team land the killing blow on Bai Suzhen in Daichi's Crisis.",
     points = 3,
-    trigger = on_mission("Daichi's Crisis")
+    trigger = actively_in_event() 
+        && on_mission("Daichi's Crisis")
         && (
             (attacker_leader_is("Daichi") && defender_leader_is("Bai Suzhen") && defender_leader_defeated()) || 
             (defender_leader_is("Daichi") && attacker_leader_is("Bai Suzhen") && attacker_leader_defeated())
@@ -2480,8 +2571,8 @@ achievement(
 achievement(
     title = "She's Sealed Away for a Reason",
     description = "Prevent the death foretold by the second death clip on Sunday.",
-    points = 1,
-    trigger = on_mission("Daichi's Crisis") && active_mission_completed("Daichi's Crisis"),
+    points = 3,
+    trigger = on_mission("Daichi's Crisis") && actively_in_event() &&active_mission_completed("Daichi's Crisis"),
     type = "progression",
     id=530958
 )
@@ -2489,7 +2580,7 @@ achievement(
     title = "Taking on Troublesome Contracts",
     description = "Help Joe resolve his outstanding contract.",
     points = 2,
-    trigger = on_mission("A Man Named Joe") && active_mission_completed("A Man Named Joe"),
+    trigger = on_mission("A Man Named Joe") && actively_in_event() && active_mission_completed("A Man Named Joe"),
     type = "progression",
     id=530959
 )
@@ -2514,7 +2605,8 @@ achievement(
     title = "Dubious Dubhe",
     description = "Defeat Dubhe.",
     points = 5,
-    trigger = on_mission("Daichi's Resolve") 
+    trigger = actively_in_event() 
+        && on_mission("Daichi's Resolve") 
         && combat_actively_occurring()
         && specific_leader_defeated("Dubhe (Half)"),
     type = "progression",
@@ -2525,6 +2617,7 @@ achievement(
     description = "Defeat all human enemies in App Abuser before any escape and without using Suspend.",
     points = 3,
     trigger = never(MOST_RECENT_MISSION != 0x7d4)
+        && actively_in_event() 
         && on_mission("App Abuser")
         && on_grid_map()
         && never(loaded_from_suspend())
@@ -2541,7 +2634,8 @@ achievement(
     title = "Busting the 'valgate Party",
     description = "Complete 'Demon-Hacked'.",
     points = 5,
-    trigger = on_mission("Demon-Hacked") 
+    trigger = actively_in_event() 
+        && on_mission("Demon-Hacked") 
         && in_combat()
         && only_friendly_teams_left(),
     type = "progression",
@@ -2554,6 +2648,7 @@ achievement(
     trigger = on_mission("Never Say Die") 
         && team_leader_hp_full(0x0a) 
         && team_leader_hp_full(0x0b)
+        && actively_in_event()
         && trigger_when(active_mission_completed("Never Say Die")),
     type = "missable",
     id = 546542
@@ -2562,7 +2657,7 @@ achievement(
     title = "Take Me to the Men in Yellow",
     description = "Recruit Hinako to the party.",
     points = 2,
-    trigger = on_mission("Never Say Die") && character_recruited("Hinako"),
+    trigger = actively_in_event() && on_mission("Never Say Die") && character_recruited("Hinako"),
     type = "progression",
     id=530962
 )
@@ -2571,7 +2666,8 @@ achievement(
     title = "Miasma Maestro",
     description = "On either of 'Osaka Soul' or 'Too Late', clear all of the miasma before any additional enemy teams are summoned and complete the mission without using Suspend.",
     points = 5,
-    trigger = __ornext(MOST_RECENT_MISSION == event_id_by_name["Osaka Soul"] || MOST_RECENT_MISSION == event_id_by_name["Too Late"]) 
+    trigger = __ornext(MOST_RECENT_MISSION == event_id_by_name["Osaka Soul"] || MOST_RECENT_MISSION == event_id_by_name["Too Late"])
+        && actively_in_event()
         && never(loaded_from_suspend())
         && disable_when(unit_respawns(), until= MOST_RECENT_MISSION != event_id_by_name["Osaka Soul"] && MOST_RECENT_MISSION != event_id_by_name["Too Late"])
         && trigger_when(bit0(0x00284b5a) == 0x01)
@@ -2585,7 +2681,7 @@ achievement(
     title = "Savior of the Angry",
     description = "Prevent the crisis foretold by Monday's death clip.",
     points = 3,
-    trigger = bit1(0x00284aee) == 0x01 && on_mission("Osaka Soul") && character_alive("Keita") && character_recruited("Keita"),
+    trigger = bit1(0x00284aee) == 0x01 && actively_in_event() && on_mission("Osaka Soul") && character_alive("Keita") && character_recruited("Keita"),
     type = "missable",
     id=530963
 )
@@ -2593,7 +2689,9 @@ achievement(
     title = "Beta Ursae Majoris",
     description = "Defeat Merak without it ever using Circumpolarity and without using Suspend.",
     points = 5,
-    trigger = on_grid_map() && on_mission("Merak Arrives") 
+    trigger = on_grid_map()
+            && actively_in_event()  
+            && on_mission("Merak Arrives") 
             && never(loaded_from_suspend())
             && trigger_when(combat_actively_occurring())
             && trigger_when(specific_leader_defeated("Merak"))
@@ -2605,7 +2703,8 @@ achievement(
     title = "Meticulous Merak",
     description = "Defeat Merak.",
     points = 5,
-    trigger = on_mission("Merak Arrives")
+    trigger = actively_in_event()  
+        && on_mission("Merak Arrives")
         && combat_actively_occurring() 
         && specific_leader_defeated("Merak"),
     type = "progression",
@@ -2615,7 +2714,8 @@ achievement(
     title = "A Fun-Filled Q...!",
     description = "Defeat Ghost Q.",
     points = 10,
-    trigger = is_day("Tuesday") 
+    trigger = is_day("Tuesday")
+        && actively_in_event()  
         && on_mission("Vs. Q") 
         && combat_actively_occurring()
         && specific_leader_defeated("Ghost Q"),
@@ -2636,7 +2736,8 @@ achievement(
     title = "Second Time's the Charm",
     description = "Defeat Botis in 'Hacker Revealed.'",
     points = 5,
-    trigger = on_mission("Hacker Revealed")
+    trigger = actively_in_event() 
+        && on_mission("Hacker Revealed")
         && combat_actively_occurring() 
         && specific_leader_defeated("Botis"),
     type = "missable",
@@ -2646,7 +2747,8 @@ achievement(
     title = "Hmm... Mm?",
     description = "Complete 'Hacker Revealed.'",
     points = 3,
-    trigger = on_mission("Hacker Revealed") 
+    trigger = actively_in_event() 
+        && on_mission("Hacker Revealed") 
         && ptr_valid(FULL_COMBAT_PTR)
         && word(COMBAT_PTR + 0xee2) == 0x161
         && (
@@ -2669,6 +2771,7 @@ achievement(
     points = 3,
     trigger = on_mission("Saving Daichi")
         && in_combat()
+        && actively_in_event() 
         && bit4(0x00284b1f) == 0x01 
         && trigger_when(prev(bit5(0x00284b56)) == 0x00) 
         && trigger_when(bit5(0x00284b56) == 0x01),
@@ -2679,7 +2782,11 @@ achievement(
     title = "Savior of the Strong",
     description = "Prevent the crisis foretold by Tuesday's death clip.",
     points = 5,
-    trigger = bit2(0x00284af1) == 0x01 && on_mission("Saving Daichi") && character_alive("Jungo") && character_recruited("Jungo"),
+    trigger = bit2(0x00284af1) == 0x01 
+        && actively_in_event() 
+        && on_mission("Saving Daichi") 
+        && character_alive("Jungo") 
+        && character_recruited("Jungo"),
     type = "missable",
     id=530971
 )
@@ -2690,7 +2797,8 @@ achievement(
     // Loose high level idea here:
     // Normally I would detect when HP hits 0, but HP actually hits 1 here
     // Instead of going through and adding that edge case, we'll rely on combat flags flipping while all other teams are up
-    trigger = on_mission("Man of Fury") 
+    trigger = actively_in_event() 
+        && on_mission("Man of Fury") 
         && num_teams_on_map(0x0a)
         && in_combat_mission("Man of Fury (Ronaldo)")
         // The underlying pointers here continue pointing to the associated defender/attacker until next combat is entered, so this is fine
@@ -2703,9 +2811,11 @@ achievement(
     title = "Gamma Ursae Majoris",
     description = "Defeat Phecda without using Suspend.",
     points = 10,
-    trigger = never(loaded_from_suspend()) && on_mission("Man of Fury") &&
+    trigger = never(loaded_from_suspend())
+        && actively_in_event() 
+        && on_mission("Man of Fury")
         // Phys already defeated, Magic being defeated
-        ((
+        && ((
             bit0(0x00284b56) == 0x01 
             && (attacker_leader_is("Phecda (Magic)") || defender_leader_is ("Phecda (Magic)")) 
             && prev(bit6(0x00284b55) == 0x00) 
@@ -2725,9 +2835,10 @@ achievement(
     title = "Partitioned Phecda",
     description = "Defeat Phecda.",
     points = 5,
-    trigger = on_mission("Man of Fury") &&
+    trigger = actively_in_event()  
+        && on_mission("Man of Fury")
         // Phys already defeated, Magic being defeated
-        ((
+        && ((
             bit0(0x00284b56) == 0x01 
             && (attacker_leader_is("Phecda (Magic)") || defender_leader_is ("Phecda (Magic)")) 
             && prev(bit6(0x00284b55) == 0x00) 
@@ -2770,8 +2881,8 @@ achievement(
     // On any team with all members alive, have (at most) the team leader be damaged during Diastrophism.
     description = "On any team with all members alive, have only the team leader be damaged during Diastrophism.",
     points = 5,
-    trigger = 
-        (
+    trigger = actively_in_event()
+        && (
             is_day("Wednesday")
             && on_mission("Bud of Malice")
             && unit_using_diastrophism(4, "Megrez Bud") 
@@ -2914,7 +3025,8 @@ achievement(
     title = "Warm and Fuzzy Foe",
     description = "Defeat Neko Shogun in A Hard Choice.",
     points = 5,
-    trigger = on_mission("A Hard Choice")
+    trigger = actively_in_event() 
+        && on_mission("A Hard Choice")
         && combat_actively_occurring() 
         && specific_leader_defeated("Neko Shogun"),
     type = "missable",
@@ -2941,7 +3053,8 @@ achievement(
     title = "Delta Ursae Majoris",
     description = "Win the Delta Battle mission without clearing any of the miasma.",
     points = 5,
-    trigger = on_mission("Delta Battle")
+    trigger = actively_in_event() 
+        && on_mission("Delta Battle")
         && bit1(0x00284b58) == 0x00
         && bit2(0x00284b58) == 0x00
         && bit3(0x00284b58) == 0x00
@@ -2954,7 +3067,8 @@ achievement(
     title = "Marooned Megrez",
     description = "Defeat Megrez.",
     points = 10,
-    trigger = on_mission("Delta Battle")
+    trigger = actively_in_event() 
+        && on_mission("Delta Battle")
         && combat_actively_occurring() 
         && specific_leader_defeated("Megrez"),
     type = "progression",
@@ -2965,7 +3079,7 @@ achievement(
     title = "It's Showtime",
     description = "Complete the 'Poisonous Day' mission and unlock Hitokotonusi.",
     points = 5,
-    trigger = on_mission("Poisonous Day") && mail_triggered("Re: Hitokotonusi"),
+    trigger = is_day("Thursday") && on_mission("Poisonous Day") && mail_triggered("Re: Hitokotonusi"),
     type = "progression",
     id = 546543
 )
@@ -2988,7 +3102,7 @@ achievement(
     title ="I'm Bringing Sexy Ban",
     description = "Have Airi defeat Kama during the 'Ananga' mission.",
     points = 3,
-    trigger = is_day("Thursday") && on_mission("Ananga") && trigger_when(specific_leader_soft_defeated_by("Kama", "Airi")),
+    trigger = is_day("Thursday") && actively_in_event() && on_mission("Ananga") && trigger_when(specific_leader_soft_defeated_by("Kama", "Airi")),
     type = "missable"
 )
 achievement(
@@ -2996,7 +3110,8 @@ achievement(
     title = "A Summoning via Lasya",
     description = "Complete the 'Nataraja' mission with Hinako having never been damaged during her dance and without using Suspend.",
     points = 5,
-    trigger = is_day("Thursday") 
+    trigger = is_day("Thursday")
+        && actively_in_event()
         && on_mission("Nataraja")
         && !loaded_from_suspend()
         && disable_when(
@@ -3010,9 +3125,11 @@ achievement(
     title = "(Bifrons Actually Required)",
     description = "Defeat Bifrons in either of 'Unexpected Hostility' or 'Victim of Foul Play'.",
     points = 10,
-    trigger = (on_mission("Unexpected Hostility") || on_mission("Victim of Foul Play")) &&
-        (attacker_leader_is("Bifrons") || defender_leader_is("Bifrons")) && 
-        prev(bit4(0x00284b15)) == 0x00 && bit4(0x00284b15) == 0x01,
+    trigger = actively_in_event() 
+        && (on_mission("Unexpected Hostility") || on_mission("Victim of Foul Play"))
+        && (attacker_leader_is("Bifrons") || defender_leader_is("Bifrons"))
+        && prev(bit4(0x00284b15)) == 0x00 
+        && bit4(0x00284b15) == 0x01,
     type = "missable",
     id = 546544
 )
@@ -3020,7 +3137,11 @@ achievement(
     title = "The Savior's Savior",
     description = "Prevent the crisis shown by Thursday's death clip.",
     points = 5,
-    trigger = bit1(0x00284afa) == 0x01 && on_mission("Unexpected Hostility") && character_alive("Otome") && character_recruited("Otome"),
+    trigger = bit1(0x00284afa) == 0x01
+        && actively_in_event() 
+        && on_mission("Unexpected Hostility") 
+        && character_alive("Otome") 
+        && character_recruited("Otome"),
     type = "missable",
     id = 546545
 )
@@ -3029,7 +3150,8 @@ achievement(
     description = "Defeat Alioth without usage of the neutralizing agent.",
     points = 10,
     // 
-    trigger = on_mission("Alioth Core") 
+    trigger = actively_in_event()
+        && on_mission("Alioth Core") 
         && bit2(0x00284b58) != 0x01
         && disable_when(
             // When the mission's done, only MC + Alioth are left in turn order. Regardless of who you deployed.
@@ -3049,7 +3171,8 @@ achievement(
     title = "Antagonizing Alioth",
     description = "Defeat Alioth.",
     points = 10,
-    trigger = on_mission("Alioth Core")
+    trigger = actively_in_event()
+        && on_mission("Alioth Core")
         && combat_actively_occurring()
         && specific_leader_defeated("Alioth Core"),
     type = "progression",
@@ -3070,13 +3193,13 @@ achievement(
     description = "Complete the 'Under Attack' mission.",
     points = 3,
     type = "progression",
-    trigger = on_mission("Under Attack") && only_friendly_teams_left()
+    trigger = actively_in_event() && on_mission("Under Attack") && only_friendly_teams_left()
 )
 achievement(
     title = "Chilly Crater Combat",
     description = "Complete the 'Barrier Failure' mission and witness the ensuing events.",
     points = 5,
-    trigger = on_mission("Barrier Failure") && prev(bit5(0x00284b00)) == 0x00 && bit5(0x00284b00) == 0x01,
+    trigger = actively_in_event() && on_mission("Barrier Failure") && prev(bit5(0x00284b00)) == 0x00 && bit5(0x00284b00) == 0x01,
     type = "progression",
     id = 547006
 )
@@ -3087,22 +3210,27 @@ achievement(
     description = "Collect all of Lugh's fragments of energy.",
     points = 3,
     type = "progression",
-    trigger = on_mission("Lamhfhada") && only_friendly_teams_left()
+    trigger = actively_in_event() && on_mission("Lamhfhada") && only_friendly_teams_left()
 )
 achievement(
     id = 594850,
     title = "Demon Delivery Service",
-    description = "On 'Lamhfhada', complete the mission without actively picking up energy yourself.",
+    description = "On 'Lamhfhada', complete the mission without actively picking up energy yourself and without using the Suspend feature.",
     points = 3,
-    trigger = on_mission("Lamhfhada") 
-        && disable_when(once(friendly_used_special_action()), until=!on_mission("Lamhfhada"))
-        && byte(COMBAT_PTR + 0x218) > 0 && 
+    trigger = actively_in_event() 
+        // && on_mission("Lamhfhada")
+        && never(loaded_from_suspend())
+        && never(!on_mission("Lamhfhada"))
+        && once(prev(byte(COMBAT_PTR + 0x24c) == 0x00) && byte(COMBAT_PTR + 0x24c) == 0x05)
+        && disable_when(once(ptr_valid(FULL_COMBAT_PTR) && friendly_used_special_action()), until=!on_mission("Lamhfhada"))
+        // && byte(COMBAT_PTR + 0x218) > 0 && 
         // The following is a carbon copy of only_friendly_teams_left(), except that it has trigger_whens
         // We cannot apply trigger_when to the current form of only_friendly_teams_left(). "Too complex"
-        (
+        && (
             // Case 1: one party member alive
             (
                 trigger_when(byte(COMBAT_PTR + 0x250) <= 0x03)
+                && trigger_when(byte(COMBAT_PTR + 0x251) == byte(COMBAT_PTR + 0x251 + 12))
                 && trigger_when(prev(byte(COMBAT_PTR + 0x251) <= 0x0b))
                 && trigger_when(byte(COMBAT_PTR + 0x251) == 0xff)
             )
@@ -3111,6 +3239,7 @@ achievement(
             (
                 trigger_when(byte(COMBAT_PTR + 0x250) <= 0x03)
                 && trigger_when(byte(COMBAT_PTR + 0x251) <= 0x03)
+                && trigger_when(byte(COMBAT_PTR + 0x252) == byte(COMBAT_PTR + 0x252 + 12))
                 && trigger_when(prev(byte(COMBAT_PTR + 0x252) <= 0x0b))
                 && trigger_when(byte(COMBAT_PTR + 0x252) == 0xff)
             )
@@ -3120,6 +3249,7 @@ achievement(
                 trigger_when(byte(COMBAT_PTR + 0x250) <= 0x03)
                 && trigger_when(byte(COMBAT_PTR + 0x251) <= 0x03)
                 && trigger_when(byte(COMBAT_PTR + 0x252) <= 0x03)
+                && trigger_when(byte(COMBAT_PTR + 0x253) == byte(COMBAT_PTR + 0x253 + 12))
                 && trigger_when(prev(byte(COMBAT_PTR + 0x253) <= 0x0b))
                 && trigger_when(byte(COMBAT_PTR + 0x253) == 0xff)
             )
@@ -3130,6 +3260,7 @@ achievement(
                 && trigger_when(byte(COMBAT_PTR + 0x251) <= 0x03)
                 && trigger_when(byte(COMBAT_PTR + 0x252) <= 0x03)
                 && trigger_when(byte(COMBAT_PTR + 0x253) <= 0x03)
+                && trigger_when(byte(COMBAT_PTR + 0x254) == byte(COMBAT_PTR + 0x254 + 12))
                 && trigger_when(prev(byte(COMBAT_PTR + 0x254)) <= 0x0b)
                 && trigger_when(byte(COMBAT_PTR + 0x254) == 0xff)
             )
@@ -3158,7 +3289,8 @@ achievement(
     title = "Trial of the Dragon",
     description = "Call forth the Dragon Stream using Lugh's power.",
     points = 10,
-    trigger = on_mission("The Dragon") 
+    trigger = actively_in_event()
+        && on_mission("The Dragon") 
         && ((character_alive("Io") && character_recruited("Io")) || (prev(bit7(0x00284b11)) == 0x00 && bit7(0x00284b11) == 0x01)),
     type = "progression",
     id = 547042
@@ -3168,7 +3300,7 @@ achievement(
     title = "Savior of the Timid",
     description = "Prevent the crisis shown in the death clip on Friday.",
     points = 5,
-    trigger = on_mission("The Dragon") && character_alive("Io") && character_recruited("Io"),
+    trigger = actively_in_event() && on_mission("The Dragon") && character_alive("Io") && character_recruited("Io"),
     type = "missable"
 )
 
@@ -3177,7 +3309,8 @@ achievement(
     title = "Zeta Ursae Majoris",
     description = "Deploy 4 teams to the Food Chain mission and defeat Mizar with all team leaders alive.",
     points = 10,
-    trigger = on_mission("Food Chain") 
+    trigger = actively_in_event()
+        && on_mission("Food Chain") 
         && player_teams_alive(4)
         && trigger_when(bit1(0x00284b55) == 0x01) 
         && trigger_when(bit2(0x00284b55) == 0x01)
@@ -3194,7 +3327,8 @@ achievement(
     title = "Mizar (No Longer) Multiply",
     description = "Defeat Mizar.",
     points = 10,
-    trigger = on_mission("Food Chain") 
+    trigger = actively_in_event()
+        && on_mission("Food Chain") 
         && bit1(0x00284b55) == 0x01 
         && bit2(0x00284b55) == 0x01 
         && bit3(0x00284b55) == 0x01 
@@ -3211,7 +3345,7 @@ achievement(
     title = "Savior of the Loyal",
     description = "Prevent the crisis shown in Friday's second death clip.",
     points = 5,
-    trigger = on_mission("Ronaldo Rises") && character_alive("Makoto") && character_recruited("Makoto"),
+    trigger = actively_in_event() && on_mission("Ronaldo Rises") && character_alive("Makoto") && character_recruited("Makoto"),
     type = "missable",
     id = 547045
 )
@@ -3248,6 +3382,7 @@ achievement(
     title = "How Many Demons Could a Phone Hold, Anyway?",
     description = "On Vs. Osaka, defeat Fumi last.",
     points = 5,
+    type = "missable",
     // do this one at a time
     trigger = (
         __ornext(on_branching_mission("Vs. Osaka", "Anguished One") || on_branching_mission("Vs. Osaka", "Daichi"))
@@ -3255,7 +3390,7 @@ achievement(
         && bit2(COMBAT_PTR + 0xed8) == 0x00
         && bit2(COMBAT_PTR + 0x1154) == 0x00
         && bit2(COMBAT_PTR + 0x13d0) == 0x00
-        && byte(COMBAT_PTR + 0x164c) == 0x07
+        && bit2(COMBAT_PTR + 0x164c) == 0x01
         && word(COMBAT_PTR + 0x1656) == enemy_id_by_name["Fumi"] 
         && bit2(COMBAT_PTR + 0x18c8) == 0x00
         && bit2(COMBAT_PTR + 0x1b44) == 0x00
@@ -3264,7 +3399,7 @@ achievement(
         && specific_leader_defeated("Fumi")
     ) || (
         on_branching_mission("Vs. Osaka", "Ronaldo")
-        && byte(COMBAT_PTR + 0xc5c) == 0x07 
+        && bit2(COMBAT_PTR + 0xc5c) == 0x01 
         && word(COMBAT_PTR + 0xc66) == enemy_id_by_name["Fumi (Hacking)"]
         && bit2(COMBAT_PTR + 0xed8) == 0x00
         && bit2(COMBAT_PTR + 0x1154) == 0x00
@@ -3298,22 +3433,53 @@ achievement(
             (word(COMBAT_PTR + 0xc66) == 0x12e) ||
             (word(COMBAT_PTR + 0xc66) == 0x12f)
         ))
-        && trigger_when(__ornext(byte(COMBAT_PTR + 0x250) <= 0x03 || byte(COMBAT_PTR + 0x250) == 0x05))
-        && trigger_when(__ornext(byte(COMBAT_PTR + 0x251) <= 0x03 || byte(COMBAT_PTR + 0x251) == 0x05))
-        && trigger_when(__ornext(byte(COMBAT_PTR + 0x252) <= 0x03 || byte(COMBAT_PTR + 0x252) == 0x05 || byte(COMBAT_PTR + 0x252) == 0xff))
-        && trigger_when(__ornext(byte(COMBAT_PTR + 0x253) <= 0x03 || byte(COMBAT_PTR + 0x253) == 0x05 || byte(COMBAT_PTR + 0x253) == 0xff))
-        && trigger_when(__ornext(byte(COMBAT_PTR + 0x254) <= 0x03 || byte(COMBAT_PTR + 0x254) == 0x05 || byte(COMBAT_PTR + 0x254) == 0xff))
-        && trigger_when(prev(byte(COMBAT_PTR + 0x255)) <= 0x08)
-        && trigger_when(byte(COMBAT_PTR + 0x255) == 0xff),
+        && (
+            // one party member, trumpeter, one enemy
+            (
+                trigger_when(__ornext(byte(COMBAT_PTR + 0x250) <= 0x03 || byte(COMBAT_PTR + 0x250) == 0x05))
+                && trigger_when(__ornext(byte(COMBAT_PTR + 0x251) <= 0x03 || byte(COMBAT_PTR + 0x251) == 0x05))
+                && trigger_when(prev(byte(COMBAT_PTR + 0x252)) <= 0x08)
+                && trigger_when(byte(COMBAT_PTR + 0x252) == 0xff)
+            ) 
+            // two party members, trumpeter, one enemy
+            ||
+            (
+                trigger_when(__ornext(byte(COMBAT_PTR + 0x250) <= 0x03 || byte(COMBAT_PTR + 0x250) == 0x05))
+                && trigger_when(__ornext(byte(COMBAT_PTR + 0x251) <= 0x03 || byte(COMBAT_PTR + 0x251) == 0x05))
+                && trigger_when(__ornext(byte(COMBAT_PTR + 0x252) <= 0x03 || byte(COMBAT_PTR + 0x252) == 0x05))
+                && trigger_when(prev(byte(COMBAT_PTR + 0x253)) <= 0x08)
+                && trigger_when(byte(COMBAT_PTR + 0x253) == 0xff)
 
+            )
+            // three party members, trumpeter, one enemy
+            ||
+            (
+                trigger_when(__ornext(byte(COMBAT_PTR + 0x250) <= 0x03 || byte(COMBAT_PTR + 0x250) == 0x05))
+                && trigger_when(__ornext(byte(COMBAT_PTR + 0x251) <= 0x03 || byte(COMBAT_PTR + 0x251) == 0x05))
+                && trigger_when(__ornext(byte(COMBAT_PTR + 0x252) <= 0x03 || byte(COMBAT_PTR + 0x252) == 0x05))
+                && trigger_when(__ornext(byte(COMBAT_PTR + 0x253) <= 0x03 || byte(COMBAT_PTR + 0x253) == 0x05))
+                && trigger_when(prev(byte(COMBAT_PTR + 0x254)) <= 0x08)
+                && trigger_when(byte(COMBAT_PTR + 0x254) == 0xff)
+            )
+            ||
+            // four party members, trumpeter, one enemy
+            (
+                trigger_when(__ornext(byte(COMBAT_PTR + 0x250) <= 0x03 || byte(COMBAT_PTR + 0x250) == 0x05))
+                && trigger_when(__ornext(byte(COMBAT_PTR + 0x251) <= 0x03 || byte(COMBAT_PTR + 0x251) == 0x05))
+                && trigger_when(__ornext(byte(COMBAT_PTR + 0x252) <= 0x03 || byte(COMBAT_PTR + 0x252) == 0x05))
+                && trigger_when(__ornext(byte(COMBAT_PTR + 0x253) <= 0x03 || byte(COMBAT_PTR + 0x253) == 0x05))
+                && trigger_when(__ornext(byte(COMBAT_PTR + 0x254) <= 0x03 || byte(COMBAT_PTR + 0x254) == 0x05))
+                && trigger_when(prev(byte(COMBAT_PTR + 0x255)) <= 0x08)
+                && trigger_when(byte(COMBAT_PTR + 0x255) == 0xff)
+            )
+        ),
     type = "missable"
 )
 achievement(
     title = "Only the Administrator Remains",
     description = "Defeat Benetnasch.",
     points = 25,
-    trigger = actively_in_event()
-        && __ornext(on_shared_mission("Seven Down"))
+    trigger = __ornext(on_shared_mission("Seven Down"))
         && mail_triggered("Re: Trumpeter"),
     type = "progression"
 )
@@ -3338,22 +3504,24 @@ achievement(
     title = "Saving the Best for Last",
     description = "Defeat the Dragon last on either of 'Unexpected Battle' or 'Reared Head.'",
     points = 5,
-    trigger = __ornext(
-        on_mission("Reared Head") ||
-        on_branching_mission("Unexpected Battle", "Daichi (Restorer)") ||
-        on_branching_mission("Unexpected Battle", "Daichi (Liberator)") ||
-        on_branching_mission("Unexpected Battle", "Yamato") ||
-        on_branching_mission("Unexpected Battle", "Ronaldo")
-    ) && (
-        trigger_when(byte(COMBAT_PTR + 0x250) <= 0x04) &&
-        trigger_when(byte(COMBAT_PTR + 0x251) <= 0x04) &&
-        trigger_when(__ornext(byte(COMBAT_PTR + 0x252) <= 0x04 || byte(COMBAT_PTR + 0x252) == 0xff)) &&
-        trigger_when(__ornext(byte(COMBAT_PTR + 0x253) <= 0x04 || byte(COMBAT_PTR + 0x253) == 0xff)) &&
-        trigger_when(__ornext(byte(COMBAT_PTR + 0x254) <= 0x04 || byte(COMBAT_PTR + 0x254) == 0xff))
-    )
-    && team_leader_is(4, "Dragon")
-    && trigger_when(combat_actively_occurring())
-    && trigger_when(specific_leader_defeated("Dragon"))
+    type = "missable",
+    trigger = actively_in_event()
+        && __ornext(
+            on_mission("Reared Head") ||
+            on_branching_mission("Unexpected Battle", "Daichi (Restorer)") ||
+            on_branching_mission("Unexpected Battle", "Daichi (Liberator)") ||
+            on_branching_mission("Unexpected Battle", "Yamato") ||
+            on_branching_mission("Unexpected Battle", "Ronaldo")
+        ) && (
+            trigger_when(byte(COMBAT_PTR + 0x250) <= 0x04) &&
+            trigger_when(byte(COMBAT_PTR + 0x251) <= 0x04) &&
+            trigger_when(__ornext(byte(COMBAT_PTR + 0x252) <= 0x04 || byte(COMBAT_PTR + 0x252) == 0xff)) &&
+            trigger_when(__ornext(byte(COMBAT_PTR + 0x253) <= 0x04 || byte(COMBAT_PTR + 0x253) == 0xff)) &&
+            trigger_when(__ornext(byte(COMBAT_PTR + 0x254) <= 0x04 || byte(COMBAT_PTR + 0x254) == 0xff))
+        )
+        && team_leader_is(4, "Dragon")
+        && trigger_when(combat_actively_occurring())
+        && trigger_when(specific_leader_defeated("Dragon"))
 )
 achievement(
     id = 575409,
@@ -3361,21 +3529,23 @@ achievement(
     description = "Defeat the Dragon.",
     type = "progression",
     points = 10,
-    trigger = __ornext(
-        on_mission("Reared Head") ||
-        on_branching_mission("Unexpected Battle", "Daichi (Restorer)") ||
-        on_branching_mission("Unexpected Battle", "Daichi (Liberator)") ||
-        on_branching_mission("Unexpected Battle", "Yamato") ||
-        on_branching_mission("Unexpected Battle", "Ronaldo")
-    )
-    && combat_actively_occurring()
-    && specific_leader_defeated("Dragon")
+    trigger = actively_in_event() 
+        && __ornext(
+            on_mission("Reared Head") ||
+            on_branching_mission("Unexpected Battle", "Daichi (Restorer)") ||
+            on_branching_mission("Unexpected Battle", "Daichi (Liberator)") ||
+            on_branching_mission("Unexpected Battle", "Yamato") ||
+            on_branching_mission("Unexpected Battle", "Ronaldo")
+        )
+        && combat_actively_occurring()
+        && specific_leader_defeated("Dragon")
 )
 achievement(
     id = 596776,
     title = "The Administrator's Sword Stirs Chaos",
     description = "On 'Last Assassin', defeat Alcor while it is in its alternate form.",
     points = 10,
+    type = "missable",
     trigger = __ornext(
         on_branching_mission("Last Assassin", "Daichi (Restorer)") ||
         on_branching_mission("Last Assassin", "Daichi (Liberator)") ||
@@ -3539,6 +3709,7 @@ achievement(
     title = "Will of the Species",
     description = "Defeat Polaris with all possible demon users alive and recruited.",
     points = 25,
+    type = "missable",
     trigger = ending_selected("Daichi") 
         && __ornext(
             on_branching_mission("Dreamed Future", "Daichi (Restorer)") ||
@@ -3597,6 +3768,7 @@ achievement(
     description = "Defeat Polaris and establish your new free world.",
     points = 25,
     trigger = ending_selected("Anguished One") 
+        && actively_in_event()
         && on_mission("New Tomorrow") 
         && combat_actively_occurring()
         && specific_leader_defeated("Polaris A")    
@@ -3713,7 +3885,7 @@ achievement(
 
 achievement(
     title = "Sunday's Melancholy",
-    description = "Reach the end of Day 1 without ever entering any Free Battle and with no Demon carry over, no Macca carry over or no compendium discount.",
+    description = "Without ever entering any Free Battle, reach the end of Day 1 without carrying over Demons or Macca and no compendium discount.",
     points = 5,
     trigger = !new_game_plus_perk_enabled("Carry over 1 demon")
         && !new_game_plus_perk_enabled("Carry over 4 demons")
@@ -3733,7 +3905,7 @@ achievement(
 )
 achievement(
     title = "Monday's Turmoil",
-    description = "Reach the end of Day 2 without ever entering any Free Battle and with no Demon carry over, no Macca carry over or no compendium discount..",
+    description = "Without ever entering any Free Battle, reach the end of Day 2 without carrying over Demons or Macca and no compendium discount.",
     points = 10,
     trigger = !new_game_plus_perk_enabled("Carry over 1 demon")
         && !new_game_plus_perk_enabled("Carry over 4 demons")
@@ -3753,7 +3925,7 @@ achievement(
 )
 achievement(
     title = "Tuesday's Disquiet",
-    description = "Reach the end of Day 3 without ever entering any Free Battle and with no Demon carry over, no Macca carry over or no compendium discount.",
+    description = "Without ever entering any Free Battle, reach the end of Day 3 without carrying over Demons or Macca and no compendium discount.",
     points = 10,
     trigger = !new_game_plus_perk_enabled("Carry over 1 demon")
         && !new_game_plus_perk_enabled("Carry over 4 demons")
@@ -3773,7 +3945,7 @@ achievement(
 )
 achievement(
     title = "Wednesday's Changes",
-    description = "Reach the end of Day 4 without ever entering any Free Battle and with no Demon carry over, no Macca carry over or no compendium discount.",
+    description = "Without ever entering any Free Battle, reach the end of Day 4 without carrying over Demons or Macca and no compendium discount.",
     points = 10,
     trigger = !new_game_plus_perk_enabled("Carry over 1 demon")
         && !new_game_plus_perk_enabled("Carry over 4 demons")
@@ -3793,7 +3965,7 @@ achievement(
 )
 achievement(
     title = "Thursday's Shock",
-    description = "Reach the end of Day 5 without ever entering any Free Battle and with no Demon carry over, no Macca carry over or no compendium discount.",
+    description = "Without ever entering any Free Battle, reach the end of Day 5 without carrying over Demons or Macca and no compendium discount.",
     points = 10,
     trigger = !new_game_plus_perk_enabled("Carry over 1 demon")
         && !new_game_plus_perk_enabled("Carry over 4 demons")
@@ -3813,7 +3985,7 @@ achievement(
 )
 achievement(
     title = "Friday's Partings",
-    description = "Reach the end of Day 6 without ever entering any Free Battle and with no Demon carry over, no Macca carry over or no compendium discount.",
+    description = "Without ever entering any Free Battle, reach the end of Day 6 without carrying over Demons or Macca and no compendium discount.",
     points = 10,
     trigger = !new_game_plus_perk_enabled("Carry over 1 demon")
         && !new_game_plus_perk_enabled("Carry over 4 demons")
@@ -3832,7 +4004,7 @@ achievement(
 )
 achievement(
     title = "A Saturday Towards a New World",
-    description = "Reach the end of Day 7 without ever entering any Free Battle and with no Demon carry over, no Macca carry over or no compendium discount.",
+    description = "Without ever entering any Free Battle, reach the end of Day 7 without carrying over Demons or Macca and no compendium discount.",
     points = 25,
     trigger = !new_game_plus_perk_enabled("Carry over 1 demon")
         && !new_game_plus_perk_enabled("Carry over 4 demons")
@@ -3851,7 +4023,7 @@ achievement(
 )
 achievement(
     title = "I Have a Severe Allergy to Grinding",
-    description = "Complete any ending without ever entering any Free Battle and with no Demon carry over, no Macca carry over or no compendium discount.",
+    description = "Without ever entering any Free Battle, complete any ending without carrying over Demons or Macca and no compendium discount."
     points = 25,
     trigger = !new_game_plus_perk_enabled("Carry over 1 demon")
         && !new_game_plus_perk_enabled("Carry over 4 demons")
@@ -4060,7 +4232,8 @@ achievement(
     title = "The Power to Do Anything",
     description = "Learn all Command skills.",
     points = 25,
-    trigger = prev(num_learned_command_skills()) == 0x42 && measured(num_learned_command_skills() == 0x43, when=always_true(), format="raw"),
+    trigger = prev(check_num_command_skills()) == length(COMMAND_SKILLS) - 1 
+        && measured(check_num_command_skills() == length(COMMAND_SKILLS), when=always_true(), format="raw"),
     id=530983
 )
 

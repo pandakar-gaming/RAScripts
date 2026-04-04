@@ -380,6 +380,21 @@ function on_screen(region, map_name, screen_name) {
     return in_zone(region, map_name) && RELEVANT_SCREENS[map_name][screen_name] == active_screen(region)
 }
 
+function in_total_pandemonium(region) {
+    // For lazy reference:
+    //         "Lair, pt. 1": 0x0c,
+    //          "Lair, pt. 2": 0x0e,
+    //          "Lair, pt. 3": 0x0f,
+    //          "Lair, pt. 4": 0x10,
+    //          "Lair, pt. 5": 0x11,
+    //          "Lair, pt. 6": 0x12,
+    //          "Lair, pt. 7": 0x13,
+    //          "Lair, final part": 0x14,
+
+    return in_zone(region, "Izu") 
+        && active_screen(region) >= RELEVANT_SCREENS["Izu"]["Lair, pt. 1"]
+        && active_screen(region) <= RELEVANT_SCREENS["Izu"]["Lair, final part"]
+}
 
 // $DA70C4: [32-bit BE] Current Map ID
 ZoneLookup = {
@@ -2059,7 +2074,8 @@ achievement(
 achievement(
     id = 582475,
     title = "Haunting Combo",
-    description = "Achieve a combo of 75 or higher and defeat the Blue Monk on Shura or Shigurui difficulty and obtain Hasebe Kunishige.",
+    description = "Achieve a combo of 75 or higher and defeat the Blue Monk to clear Act 1 on Shura or Shigurui difficulty.",
+    type = "missable",
     points = 3,
     trigger = (never(is_ntsc() && !in_zone("NTSC", "Blue Monk"))
             && is_in_game("NTSC")
@@ -2098,8 +2114,9 @@ achievement(
 achievement(
     id = 583622,
     title = "Freewheeling",
-    description = "Achieve a combo of 75 or higher and defeat Wanyudo on Shura or Shigurui difficulty and obtain Kashagiri Hiromitsu.",
-    points = 5,  
+    description = "Achieve a combo of 75 or higher and defeat Wanyudo to clear Act 2 on Shura or Shigurui difficulty.",
+    points = 5, 
+    type = "missable",
     trigger = (never(is_ntsc() && !in_zone("NTSC", "Wanyudo"))
             && is_in_game("NTSC")
             && active_character("NTSC") == 0x01 
@@ -2137,8 +2154,9 @@ achievement(
 achievement(
     id = 583623,
     title = "Sending Swords Swimming",
-    description = "Achieve a combo of 50 or higher and defeat Yukinojyo on Shura or Shigurui difficulty and obtain Izumokami Naganori.",
-    points = 5,  
+    description = "Achieve a combo of 50 or higher and defeat Yukinojyo to clear Act 3 on Shura or Shigurui difficulty.",
+    points = 5,
+    type = "missable",
     trigger = (never(is_ntsc() && !in_zone("NTSC", "Yukinojyo"))
             && is_in_game("NTSC")
             && active_character("NTSC") == 0x01 
@@ -2178,7 +2196,7 @@ achievement(
 achievement(
     id = 583860,
     title = "The Hand of a Protective Deity",
-    description = "Achieve a combo of 50 or higher and defeat Ippondatara on Shura or Shigurui difficulty and obtain Ichimonji Norimune.",
+    description = "Achieve a combo of 50 or higher and defeat Ippondatara to clear Act 4 on Shura or Shigurui difficulty.",
     points = 5,
     type = "missable",
     trigger = (never(is_ntsc() && !in_zone("NTSC", "Ippondatara"))
@@ -2218,7 +2236,7 @@ achievement(
 achievement(
     id = 583862,
     title = "Truly Traitorous Form",
-    description = "Achieve a combo of 50 or higher and defeat the Chimera on Shura or Shigurui difficulty and obtain Shishiou.",
+    description = "Achieve a combo of 50 or higher and defeat the Chimera to clear Act 5 on Shura or Shigurui difficulty.",
     points = 5,
     type = "missable",
     trigger = (never(is_ntsc() && !in_zone("NTSC", "Chimera"))
@@ -2261,7 +2279,7 @@ achievement(
     title = "A Meal Better Eaten Whole",
     // 60 is too low because of the adds, find a video to corroborate that isn't a speedrun but you can probably float 66-70
     // maybe 66 as a "haha funny hell ish number"
-    description = "Achieve a combo of 66 or higher and defeat the Big Oni on Shura or Shigurui difficulty and obtain Onikiri.",
+    description = "Achieve a combo of 66 or higher and defeat the Big Oni to clear Act 6 on Shura or Shigurui difficulty.",
     points = 5,
     type = "missable",
     trigger = (never(is_ntsc() && !in_zone("NTSC", "Big Oni"))
@@ -2302,7 +2320,7 @@ achievement(
 achievement(
     id = 583888,
     title = "Thunderous Performance",
-    description = "Defeat Raijin as Momohime on Shura or Shigurui and achieve a combo of 100 or higher and obtain Mutsunokami Yoshiyuki.",
+    description = "Achieve a combo of 100 or higher and defeat Raijin to clear Act 7 on Shura or Shigurui difficulty.",
     points = 10,
     type = "missable",
     trigger = (never(is_ntsc() && !in_zone("NTSC", "Raijin"))
@@ -2371,7 +2389,7 @@ achievement(
 achievement(
     id = 580625,
     title = "Furious Haunting",
-    description = "Defeat the Blue Monk on Shigurui difficulty.",
+    description = "Defeat the Blue Monk as Momohime on Shigurui difficulty.",
     points = 5,
     trigger = (is_ntsc()
             && is_in_game("NTSC")
@@ -2393,7 +2411,7 @@ achievement(
 achievement(
     id = 580626,
     title = "The Wheel Burns Once More",
-    description = "Defeat Wanyudo on Shigurui difficulty.",
+    description = "Defeat Wanyudo as Momohime on Shigurui difficulty.",
     points = 10,
     trigger = (is_ntsc() 
             && is_in_game("NTSC")
@@ -2415,7 +2433,7 @@ achievement(
 achievement(
     id = 580627,
     title = "Shinkage Style Still Inferior",
-    description = "Defeat Yukinojyo on Shigurui difficulty.",
+    description = "Defeat Yukinojyo as Momohime on Shigurui difficulty.",
     points = 10,
     trigger = (is_ntsc()
         && is_in_game("NTSC")
@@ -2437,7 +2455,7 @@ achievement(
 achievement(
     id = 580628,
     title = "The Eye of a Springly Guardian",
-    description = "Defeat Ippondatara on Shigurui difficulty.",
+    description = "Defeat Ippondatara as Momohime on Shigurui difficulty.",
     points = 10,
     trigger = (is_ntsc()
             && is_in_game("NTSC")
@@ -2459,7 +2477,7 @@ achievement(
 achievement(
     id = 580629,
     title = "Justice Served",
-    description = "Defeat the Chimera on Shigurui difficulty.",
+    description = "Defeat the Chimera as Momohime on Shigurui difficulty.",
     points = 10,
     trigger = (is_ntsc()
             && is_in_game("NTSC")
@@ -2481,7 +2499,7 @@ achievement(
 achievement(
     id = 580630,
     title = "To Hell and Back, Again",
-    description = "Defeat the Big Oni on Shigurui difficulty.",
+    description = "Defeat the Big Oni as Momohime on Shigurui difficulty.",
     points = 10,
     trigger = (is_ntsc()
         && is_in_game("NTSC")
@@ -2503,7 +2521,7 @@ achievement(
 achievement(
     id = 580631,
     title = "Putting On a Clinic for Fujin",
-    description = "Defeat Raijin on Shigurui difficulty.",
+    description = "Defeat Raijin as Momohime on Shigurui difficulty.",
     points = 10,
     trigger = (is_ntsc()
         && is_in_game("NTSC")
@@ -2525,7 +2543,7 @@ achievement(
 achievement(
     id = 580632,
     title = "Buddhist Death Frenzy",
-    description = "Defeat Fudo-Myoou on Shigurui difficulty.",
+    description = "Defeat Fudo-Myoou as Momohime on Shigurui difficulty.",
     points = 25,
     trigger = (is_ntsc()
         && is_in_game("NTSC")
@@ -3304,7 +3322,7 @@ rich_presence_conditional_display(
 
 rich_presence_conditional_display(
     is_fighting_boss("PAL") && is_shigurui("PAL"), 
-    "[Shigurui] lv. {0} {1} is fighting {2} | {3} / 108 ⚔️ | {4} / 20 📖 | {5} / 55 💍 | {6} ryo, {7} mon",
+    "[Shigurui] lv. {0} {1} is battling {2} | {3} / 108 ⚔️ | {4} / 20 📖 | {5} / 55 💍 | {6} ryo, {7} mon",
     rich_presence_value("CurrLevel", current_level("PAL"), "VALUE"),
     rich_presence_lookup("Character", active_character("PAL"), CharacterLookup),
     rich_presence_lookup("Zone", active_zone("PAL"), ZoneLookup),
@@ -3331,7 +3349,7 @@ rich_presence_conditional_display(
 
 rich_presence_conditional_display(
     is_fighting_boss("PAL"), 
-    "[{0}] lv. {1} {2} is fighting {3} | {4} / 108 ⚔️ | {5} / 20 📖 | {6} / 55 💍 | {7} ryo, {8} mon",
+    "[{0}] lv. {1} {2} is battling {3} | {4} / 108 ⚔️ | {5} / 20 📖 | {6} / 55 💍 | {7} ryo, {8} mon",
     rich_presence_lookup("Difficulty", current_difficulty("PAL"), DifficultyLookup),
     rich_presence_value("CurrLevel", current_level("PAL"), "VALUE"),
     rich_presence_lookup("Character", active_character("PAL"), CharacterLookup),
@@ -3339,6 +3357,112 @@ rich_presence_conditional_display(
     rich_presence_value("NumCurrentSwords", num_current_swords("PAL"), "VALUE"),
     rich_presence_value("NumCurrentBooks", num_current_recipes("PAL"), "VALUE"),
     rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
+    rich_presence_value("Ryo", current_ryo("PAL"), "VALUE"),
+    rich_presence_value("Mon", current_mon("PAL"), "VALUE")
+)
+
+// Total Pandemonium
+rich_presence_conditional_display(
+    is_shigurui("NTSC") && in_total_pandemonium("NTSC"),
+    "[Shigurui] lv. {0} {1} is surviving Total Pandemonium | {2} / 108 ⚔️ | {3} / 20 📖 | {4} / 55 💍 | {5} ryo, {6} mon",
+    rich_presence_value("CurrLevel", current_level("NTSC"), "VALUE"),
+    rich_presence_lookup("Character", active_character("NTSC"), CharacterLookup),
+    rich_presence_value("NumCurrentSwords", num_current_swords("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentBooks", num_current_recipes("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
+    rich_presence_value("Ryo", current_ryo("NTSC"), "VALUE"),
+    rich_presence_value("Mon", current_mon("NTSC"), "VALUE")
+)
+
+rich_presence_conditional_display(
+    is_shigurui("PAL") && in_total_pandemonium("PAL"),
+    "[Shigurui] lv. {0} {1} is withstanding Total Pandemonium | {2} / 108 ⚔️ | {3} / 20 📖 | {4} / 55 💍 | {5} ryo, {6} mon",
+    rich_presence_value("CurrLevel", current_level("NTSC"), "VALUE"),
+    rich_presence_lookup("Character", active_character("NTSC"), CharacterLookup),
+    rich_presence_value("NumCurrentSwords", num_current_swords("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentBooks", num_current_recipes("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
+    rich_presence_value("Ryo", current_ryo("NTSC"), "VALUE"),
+    rich_presence_value("Mon", current_mon("NTSC"), "VALUE")
+)
+
+rich_presence_conditional_display(
+    in_total_pandemonium("NTSC"),
+    "[{0}] lv. {1} {2} is surviving Total Pandemonium | {3} / 108 ⚔️ | {4} / 20 📖 | {5} / 55 💍 | {6} ryo, {7} mon",
+    rich_presence_lookup("Difficulty", current_difficulty("NTSC"), DifficultyLookup),
+    rich_presence_value("CurrLevel", current_level("NTSC"), "VALUE"),
+    rich_presence_lookup("Character", active_character("NTSC"), CharacterLookup),
+    rich_presence_value("NumCurrentSwords", num_current_swords("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentBooks", num_current_recipes("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
+    rich_presence_value("Ryo", current_ryo("NTSC"), "VALUE"),
+    rich_presence_value("Mon", current_mon("NTSC"), "VALUE")
+)
+
+rich_presence_conditional_display(
+    in_total_pandemonium("PAL"),
+    "[{0}] lv. {1} {2} is withstanding Total Pandemonium | {3} / 108 ⚔️ | {4} / 20 📖 | {5} / 55 💍 | {6} ryo, {7} mon",
+    rich_presence_lookup("Difficulty", current_difficulty("NTSC"), DifficultyLookup),
+    rich_presence_value("CurrLevel", current_level("NTSC"), "VALUE"),
+    rich_presence_lookup("Character", active_character("NTSC"), CharacterLookup),
+    rich_presence_value("NumCurrentSwords", num_current_swords("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentBooks", num_current_recipes("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
+    rich_presence_value("Ryo", current_ryo("NTSC"), "VALUE"),
+    rich_presence_value("Mon", current_mon("NTSC"), "VALUE")
+)
+
+// Fishing
+rich_presence_conditional_display(
+    is_shigurui("NTSC") && is_fishing("NTSC"),
+    "[Shigurui] lv. {0} {1} is braving the {2}'s waters | {3} / 108 ⚔️ | {4} / 20 📖 | {5} / 55 💍 | {6} ryo, {7} mon",
+    rich_presence_value("CurrLevel", current_level("NTSC"), "VALUE"),
+    rich_presence_lookup("Character", active_character("NTSC"), CharacterLookup),
+    rich_presence_lookup("Zone", active_zone("NTSC"), ZoneLookup),
+    rich_presence_value("NumCurrentSwords", num_current_swords("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentBooks", num_current_recipes("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
+    rich_presence_value("Ryo", current_ryo("NTSC"), "VALUE"),
+    rich_presence_value("Mon", current_mon("NTSC"), "VALUE")
+)
+
+rich_presence_conditional_display(
+    is_shigurui("PAL") && is_fishing("PAL"),
+    "[Shigurui] lv. {0} {1} is braving the {2}'s sea | {3} / 108 ⚔️ | {4} / 20 📖 | {5} / 55 💍 | {6} ryo, {7} mon",
+    rich_presence_value("CurrLevel", current_level("PAL"), "VALUE"),
+    rich_presence_lookup("Character", active_character("PAL"), CharacterLookup),
+    rich_presence_lookup("Zone", active_zone("PAL"), ZoneLookup),
+    rich_presence_value("NumCurrentSwords", num_current_swords("PAL"), "VALUE"),
+    rich_presence_value("NumCurrentBooks", num_current_recipes("PAL"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("PAL"), "VALUE"),
+    rich_presence_value("Ryo", current_ryo("PAL"), "VALUE"),
+    rich_presence_value("Mon", current_mon("PAL"), "VALUE")
+)
+
+rich_presence_conditional_display(
+    is_fishing("NTSC"),
+    "[{0}] lv. {1} {2} is braving the {3}'s waters | {4} / 108  ⚔️ | {5} / 20 📖 | {6} / 55 💍 | {7} ryo, {8} mon",
+    rich_presence_lookup("Difficulty", current_difficulty("NTSC"), DifficultyLookup),
+    rich_presence_value("CurrLevel", current_level("NTSC"), "VALUE"),
+    rich_presence_lookup("Character", active_character("NTSC"), CharacterLookup),
+    rich_presence_lookup("Zone", active_zone("NTSC"), ZoneLookup),
+    rich_presence_value("NumCurrentSwords", num_current_swords("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentBooks", num_current_recipes("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
+    rich_presence_value("Ryo", current_ryo("NTSC"), "VALUE"),
+    rich_presence_value("Mon", current_mon("NTSC"), "VALUE")
+)
+
+rich_presence_conditional_display(
+    is_fishing("PAL"),
+    "[{0}] lv. {1} {2} is braving the {3}'s sea | {4} / 108  ⚔️ | {5} / 20 📖 | {6} / 55 💍 | {7} ryo, {8} mon",
+    rich_presence_lookup("Difficulty", current_difficulty("PAL"), DifficultyLookup),
+    rich_presence_value("CurrLevel", current_level("PAL"), "VALUE"),
+    rich_presence_lookup("Character", active_character("PAL"), CharacterLookup),
+    rich_presence_lookup("Zone", active_zone("PAL"), ZoneLookup),
+    rich_presence_value("NumCurrentSwords", num_current_swords("PAL"), "VALUE"),
+    rich_presence_value("NumCurrentBooks", num_current_recipes("PAL"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("PAL"), "VALUE"),
     rich_presence_value("Ryo", current_ryo("PAL"), "VALUE"),
     rich_presence_value("Mon", current_mon("PAL"), "VALUE")
 )

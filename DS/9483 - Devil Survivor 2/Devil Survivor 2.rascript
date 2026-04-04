@@ -4319,7 +4319,8 @@ achievement(
     title = "Power Seekers",
     description = "Record all 7 demons of the Omega race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Omega") == length(demons_by_race["Omega"]) - 1)
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_demons_of_race_registered("Omega") == length(demons_by_race["Omega"]) - 1)
         && measured(num_demons_of_race_registered("Omega") == length(demons_by_race["Omega"]), when=always_true(), format="raw")
 )
 achievement(
@@ -4327,7 +4328,8 @@ achievement(
     title = "Grace of the Affectionate",
     description = "Record all 11 demons of the Megami race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Megami") == length(demons_by_race["Megami"]) - 1)
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_demons_of_race_registered("Megami") == length(demons_by_race["Megami"]) - 1)
         && measured(num_demons_of_race_registered("Megami") == length(demons_by_race["Megami"]), when=always_true(), format="raw")
 )
 achievement(
@@ -4335,7 +4337,8 @@ achievement(
     title = "Awakening the Enlightened",
     description = "Record all 13 demons of the Deity race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Deity") == length(demons_by_race["Deity"]) - 1)
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_demons_of_race_registered("Deity") == length(demons_by_race["Deity"]) - 1)
         && measured(num_demons_of_race_registered("Deity") == length(demons_by_race["Deity"]), when=always_true(), format="raw")
 )
 
@@ -4344,7 +4347,8 @@ achievement(
     title = "Chaotic Beings",
     description = "Record all 8 demons of the Vile race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Vile") == length(demons_by_race["Vile"]) - 1)
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_demons_of_race_registered("Vile") == length(demons_by_race["Vile"]) - 1)
         && measured(num_demons_of_race_registered("Vile") == length(demons_by_race["Vile"]), when=always_true(), format="raw")
 )
 achievement(
@@ -4352,7 +4356,8 @@ achievement(
     title = "Those That Constrict",
     description = "Record all 10 demons of the Snake race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Snake") == length(demons_by_race["Snake"]) - 1)
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_demons_of_race_registered("Snake") == length(demons_by_race["Snake"]) - 1)
         && measured(num_demons_of_race_registered("Snake") == length(demons_by_race["Snake"]), when=always_true(), format="raw")
 )
 
@@ -4361,7 +4366,8 @@ achievement(
     title = "Evil Serpents",
     description = "Record all 9 demons of the Dragon race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Dragon") == length(demons_by_race["Dragon"]) - 1)
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_demons_of_race_registered("Dragon") == length(demons_by_race["Dragon"]) - 1)
         && measured(num_demons_of_race_registered("Dragon") == length(demons_by_race["Dragon"]), when=always_true(), format="raw")
 )
 
@@ -4370,7 +4376,8 @@ achievement(
     title = "Stigma of the Divine",
     description = "Record all 7 demons of the Divine race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Divine") == length(demons_by_race["Divine"]) - 1)
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_demons_of_race_registered("Divine") == length(demons_by_race["Divine"]) - 1)
         && measured(num_demons_of_race_registered("Divine") == length(demons_by_race["Divine"]), when=always_true(), format="raw")
 )
 achievement(
@@ -4378,7 +4385,8 @@ achievement(
     title = "Taking Flight",
     description = "Record all 10 demons of the Avian race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Avian") == length(demons_by_race["Avian"]) - 1)
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_demons_of_race_registered("Avian") == length(demons_by_race["Avian"]) - 1)
         && measured(num_demons_of_race_registered("Avian") == length(demons_by_race["Avian"]), when=always_true(), format="raw")
 )
 achievement(
@@ -4386,7 +4394,8 @@ achievement(
     title = "Feasting With the Fallen",
     description = "Record all 13 demons of the Fallen race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Fallen") == length(demons_by_race["Fallen"]) - 1)
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_demons_of_race_registered("Fallen") == length(demons_by_race["Fallen"]) - 1)
         && measured(num_demons_of_race_registered("Fallen") == length(demons_by_race["Fallen"]), when=always_true(), format="raw")
 )
 achievement(
@@ -4394,7 +4403,8 @@ achievement(
     title = "Switching Forms for Their Believers",
     description = "Record all 11 demons of the Avatar race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Avatar") == length(demons_by_race["Avatar"]) - 1)
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_demons_of_race_registered("Avatar") == length(demons_by_race["Avatar"]) - 1)
         && measured(num_demons_of_race_registered("Avatar") == length(demons_by_race["Avatar"]), when=always_true(), format="raw")
 )
 achievement(
@@ -4402,7 +4412,8 @@ achievement(
     title = "Brutish Beasts",
     description = "Record all 9 demons of the Beast race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Beast") == length(demons_by_race["Beast"]) - 1)
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_demons_of_race_registered("Beast") == length(demons_by_race["Beast"]) - 1)
         && measured(num_demons_of_race_registered("Beast") == length(demons_by_race["Beast"]), when=always_true(), format="raw")
 )
 achievement(
@@ -4410,7 +4421,8 @@ achievement(
     title = "Devils Closing In",
     description = "Record all 10 demons of the Wilder race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Wilder") == length(demons_by_race["Wilder"]) - 1)
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_demons_of_race_registered("Wilder") == length(demons_by_race["Wilder"]) - 1)
         && measured(num_demons_of_race_registered("Wilder") == length(demons_by_race["Wilder"]), when=always_true(), format="raw")
 )
 achievement(
@@ -4418,7 +4430,8 @@ achievement(
     title = "No Obstacles Shall Bar Them",
     description = "Record all 12 demons of the Genma race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Genma") == length(demons_by_race["Genma"]) - 1)
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_demons_of_race_registered("Genma") == length(demons_by_race["Genma"]) - 1)
         && measured(num_demons_of_race_registered("Genma") == length(demons_by_race["Genma"]), when=always_true(), format="raw")
 )
 achievement(
@@ -4426,7 +4439,8 @@ achievement(
     title = "Glamorous Beings",
     description = "Record all 10 demons of the Fairy race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Fairy") == length(demons_by_race["Fairy"]) - 1)
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_demons_of_race_registered("Fairy") == length(demons_by_race["Fairy"]) - 1)
         && measured(num_demons_of_race_registered("Fairy") == length(demons_by_race["Fairy"]), when=always_true(), format="raw")
 )
 achievement(
@@ -4434,7 +4448,8 @@ achievement(
     title = "Relentless Rulers",
     description = "Record all 12 demons of the Tyrant race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Tyrant") == length(demons_by_race["Tyrant"]) - 1)
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_demons_of_race_registered("Tyrant") == length(demons_by_race["Tyrant"]) - 1)
         && measured(num_demons_of_race_registered("Tyrant") == length(demons_by_race["Tyrant"]), when=always_true(), format="raw")
 )
 achievement(
@@ -4442,7 +4457,8 @@ achievement(
     title = "Peerless Fighters",
     description = "Record all 10 demons of the Kishin race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Kishin") == length(demons_by_race["Kishin"]) - 1)
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_demons_of_race_registered("Kishin") == length(demons_by_race["Kishin"]) - 1)
         && measured(num_demons_of_race_registered("Kishin") == length(demons_by_race["Kishin"]), when=always_true(), format="raw")
 )
 achievement(
@@ -4450,7 +4466,8 @@ achievement(
     title = "Easily Agitated",
     description = "Record all 10 demons of the Touki race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Touki") == length(demons_by_race["Touki"]) - 1)
+    trigger = !is_time_of_day(0, 0) 
+        && prev(num_demons_of_race_registered("Touki") == length(demons_by_race["Touki"]) - 1)
         && measured(num_demons_of_race_registered("Touki") == length(demons_by_race["Touki"]), when=always_true(), format="raw")
 )
 achievement(
@@ -4458,7 +4475,8 @@ achievement(
     title = "Bound by Evil",
     description = "Record all 10 demons of the Jaki race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Jaki") == length(demons_by_race["Jaki"]) - 1)
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_demons_of_race_registered("Jaki") == length(demons_by_race["Jaki"]) - 1)
         && measured(num_demons_of_race_registered("Jaki") == length(demons_by_race["Jaki"]), when=always_true(), format="raw")
 )
 achievement(
@@ -4466,7 +4484,8 @@ achievement(
     title = "Maternal Devotion",
     description = "Record all 12 demons of the Femme race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Femme") == length(demons_by_race["Femme"]) - 1)
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_demons_of_race_registered("Femme") == length(demons_by_race["Femme"]) - 1)
         && measured(num_demons_of_race_registered("Femme") == length(demons_by_race["Femme"]), when=always_true(), format="raw")
 )
 achievement(
@@ -4474,7 +4493,8 @@ achievement(
     title = "Possessing the Possessors",
     description = "Record all 8 demons of the Ghost race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Ghost") == length(demons_by_race["Ghost"]) - 1)
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_demons_of_race_registered("Ghost") == length(demons_by_race["Ghost"]) - 1)
         && measured(num_demons_of_race_registered("Ghost") == length(demons_by_race["Ghost"]), when=always_true(), format="raw")
 )
 achievement(
@@ -4482,7 +4502,8 @@ achievement(
     title = "Uncanny Characters",
     description = "Record all 5 demons of the Fiend race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Fiend") == length(demons_by_race["Fiend"]) - 1)
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_demons_of_race_registered("Fiend") == length(demons_by_race["Fiend"]) - 1)
         && measured(num_demons_of_race_registered("Fiend") == length(demons_by_race["Fiend"]), when=always_true(), format="raw")
 )
 achievement(
@@ -4490,28 +4511,35 @@ achievement(
     title = "Proof of Heroism",
     description = "Record all 6 demons of the Hero race in your compendium.",
     points = 5,
-    trigger = prev(num_demons_of_race_registered("Hero") == length(demons_by_race["Hero"]) - 1)
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_demons_of_race_registered("Hero") == length(demons_by_race["Hero"]) - 1)
         && measured(num_demons_of_race_registered("Hero") == length(demons_by_race["Hero"]), when=always_true(), format="raw")
 )
 achievement(
     title = "The Purest of Form",
     description = "Register all four demons of the Element race in your compendium.",
     points = 5,
-    trigger = prev(elements_registered() == 0x03) && measured(elements_registered() == 0x04, when=always_true(), format="raw"),
+    trigger = !is_time_of_day(0, 0)
+        && prev(elements_registered() == 0x03) 
+        && measured(elements_registered() == 0x04, when=always_true(), format="raw"),
     id = 546534
 )
 achievement(
     title="Honorable Spirits",
     description="Register all four demons of the Mitama race in your compendium.",
     points = 5,
-    trigger = prev(mitamas_registered() == 0x03) && measured(mitamas_registered() == 0x04, when=always_true(), format="raw"),
+    trigger = !is_time_of_day(0, 0) 
+        && prev(mitamas_registered() == 0x03) 
+        && measured(mitamas_registered() == 0x04, when=always_true(), format="raw"),
     id = 575035
 )
 achievement(
     title = "Finally, Fully Filled",
     description = "Complete 100% of the Demon compendium.",
     points = 50,
-    trigger = prev(num_registered_compendium() == 220) && measured(num_registered_compendium() == 221, when=always_true(), format="raw"),
+    trigger = !is_time_of_day(0, 0)
+        && prev(num_registered_compendium() == 220) 
+        && measured(num_registered_compendium() == 221, when=always_true(), format="raw"),
     id = 546541
 )
 

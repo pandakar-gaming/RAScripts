@@ -38,6 +38,67 @@ ATTACKER_TEAM_PTR = tbyte(0x001c9fd0)
 FULL_DEFENDER_TEAM_PTR = dword(0x001c9fd4)
 DEFENDER_PTR = tbyte(0x001c9fd4)
 
+// Every team in a combat is 636 bytes long.
+class CombatTeam {
+    team_num = 0
+
+    function team_start() => COMBAT_PTR + 0x26c + (this.team_num * 0x27c)
+
+    // State of unit [Bitflags]
+    // bit0: Unit is defined;
+    // bit1: Unit is placed on the field;
+    // bit2: Unit is alive;
+    function state_of_unit(expected_state) {
+        if (expected_state == "Defined") {
+            return bit0(this.team_start())
+        } else if (expected_state == "Placed") {
+            return bit1(this.team_start())
+        } else if (expected_state == "Alive") {
+            return bit2(this.team_start())
+        }
+    } 
+
+    // Enemy ID [16-bit]
+    function leader_id() => word(this.team_start() + 0x0a)
+
+    // Current HP of leader [16-bit]
+    function leader_current_hp() => word(this.team_start() + 0x18)
+
+    // Max HP of leader [16-bit]
+    function leader_max_hp() => word(this.team_start() + 0x1a)
+
+    // Current MP of leader [16-bit]
+    function leader_current_mp() => word(this.team_start() + 0x1c)
+    
+    // Max MP of leader [16-bit]
+    function leader_max_mp() => word(this.team_start() + 0x1e)
+
+    // B8	0x324	Left-hand side Demon ID
+    // Left-hand side Demon ID [16-bit]
+    function left_demon_id() => word(this.team_start() + 0xb8)
+
+    // Left-hand side Demon Current HP [16-bit]
+    function left_demon_current_hp() => word(this.team_start() + 0xbc)
+
+    // Left-hand side demon max hp [16-bit]
+    function left_demon_max_hp() => always_false()
+
+    // Right-hand side demon id [16-bit]
+    function right_demon_id() => always_false()
+
+    // Right hand side demon current hp [16-bit]
+    function right_demon_current_hp() => always_false()
+
+    // Right hand side demon max hp [16-bit]
+    function right_demon_max_hp() => always_false()
+
+    // X position of team on field [8-bit]
+    function x_pos() => always_false()
+
+    // Y position of team on field [8-bit]
+    function y_pos() => always_false()
+}
+
 day_of_week = {
     0x01: "Sunday",
     0x02: "Monday",
@@ -215,6 +276,31 @@ function unit_moving() => ptr_valid(FULL_COMBAT_PTR) && bit0(COMBAT_PTR + 0x1c) 
 // This is done by seeing if the player ever saw the tutorials for how Free Combat works.
 // TODO match how the game checks it, I tried unflagging these before beating Polaris and it didn't take
 function entered_free_battle() => bit0(0x00284ad7) == 0x01 || bit1(0x00284ad7) == 0x01
+
+// This checks that the enemy leader is present on the field
+function enemy_leader_is_present(enemy_name) {
+    cond = always_true()
+    for i in range(4, 12) {
+        cond = cond || CombatTeam(i).leader_id() == enemy_id_by_name[enemy_name]
+    }
+
+    return __ornext(cond)
+}
+
+// This checks that the enemy leader is not on the field.
+// This either means they've been defeated and not replaced, OR they simply aren't on the field.
+function enemy_leader_is_absent(enemy_name) {
+    cond = always_true()
+    for i in range(4, 12) {
+        team = CombatTeam(i)
+        cond = cond && __ornext(
+            team.leader_id() != enemy_id_by_name[enemy_name] 
+            || (team.leader_id() == enemy_id_by_name[enemy_name] && team.state_of_unit("Alive") == 0)
+        )
+    }
+
+    return __ornext(cond)
+}
 
 // Check if the enemy we're looking for is the defending team in this active combat.
 // We only care about the enemy leader for the most part; side enemies are hopefully not notable enough for most achievements.
@@ -2839,19 +2925,19 @@ achievement(
     trigger = actively_in_event()  
         && on_mission("Man of Fury")
         // Phys already defeated, Magic being defeated
-        && ((
-            bit0(0x00284b56) == 0x01 
-            && (attacker_leader_is("Phecda (Magic)") || defender_leader_is ("Phecda (Magic)")) 
-            && prev(bit6(0x00284b55) == 0x00) 
-            && bit6(0x00284b55) == 0x01
-        ) ||
+        // TODO logic needs to be reworked, people are missing probably because of the combat flags
+        // 
+        
+        // Cases tested:
+        // 1. Phecda Magic attacks me and is defeated
+        // 2. I attack Phecda magic and defeat it
+        // 3. Phecda Phys attacks me and is defeated
+        // 4. I attack Phecda Phys and defeat it
+        && (
+            (enemy_leader_is_absent("Phecda (Phys)")&& specific_leader_defeated("Phecda (Magic)"))
         // Magic already defeated, Phys being defeated
-        (
-            bit6(0x00284b55) == 0x01 
-            && (attacker_leader_is("Phecda (Phys)") || defender_leader_is("Phecda (Phys)")) 
-            && prev(bit0(0x00284b56)) == 0x00 
-            && bit0(0x00284b56) == 0x01
-        )),
+            || (enemy_leader_is_absent("Phecda (Magic)") && specific_leader_defeated("Phecda (Phys)"))
+        ),
     type = "progression",
     id=530972
 )

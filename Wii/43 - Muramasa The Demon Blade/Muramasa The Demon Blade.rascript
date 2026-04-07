@@ -3328,7 +3328,7 @@ rich_presence_conditional_display(
     rich_presence_lookup("Zone", active_zone("PAL"), ZoneLookup),
     rich_presence_value("NumCurrentSwords", num_current_swords("PAL"), "VALUE"),
     rich_presence_value("NumCurrentBooks", num_current_recipes("PAL"), "VALUE"),
-    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("PAL"), "VALUE"),
     rich_presence_value("Ryo", current_ryo("PAL"), "VALUE"),
     rich_presence_value("Mon", current_mon("PAL"), "VALUE")
 )
@@ -3356,7 +3356,7 @@ rich_presence_conditional_display(
     rich_presence_lookup("Zone", active_zone("PAL"), ZoneLookup),
     rich_presence_value("NumCurrentSwords", num_current_swords("PAL"), "VALUE"),
     rich_presence_value("NumCurrentBooks", num_current_recipes("PAL"), "VALUE"),
-    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("PAL"), "VALUE"),
     rich_presence_value("Ryo", current_ryo("PAL"), "VALUE"),
     rich_presence_value("Mon", current_mon("PAL"), "VALUE")
 )

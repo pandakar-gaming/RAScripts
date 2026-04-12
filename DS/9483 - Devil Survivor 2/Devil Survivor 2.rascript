@@ -13,6 +13,9 @@ IN_GAME_CLOCK = word(0x00284ab4)
 // Checks if we're at a current time of day, written in a way that lets us write human-readable times.
 function is_time_of_day(hours, minutes) => hours * 60 + minutes == IN_GAME_CLOCK
 
+// Checks if time passed by 30 minutes.
+function time_progresses_to(hours, minutes) => prev(IN_GAME_CLOCK) == hours * 60 + minutes - 30 && IN_GAME_CLOCK == hours * 60 + minutes
+
 DAY = byte(0x00284aba)
 MACCA = dword(0x00284a98)
 CURRENT_LOCATION = byte(0x00284da9)
@@ -146,7 +149,8 @@ function in_combat() => word(0x00284abe) != 0xffff
 function in_combat_mission(mission_name) => word(0x00284abe) == combat_mission_by_name[mission_name]
 
 // Whenever you're in an event (combat or otherwise) the 8-bit value at 0x00284ab8 is set to 0x1e. 
-// I'm not sure why that is significant, however it is a helpful fingerprint to know if the player is doing something.
+// This is significant because (one whole ass fucking year later) I have discovered this address is just telling us how much time will pass.
+// This happens to be... dun dun dun dun... 30 minutes. Per mission. What a coincidence WOW
 function actively_in_event() => byte(0x00284ab8) == 0x1e
 
 // This does not confirm what combat mission you're on, just that you're in one.
@@ -3302,7 +3306,7 @@ achievement(
 achievement(
     id = 594850,
     title = "Demon Delivery Service",
-    description = "On 'Lamhfhada', complete the mission without actively picking up energy yourself and without using the Suspend feature.",
+    description = "On 'Lamhfhada', complete the mission without actively picking up energy yourself and without using Suspend.",
     points = 3,
     trigger = actively_in_event() 
         // && on_mission("Lamhfhada")
@@ -3432,7 +3436,14 @@ achievement(
     title = "Savior of the Loyal",
     description = "Prevent the crisis shown in Friday's second death clip.",
     points = 5,
-    trigger = actively_in_event() && on_mission("Ronaldo Rises") && character_alive("Makoto") && character_recruited("Makoto"),
+    // This mission is different. There are two ways in which Makoto lives: do not side with Ronaldo.
+    // If you actively side with her, the logic follows like normal "savior of the" missions.
+    // If you side with neither, she never "leaves" the party.
+    trigger = on_mission("Ronaldo Rises") 
+        && character_alive("Makoto")
+        && (prev(actively_in_event()))
+        && !actively_in_event()
+        && (prev(IN_GAME_CLOCK + 30) == IN_GAME_CLOCK),
     type = "missable",
     id = 547045
 )

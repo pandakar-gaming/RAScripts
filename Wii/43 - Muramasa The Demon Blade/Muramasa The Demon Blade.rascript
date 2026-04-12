@@ -143,10 +143,12 @@ function results_screen_present(region) {
         && dword_be(results_screen_ptr(region) + 0x80c) == 0xffffffff
         // they got some mon out of this
         && dword_be(results_screen_ptr(region) + 0x814) >= 0x00
-        && dword_be(results_screen_ptr(region) + 0x814) <= 20000 // 20,000 is mostly a "is this an amount of mon could get"
+        && dword_be(results_screen_ptr(region) + 0x814) <= 40000 // 20,000 is mostly a "is this an amount of mon could get"
         // results screen timer is now present where it wasn't before
-        && prev(dword_be(results_screen_ptr(region) + 0x4c4)) == 0x00
-        && dword_be(results_screen_ptr(region) + 0x4c4) > 0x00
+        && prev(byte(results_screen_ptr(region) + 0x4c0)) == 0x00
+        && byte(results_screen_ptr(region) + 0x4c0) == 0x01
+        // && prev(dword_be(results_screen_ptr(region) + 0x4c4)) == 0x00
+        // && dword_be(results_screen_ptr(region) + 0x4c4) > 0x00
 }
 
 // We know this works for a single boss. Too lazy to dig for multiple because we don't really need it!
@@ -1384,14 +1386,10 @@ achievement(
         // character HP is above 0
         && dword_be(ptr_character_details("NTSC") + 0x1d8) > 0
         // results screen timer is initialized
-        && dword_be(results_screen_ptr("NTSC") + 0x4bc) == 0xffffffff
-        && dword_be(results_screen_ptr("NTSC") + 0x80c) == 0xffffffff
-        // they got some mon out of this
-        && dword_be(results_screen_ptr("NTSC") + 0x814) >= 0x00
-        && dword_be(results_screen_ptr("NTSC") + 0x814) <= 20000 // 20,000 is mostly a "is this an amount of mon could get"
-        // results screen timer is now present where it wasn't before
-        && prev(dword_be(results_screen_ptr("NTSC") + 0x4c4)) == 0x00
-        && dword_be(results_screen_ptr("NTSC") + 0x4c4) > 0x00) 
+        && results_screen_present("NTSC")
+        // && prev(dword_be(results_screen_ptr("NTSC") + 0x4c4)) == 0x00
+        // && dword_be(results_screen_ptr("NTSC") + 0x4c4) > 0x00)
+    )
     || 
         (is_pal() 
         && is_in_game("PAL")
@@ -1400,14 +1398,10 @@ achievement(
         // character HP is above 0
         && dword_be(ptr_character_details("PAL") + 0x1d8) > 0
         // results screen timer is initialized
-        && dword_be(results_screen_ptr("PAL") + 0x4bc) == 0xffffffff
-        && dword_be(results_screen_ptr("PAL") + 0x80c) == 0xffffffff
-        // they got some mon out of this
-        && dword_be(results_screen_ptr("PAL") + 0x814) >= 0x00
-        && dword_be(results_screen_ptr("PAL") + 0x814) <= 20000 // 20,000 is mostly a "is this an amount of mon could get"
-        // results screen timer is now present where it wasn't before
-        && prev(dword_be(results_screen_ptr("PAL") + 0x4c4)) == 0x00
-        && dword_be(results_screen_ptr("PAL") + 0x4c4) > 0x00) 
+        && results_screen_present("PAL")
+        // && prev(dword_be(results_screen_ptr("PAL") + 0x4c4)) == 0x00
+        // && dword_be(results_screen_ptr("PAL") + 0x4c4) > 0x00)
+        )
 )
 
 // *** Lairs ***
@@ -3377,13 +3371,13 @@ rich_presence_conditional_display(
 rich_presence_conditional_display(
     is_shigurui("PAL") && in_total_pandemonium("PAL"),
     "[Shigurui] lv. {0} {1} is withstanding Total Pandemonium | {2} / 108 ⚔️ | {3} / 20 📖 | {4} / 55 💍 | {5} ryo, {6} mon",
-    rich_presence_value("CurrLevel", current_level("NTSC"), "VALUE"),
-    rich_presence_lookup("Character", active_character("NTSC"), CharacterLookup),
-    rich_presence_value("NumCurrentSwords", num_current_swords("NTSC"), "VALUE"),
-    rich_presence_value("NumCurrentBooks", num_current_recipes("NTSC"), "VALUE"),
-    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
-    rich_presence_value("Ryo", current_ryo("NTSC"), "VALUE"),
-    rich_presence_value("Mon", current_mon("NTSC"), "VALUE")
+    rich_presence_value("CurrLevel", current_level("PAL"), "VALUE"),
+    rich_presence_lookup("Character", active_character("PAL"), CharacterLookup),
+    rich_presence_value("NumCurrentSwords", num_current_swords("PAL"), "VALUE"),
+    rich_presence_value("NumCurrentBooks", num_current_recipes("PAL"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("PAL"), "VALUE"),
+    rich_presence_value("Ryo", current_ryo("PAL"), "VALUE"),
+    rich_presence_value("Mon", current_mon("PAL"), "VALUE")
 )
 
 rich_presence_conditional_display(
@@ -3402,14 +3396,14 @@ rich_presence_conditional_display(
 rich_presence_conditional_display(
     in_total_pandemonium("PAL"),
     "[{0}] lv. {1} {2} is withstanding Total Pandemonium | {3} / 108 ⚔️ | {4} / 20 📖 | {5} / 55 💍 | {6} ryo, {7} mon",
-    rich_presence_lookup("Difficulty", current_difficulty("NTSC"), DifficultyLookup),
-    rich_presence_value("CurrLevel", current_level("NTSC"), "VALUE"),
-    rich_presence_lookup("Character", active_character("NTSC"), CharacterLookup),
-    rich_presence_value("NumCurrentSwords", num_current_swords("NTSC"), "VALUE"),
-    rich_presence_value("NumCurrentBooks", num_current_recipes("NTSC"), "VALUE"),
-    rich_presence_value("NumCurrentAccessories", num_current_accessories("NTSC"), "VALUE"),
-    rich_presence_value("Ryo", current_ryo("NTSC"), "VALUE"),
-    rich_presence_value("Mon", current_mon("NTSC"), "VALUE")
+    rich_presence_lookup("Difficulty", current_difficulty("PAL"), DifficultyLookup),
+    rich_presence_value("CurrLevel", current_level("PAL"), "VALUE"),
+    rich_presence_lookup("Character", active_character("PAL"), CharacterLookup),
+    rich_presence_value("NumCurrentSwords", num_current_swords("PAL"), "VALUE"),
+    rich_presence_value("NumCurrentBooks", num_current_recipes("PAL"), "VALUE"),
+    rich_presence_value("NumCurrentAccessories", num_current_accessories("PAL"), "VALUE"),
+    rich_presence_value("Ryo", current_ryo("PAL"), "VALUE"),
+    rich_presence_value("Mon", current_mon("PAL"), "VALUE")
 )
 
 // Fishing

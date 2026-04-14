@@ -982,49 +982,49 @@ function monster_trained(monster_name) {
     } else if (monster_name == "Gariel") {
         return has_trained_breed("Dragon") && card_unlocked("Dragon", "Gali")        
     } else if (monster_name == "Oscerot") {
-        return has_trained_breed("Dragon") && byte(0x990ae) == 0x01        
+        return has_trained_breed("Dragon") && card_unlocked("Dragon", "Kato")        
     } else if (monster_name == "Dodongo") {
-        return has_trained_breed("Dragon") && byte(0x990af) == 0x01 && has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Bajarl")
+        return has_trained_breed("Dragon") && card_unlocked("Dragon", "Bajarl") && has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Bajarl")
     } else if (monster_name == "Gidras") {
-        return has_trained_breed("Dragon") && byte(0x990b0) == 0x01        
+        return has_trained_breed("Dragon") && card_unlocked("Dragon", "Metalner")        
     } else if (monster_name == "Death Dragon") {
-        return has_trained_breed("Dragon") && byte(0x990b1) == 0x01 && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
+        return has_trained_breed("Dragon") && card_unlocked("Dragon", "Joker") && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
     } else if (monster_name == "Ragnaroks") {
-        return has_trained_breed("Dragon") && byte(0x990b2) == 0x01        
+        return has_trained_breed("Dragon") && card_unlocked("Dragon", "Monol")        
     } else if (monster_name == "Moo") {
-        return has_trained_breed("Dragon") && byte(0x990b3) == 0x01        
+        return has_trained_breed("Dragon") && card_unlocked("Dragon", "Moo (Rare)")        
     } else if (monster_name == "Ferious") { // centaurs start here
-        return has_trained_breed("Centaur") && byte(0x990b4) == 0x01        
+        return has_trained_breed("Centaur") && card_unlocked("Centaur", "Pixie")        
     } else if (monster_name == "Dragoon") {
-        return has_trained_breed("Centaur") && byte(0x990b5) == 0x01 && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")       
+        return has_trained_breed("Centaur") && card_unlocked("Centaur", "Dragon") && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")       
     } else if (monster_name == "Centaur") {
-        return has_trained_breed("Centaur") && byte(0x990b6) == 0x01        
+        return has_trained_breed("Centaur") && card_unlocked("Centaur", "Centaur")        
     } else if (monster_name == "Trojan") {
-        return has_trained_breed("Centaur") && byte(0x990b7) == 0x01        
+        return has_trained_breed("Centaur") && card_unlocked("Centaur", "Golem")        
     } else if (monster_name == "Chariot") {
-        return has_trained_breed("Centaur") && byte(0x990b8) == 0x01 && has_trained_breed("Durahan") && card_unlocked("Durahan", "Durahan")         
+        return has_trained_breed("Centaur") && card_unlocked("Centaur", "Durahan") && has_trained_breed("Durahan") && card_unlocked("Durahan", "Durahan")         
     } else if (monster_name == "Antares") {
-        return has_trained_breed("Centaur") && byte(0x990b9) == 0x01        
+        return has_trained_breed("Centaur") && card_unlocked("Centaur", "Arrow Head")        
     } else if (monster_name == "Celious") {
-        return has_trained_breed("Centaur") && byte(0x990ba) == 0x01        
+        return has_trained_breed("Centaur") && card_unlocked("Centaur", "Tiger")        
     } else if (monster_name == "Bazoo") {
-        return has_trained_breed("Centaur") && byte(0x990bb) == 0x01 && has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Bajarl")
+        return has_trained_breed("Centaur") && card_unlocked("Centaur", "Bajarl") && has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Bajarl")
     } else if (monster_name == "Reaper") {
-        return has_trained_breed("Centaur") && byte(0x990bc) == 0x01 && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")            
+        return has_trained_breed("Centaur") && card_unlocked("Centaur", "Joker") && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")            
     } else if (monster_name == "Trotter") {
-        return has_trained_breed("Centaur") && byte(0x990bd) == 0x01        
+        return has_trained_breed("Centaur") && card_unlocked("Centaur", "Trotter (Rare)")        
     } else if (monster_name == "Blue Thunder") {
-        return has_trained_breed("Centaur") && byte(0x990be) == 0x01        
+        return has_trained_breed("Centaur") && card_unlocked("Centaur", "Blue Thunder (Rare)")        
     } else if (monster_name == "PeachTreeBug") { // ColorPandora starts here
-        return has_trained_breed("ColorPandora") && byte(0x990bf) == 0x01        
+        return has_trained_breed("ColorPandora") && card_unlocked("ColorPandora", "Pixie")        
     } else if (monster_name == "ColorPandora") {
-        return has_trained_breed("ColorPandora") && byte(0x990c0) == 0x01        
+        return has_trained_breed("ColorPandora") && card_unlocked("ColorPandora", "ColorPandora")        
     } else if (monster_name == "Liquid Cube") {
-        return has_trained_breed("ColorPandora") && byte(0x990c1) == 0x01        
+        return has_trained_breed("ColorPandora") && card_unlocked("ColorPandora", "Jell")        
     } else if (monster_name == "Dice") {
-        return has_trained_breed("ColorPandora") && byte(0x990c2) == 0x01        
+        return has_trained_breed("ColorPandora") && card_unlocked("ColorPandora", "Dice (Rare)")        
     } else if (monster_name == "Tram") {
-        return has_trained_breed("ColorPandora") && byte(0x990c3) == 0x01        
+        return has_trained_breed("ColorPandora") && card_unlocked("ColorPandora", "Tram (Rare)")        
     } else if (monster_name == "Bethelgeus") { // Beaclon starts here
         return has_trained_breed("Beaclon") && byte(0x990c4) == 0x01 && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")           
     } else if (monster_name == "Beaclon") {

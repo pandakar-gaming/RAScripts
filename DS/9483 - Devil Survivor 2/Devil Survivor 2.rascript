@@ -328,6 +328,9 @@ function defender_leader_friendly() {
     return ptr_valid(FULL_DEFENDER_TEAM_PTR) && ptr_valid(FULL_COMBAT_PTR) && word(DEFENDER_PTR + 0x0a) <= 0x0d
 }
 
+function attacker_leader_reduced_to(hp_threshold) => ptr_valid(FULL_ATTACKER_TEAM_PTR) && unit_reduced_to(ATTACKER_TEAM_PTR + 0x18, hp_threshold)
+function defender_leader_reduced_to(hp_threshold) => ptr_valid(FULL_DEFENDER_TEAM_PTR) && unit_reduced_to(DEFENDER_PTR + 0x18, hp_threshold)
+
 function attacker_leader_reduced_to_1hp() => ptr_valid(FULL_ATTACKER_TEAM_PTR)  && unit_soft_defeated(ATTACKER_TEAM_PTR + 0x18)
 
 // See if the unit on the left side of the attacker's team was defeated in this particular combat.
@@ -368,6 +371,7 @@ function team_leader_is(index, team_leader_name) {
     return word(COMBAT_PTR + 0x26c + (0x27c)*index + 0x0a) == enemy_id_by_name[team_leader_name]
 }
 
+STATE_OF_COMBAT = byte(0x001beaa8)
 // [8-bit] State of combat
 // 0x01 = Setting up for Dispatch;
 // 0x03 = Dialogue mid combat;
@@ -377,7 +381,12 @@ function team_leader_is(index, team_leader_name) {
 // 0x0a = Combat done;
 // 0x0f = Not doing a combat;
 // 0x10 = Seen during Lamhfhada after picking up an energy
-function combat_actively_occurring() => byte(0x001beaa8) == 0x06
+function combat_actively_occurring() => STATE_OF_COMBAT == 0x06
+
+// [8-bit] State of combat (the relevant parts)
+// 0x06 = Fighting;
+// 0x02 = Fight has exited and is phasing to the next part;
+function active_combat_phases() => prev(byte(0x001beaa8)) == 0x06 && byte(0x001beaa8) == 0x02
 
 // Helper function for the thing I keep copy-pasting everywhere.
 // Check that any unit defeated the named unit.
@@ -386,6 +395,15 @@ function specific_leader_defeated(unit_name) {
         (attacker_leader_is(unit_name) && defender_leader_friendly() && attacker_leader_defeated()) 
           || defender_leader_is(unit_name) && attacker_leader_friendly() && defender_leader_defeated()
     )
+}
+
+// Polaris is a bitch and phases not at 1hp, but something below 5% according to "the internet."
+function specific_leader_phases_at(unit_name, hp_threshold) {
+    return (
+        ((attacker_leader_is(unit_name)) && once(attacker_leader_reduced_to(hp_threshold)) && (never(prev(STATE_OF_COMBAT) != 0x06)))
+        || ((defender_leader_is(unit_name) && once(defender_leader_reduced_to(hp_threshold)) && (never(prev(STATE_OF_COMBAT) != 0x06)))
+        )
+    ) && active_combat_phases()
 }
 
 // Helper function for the other damn thing that keeps coming up.
@@ -603,8 +621,12 @@ function unit_defeated(addr_unit_current_health) {
 
 // Determine if the specific unit was soft defeated.
 // Some enemy leaders trigger mission events upon hitting 1HP.
-function unit_soft_defeated(addr_unit_current_health) {
-    return prev(word(addr_unit_current_health)) <= word(addr_unit_current_health + 0x02) && word(addr_unit_current_health) == 0x01
+function unit_soft_defeated(addr_unit_current_health) => unit_reduced_to(addr_unit_current_health, 1)
+
+function unit_reduced_to(addr_unit_current_health, hp_threshold) {
+    return prev(word(addr_unit_current_health)) <= word(addr_unit_current_health + 0x02) 
+        && word(addr_unit_current_health) >= 1
+        && word(addr_unit_current_health) <= hp_threshold
 }
 
 // Check that all characters are alive for plot purposes.
@@ -3675,7 +3697,6 @@ achievement(
         on_branching_mission("Correct Tomorrow", "Yamato") ||
         on_branching_mission("Unseen Tomorrow", "Ronaldo")
     )
-    && combat_actively_occurring()
     // Polaris is unit 4, so check starting from unit 5 that they all have HP left
     && word(COMBAT_PTR + 0xc74) > 0
     && word(COMBAT_PTR + 0xef0) > 0
@@ -3685,7 +3706,10 @@ achievement(
     && word(COMBAT_PTR + 0x18e0) > 0
     && word(COMBAT_PTR + 0x1b5c) > 0
     && word(COMBAT_PTR + 0x1dd8) > 0
-    && specific_leader_soft_defeated("Polaris")
+    // 425 -> phases (from 1900)
+    // 428 -> phases
+    // 429 -> does not phase
+    && specific_leader_phases_at("Polaris", 428)
 )
 achievement(
     id = 590282,

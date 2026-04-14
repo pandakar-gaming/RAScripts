@@ -665,7 +665,7 @@ achievement(
 
 achievement(
     id = 599928,
-    title = "Prince Exaltus out of Reach",
+    title = "Prince Exaltus Out of Reach",
     points = 2,
     description = "Defeat Feifei in Octopuzzle.",
     trigger = is_octopuzzle_enemy("Feifei") && OctoBoard(PLAYER_BOARD).board_has_won()
@@ -717,11 +717,11 @@ achievement(
 )
 
 // Real important note: credits do not roll if you do not have a score over 1m.
-// Literally does not happen. Even if you get to a point where you can unlock a character. 
+// Literally does not happen. Even if you reach a point where you can unlock a character. 
 // Whether the youngins like it or not, this is THE way to hit credits so it is the win condition. 
 achievement(
     id = 599696,
-    title = "Nobody Grills Better than Me",
+    title = "Nobody Grills Better Than Me",
     points = 10,
     type = "progression",
     description = "Complete any Octopuzzle story and record your final score.",
@@ -794,7 +794,7 @@ achievement(
     id = 599702,
     title = "Addressing the Octopus Complex",
     points = 10,
-    description = "As Kari, get to and defeat Angelique in Octopuzzle without using a Continue.",
+    description = "As Kari, reach and defeat Angelique in Octopuzzle without using a Continue.",
     trigger = is_octopuzzle_character(1, "Kari")
         && OctoCharacter(PLAYER_ONE).is_player_controlled()
         && OctoBoard(ENEMY_BOARD).board_active()
@@ -818,7 +818,7 @@ achievement(
     id = 599929,
     title = "Disinfecting the World, One Puzzle at a Time",
     points = 10,
-    description = "As Gobu, get to and defeat Shadow Kari in Octopuzzle without using a Continue.",
+    description = "As Gobu, reach and defeat Shadow Kari in Octopuzzle without using a Continue.",
     trigger = is_octopuzzle_character(1, "Gobu")
         && OctoCharacter(PLAYER_ONE).is_player_controlled()
         && OctoBoard(ENEMY_BOARD).board_active()
@@ -842,7 +842,7 @@ achievement(
     id = 599695,
     title = "A Samurai Must Endure Many Trials",
     points = 10,
-    description = "As Kanizaemon, get to and defeat Exaltus in Octopuzzle without using a Continue.",
+    description = "As Kanizaemon, reach and defeat Exaltus in Octopuzzle without using a Continue.",
     trigger = is_octopuzzle_character(1, "Kanizaemon")
         && OctoCharacter(PLAYER_ONE).is_player_controlled()
         && OctoBoard(ENEMY_BOARD).board_active()
@@ -867,7 +867,7 @@ achievement(
     id = 600148,
     title = "Lonronpia World Tour",
     points = 10,
-    description = "As Funkee, get to and defeat Prince Exaltus in Octopuzzle without using a Continue.",
+    description = "As Funkee, reach and defeat Prince Exaltus in Octopuzzle without using a Continue.",
     trigger = is_octopuzzle_character(1, "Funkee")
         && OctoCharacter(PLAYER_ONE).is_player_controlled()
         && OctoBoard(ENEMY_BOARD).board_active()
@@ -891,7 +891,7 @@ achievement(
     id = 600153,
     title = "A Journey of Retribution",
     points = 10,
-    description = "As Feifei, get to and defeat Shadow Kari in Octopuzzle without using a Continue.",
+    description = "As Feifei, reach and defeat Shadow Kari in Octopuzzle without using a Continue.",
     trigger = is_octopuzzle_character(1, "Feifei")
         && OctoCharacter(PLAYER_ONE).is_player_controlled()
         && OctoBoard(ENEMY_BOARD).board_active()
@@ -915,7 +915,7 @@ achievement(
     id = 600195,
     title = "Undefeated Octopuzzle Champion",
     points = 10,
-    description = "As Kapprio, get to and defeat Dramo in Octopuzzle without using a Continue.",
+    description = "As Kapprio, reach and defeat Dramo in Octopuzzle without using a Continue.",
     trigger = is_octopuzzle_character(1, "Kapprio")
         && OctoCharacter(PLAYER_ONE).is_player_controlled()
         && OctoBoard(ENEMY_BOARD).board_active()
@@ -939,7 +939,7 @@ achievement(
     id = 600362,
     title = "Self-Indulgent Chaos Gremlin Beats Up the World",
     points = 10,
-    description = "As Shadow Kari, get to and defeat Feifei in Octopuzzle without using a Continue.",
+    description = "As Shadow Kari, reach and defeat Feifei in Octopuzzle without using a Continue.",
     trigger = is_octopuzzle_character(1, "Shadow Kari")
         && OctoCharacter(PLAYER_ONE).is_player_controlled()
         && OctoBoard(ENEMY_BOARD).board_active()
@@ -952,7 +952,7 @@ achievement(
     id = 600374,
     title = "Still Searching for the Creator",
     points = 10,
-    description = "As Octobot, get to and defeat Angelique in Octopuzzle without using a Continue.",
+    description = "As Octobot, reach and defeat Angelique in Octopuzzle without using a Continue.",
     trigger = is_octopuzzle_character(1, "Octobot")
         && OctoCharacter(PLAYER_ONE).is_player_controlled()
         && OctoBoard(ENEMY_BOARD).board_active()
@@ -965,7 +965,7 @@ achievement(
     id = 600478,
     title = "The Demon King's Throne is Mine",
     points = 10,
-    description = "As Dramo, get to and defeat Exaltus in Octopuzzle without using a Continue.",
+    description = "As Dramo, reach and defeat Exaltus in Octopuzzle without using a Continue.",
     trigger = is_octopuzzle_character(1, "Dramo")
         && OctoCharacter(PLAYER_ONE).is_player_controlled()
         && OctoBoard(ENEMY_BOARD).board_active()
@@ -978,7 +978,7 @@ achievement(
     id = 600364,
     title = "Totally Killing the Vacation Vibe",
     points = 10,
-    description = "As Angelique, get to and defeat Exaltus in Octopuzzle without using a Continue.",
+    description = "As Angelique, reach and defeat Exaltus in Octopuzzle without using a Continue.",
     trigger = is_octopuzzle_character(1, "Angelique")
         && OctoCharacter(PLAYER_ONE).is_player_controlled()
         && OctoBoard(ENEMY_BOARD).board_active()
@@ -991,7 +991,7 @@ achievement(
     id = 600375,
     title = "Best Takoyaki Chef in the Universe",
     points = 10,
-    description = "As Takobo, get to and defeat Angelique in Octopuzzle without using a Continue.",
+    description = "As Takobo, reach and defeat Angelique in Octopuzzle without using a Continue.",
     trigger = is_octopuzzle_character(1, "Takobo")
         && OctoCharacter(PLAYER_ONE).is_player_controlled()
         && OctoBoard(ENEMY_BOARD).board_active()
@@ -1002,9 +1002,9 @@ achievement(
 
 achievement(
     id = 600477,
-    title = "Never Mess with the Prince of Demons",
+    title = "Never Mess With the Prince of Demons",
     points = 10,
-    description = "As Exaltus, get to and defeat Dramo in Octopuzzle without using a Continue.",
+    description = "As Exaltus, reach and defeat Dramo in Octopuzzle without using a Continue.",
     trigger = is_octopuzzle_character(1, "Exaltus")
         && OctoCharacter(PLAYER_ONE).is_player_controlled()
         && OctoBoard(ENEMY_BOARD).board_active()
@@ -1019,7 +1019,7 @@ achievement(
     id = 600539,
     title = "Grilling the Germophobe",
     points = 5,
-    description = "Defeat Gobu in Octopuzzle on Octo Master mode or 2x Octo Master.",
+    description = "In Octopuzzle, defeat Gobu on Octo Master or 2x Octo Master.",
     trigger = is_octopuzzle_enemy("Gobu") 
         && __ornext(octopuzzle_difficulty("Master") || octopuzzle_difficulty("2x Master"))
         && OctoBoard(PLAYER_BOARD).board_has_won() 
@@ -1029,7 +1029,7 @@ achievement(
     id = 600540,
     title = "Grilled Samurai Legs",
     points = 5,
-    description = "Defeat Kanizaemon in Octopuzzle on Octo Master mode or 2x Octo Master.",
+    description = "In Octopuzzle, defeat Kanizaemon on Octo Master or 2x Octo Master.",
     trigger = is_octopuzzle_enemy("Kanizaemon") 
         && __ornext(octopuzzle_difficulty("Master") || octopuzzle_difficulty("2x Master"))
         && OctoBoard(PLAYER_BOARD).board_has_won()
@@ -1039,7 +1039,7 @@ achievement(
     id = 600541,
     title = "Grilling the DJ",
     points = 5,
-    description = "Defeat Funkee in Octopuzzle on Octo Master mode or 2x Octo Master.",
+    description = "In Octopuzzle, defeat Funkee on Octo Master or 2x Octo Master.",
     trigger = is_octopuzzle_enemy("Funkee")
         && __ornext(octopuzzle_difficulty("Master") || octopuzzle_difficulty("2x Master")) 
         && OctoBoard(PLAYER_BOARD).board_has_won()
@@ -1049,7 +1049,7 @@ achievement(
     id = 600542,
     title = "Grilling the Rose",
     points = 5,
-    description = "Defeat Kapprio in Octopuzzle on Octo Master mode or 2x Octo Master.",
+    description = "In Octopuzzle, defeat Kapprio on Octo Master or 2x Octo Master.",
     trigger = is_octopuzzle_enemy("Kapprio") 
         && __ornext(octopuzzle_difficulty("Master") || octopuzzle_difficulty("2x Master")) 
         && OctoBoard(PLAYER_BOARD).board_has_won()
@@ -1059,7 +1059,7 @@ achievement(
     id = 600543,
     title = "Grilling the Loyal Guardian",
     points = 5,
-    description = "Defeat Octobot in Octopuzzle on Octo Master mode or 2x Octo Master.",
+    description = "In Octopuzzle, defeat Octobot on Octo Master or 2x Octo Master.",
     trigger = is_octopuzzle_enemy("Octobot")
         && __ornext(octopuzzle_difficulty("Master") || octopuzzle_difficulty("2x Master"))  
         && OctoBoard(PLAYER_BOARD).board_has_won()
@@ -1069,7 +1069,7 @@ achievement(
     id = 600544,
     title = "Grilling the Dragon",
     points = 5,
-    description = "Defeat Dramo in Octopuzzle on Octo Master mode or 2x Octo Master.",
+    description = "In Octopuzzle, defeat Dramo on Octo Master or 2x Octo Master.",
     trigger = is_octopuzzle_enemy("Dramo")
         && __ornext(octopuzzle_difficulty("Master") || octopuzzle_difficulty("2x Master"))   
         && OctoBoard(PLAYER_BOARD).board_has_won()
@@ -1079,7 +1079,7 @@ achievement(
     id = 600548,
     title = "Grilling the Fangirl",
     points = 5,
-    description = "Defeat Feifei in Octopuzzle on Octo Master mode or 2x Octo Master.",
+    description = "In Octopuzzle, defeat Feifei on Octo Master or 2x Octo Master.",
     trigger = is_octopuzzle_enemy("Feifei")
         && __ornext(octopuzzle_difficulty("Master") || octopuzzle_difficulty("2x Master"))   
         && OctoBoard(PLAYER_BOARD).board_has_won()
@@ -1089,7 +1089,7 @@ achievement(
     id = 600545,
     title = "Grilling the Grill Master",
     points = 5,
-    description = "Defeat Takobo in Octopuzzle on Octo Master or 2x Octo Master.",
+    description = "In Octopuzzle, defeat Takobo on Octo Master or 2x Octo Master.",
     trigger = is_octopuzzle_enemy("Takobo")
         && __ornext(octopuzzle_difficulty("Master") || octopuzzle_difficulty("2x Master"))   
         && OctoBoard(PLAYER_BOARD).board_has_won()
@@ -1099,7 +1099,7 @@ achievement(
     id = 600546,
     title = "Grilling Prince Exaltopus",
     points = 5,
-    description = "Defeat Exaltus in Octopuzzle on Octo Master or 2x Octo Master.",
+    description = "In Octopuzzle, defeat Exaltus on Octo Master or 2x Octo Master.",
     trigger = is_octopuzzle_enemy("Exaltus") 
         && __ornext(octopuzzle_difficulty("Master") || octopuzzle_difficulty("2x Master"))   
         && OctoBoard(PLAYER_BOARD).board_has_won()
@@ -1109,7 +1109,7 @@ achievement(
     id = 600549,
     title = "Grilling the Sorceress",
     points = 5,
-    description = "Defeat Kari in Octopuzzle on Octo Master or 2x Octo Master.",
+    description = "In Octopuzzle, defeat Kari on Octo Master or 2x Octo Master.",
     trigger = is_octopuzzle_enemy("Kari") 
         && __ornext(octopuzzle_difficulty("Master") || octopuzzle_difficulty("2x Master"))   
         && OctoBoard(PLAYER_BOARD).board_has_won()
@@ -1119,7 +1119,7 @@ achievement(
     id = 600547,
     title = "Grilling the Vacationista",
     points = 5,
-    description = "Defeat Angelique in Octopuzzle on Octo Master or 2x Octo Master.",
+    description = "In Octopuzzle, defeat Angelique on Octo Master or 2x Octo Master.",
     trigger = is_octopuzzle_enemy("Angelique")
         && __ornext(octopuzzle_difficulty("Master") || octopuzzle_difficulty("2x Master"))   
         && OctoBoard(PLAYER_BOARD).board_has_won()
@@ -1129,7 +1129,7 @@ achievement(
     id = 600550,
     title = "Grilling the Alter Ego",
     points = 5,
-    description = "Defeat Shadow Kari on Octo Master or 2x Octo Master.",
+    description = "In Octopuzzle, defeat Shadow Kari on Octo Master or 2x Octo Master.",
     trigger = is_octopuzzle_enemy("Shadow Kari")
         && __ornext(octopuzzle_difficulty("Master") || octopuzzle_difficulty("2x Master"))   
         && OctoBoard(PLAYER_BOARD).board_has_won()
@@ -1339,7 +1339,7 @@ achievement(
     id = 600479,
     title = "Octopus Vulgaris",
     points = 5,
-    description = "Get 3 licenses through Original Endless.",
+    description = "Earn 3 licenses through Original Endless.",
     trigger = is_playing_endless()
         && prev(license_count()) == 2
         && measured(license_count() == 3, when=always_true(), format="raw") 
@@ -1349,7 +1349,7 @@ achievement(
     id = 600480,
     title = "Octopus Chierchiae",
     points = 10,
-    description = "Get 6 licenses through Original Endless.",
+    description = "Earn 6 licenses through Original Endless.",
     trigger = is_playing_endless()
         && prev(license_count()) == 5
         && measured(license_count() == 6, when=always_true(), format="raw") 
@@ -1359,7 +1359,7 @@ achievement(
     id = 600481,
     title = "Octopus Cyanea",
     points = 10,
-    description = "Get 9 licenses through Original Endless.",
+    description = "Earn 9 licenses through Original Endless.",
     trigger = is_playing_endless()
         && prev(license_count()) == 8
         && measured(license_count() == 9, when=always_true(), format="raw") 
@@ -1369,7 +1369,7 @@ achievement(
     id = 600566,
     title = "Former Radioyaki Enjoyer",
     points = 5,
-    description = "Get 5 or more titles through Original Endless.",
+    description = "Earn 5 or more titles through Original Endless.",
     trigger = is_playing_endless()
         && title_count() <= 28
         && prev(title_count()) < 5
@@ -1380,7 +1380,7 @@ achievement(
     id = 600565,
     title = "Authentic Aizuya Griller",
     points = 10,
-    description = "Get 10 or more titles through Original Endless.",
+    description = "Earn 10 or more titles through Original Endless.",
     trigger = is_playing_endless()
         && title_count() <= 28
         && prev(title_count()) < 10
@@ -1391,7 +1391,7 @@ achievement(
     id = 600568,
     title = "Osaka Snack Enthusiast",
     points = 10,
-    description = "Get 15 or more titles through Original Endless.",
+    description = "Earn 15 or more titles through Original Endless.",
     trigger = is_playing_endless()
         && title_count() <= 28
         && prev(title_count()) < 15
@@ -1402,7 +1402,7 @@ achievement(
     id = 600564,
     title = "Takoyaki, Takaron!",
     points = 25,
-    description = "Get 20 or more titles through Original Endless.",
+    description = "Earn 20 or more titles through Original Endless.",
     trigger = is_playing_endless()
         && title_count() <= 28
         && prev(title_count()) < 20

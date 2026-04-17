@@ -214,8 +214,8 @@ class OctoBoard {
     // 0x18: Type of octopi that can be spawned on this board [8-bit] 
     function number_octopi_types() => byte(this.root_address + 0x18)
 
-    // 0x27: Number of diamonds on the board [8-bit]
-    function num_diamonds() => byte(this.root_address + 0x27)
+    // 0x27: Number of diamonds given to the board [8-bit]
+    function total_diamonds_earned() => byte(this.root_address + 0x27)
 
     //     0x31: Number of octopi on board [16-bit BE]
     function num_total_octopi_on_board() => word_be(this.root_address + 0x31)
@@ -276,6 +276,9 @@ class OctoBoard {
     function number_black_squid_in_chain() => byte(this.root_address + 0xd7)
     //     0xd8: Number of light green octopi in chain [8-bit]
     function number_light_green_octopi_in_chain() => byte(this.root_address + 0xd8)
+
+    //     0xda: Number of diamonds actively on board [8-bit]
+    function num_active_diamonds() => byte(this.root_address + 0xda)
 
     // Get the number of unique chains happening on the board.
     // Several different colors can be exploding all at once, so we're really just checking if there's any value in each of these addresses.
@@ -387,6 +390,8 @@ TITLES = {
     "All Clear": bit7(0x0021c8df) // Clear everything from the screen
 }
 
+function specific_title_flipped(title) => prev(TITLES[title]) == 0x00 && TITLES[title] == 0x01
+
 function title_count() {
     running_total = 0
     
@@ -413,6 +418,8 @@ LICENSES = {
     "Octo Toddler": bit1(0x0021c8e3),
     "Octo Baby": bit0(0x0021c8e3)
 }
+
+function license_acquired(license) => prev(LICENSES[license]) == 0 && LICENSES[license] == 1
 
 function license_count() {
     running_total = 0
@@ -488,6 +495,7 @@ MENU_OPTIONS = {
     0x8f: "Character Intro",
     // Any menu has this option
     0xc3: "Return",
+    0xffffffff: "Null" // Used for verifying leaderboards
 }
 
 // This is a cheat ish way of asking "has the player stepped into Octopuzzle?"
@@ -508,15 +516,21 @@ function leaderboard_available_to_enter() {
     return OctoBoard(PLAYER_BOARD).is_human_controlled_board()
         && OctoBoard(ENEMY_BOARD).is_computer_controlled()
         && OctoBoard(PLAYER_BOARD).current_score() >= 1000000
-        && prev(byte(0x0021b818)) == 0x00
         && byte(0x0021b818) == 0x1f
+        && byte(0x0021b819) == 0x1f
+        && byte(0x0021b81a) == 0x1f
+        && byte(0x0021b81b) == 0x1f
+        && byte(0x0021b81c) == 0x1f
+        && prev(!menu_option_selected_is("A"))
+        && menu_option_selected_is("A")
 }
 
 function endless_leaderboard_available_to_enter() {
     return OctoBoard(PLAYER_BOARD).is_human_controlled_board()
         && OctoBoard(ENEMY_BOARD).board_inactive()
         && OctoBoard(PLAYER_BOARD).current_score() >= 1000000
-        && prev(byte(0x0021b818)) == 0x00
+        && menu_option_selected_is("A")
+        && prev(byte(0x0021b818)) != 0x00
         && byte(0x0021b818) == 0x1f
 }
 
@@ -649,7 +663,6 @@ achievement(
     id = 599694,
     title = "Must Resort to Plan B",
     points = 2,
-    type = "progression",
     description = "Defeat Octobot in Octopuzzle.",
     trigger = is_octopuzzle_enemy("Octobot") && OctoBoard(PLAYER_BOARD).board_has_won()
 )
@@ -658,7 +671,6 @@ achievement(
     id = 599705,
     title = "I Didn't Want to Play This Anyway",
     points = 2,
-    type = "progression",
     description = "Defeat Dramo in Octopuzzle.",
     trigger = is_octopuzzle_enemy("Dramo") && OctoBoard(PLAYER_BOARD).board_has_won()
 )
@@ -675,7 +687,6 @@ achievement(
     id = 599680,
     title = "Takobo Just Wants to Go Home",
     points = 2,
-    type = "progression",
     description = "Defeat Takobo in Octopuzzle.",
     trigger = is_octopuzzle_enemy("Takobo") && OctoBoard(PLAYER_BOARD).board_has_won()
 )
@@ -684,7 +695,6 @@ achievement(
     id = 599704,
     title = "I'm Telling Mommy",
     points = 2,
-    type = "progression",
     description = "Defeat Exaltus in Octopuzzle.",
     trigger = is_octopuzzle_enemy("Exaltus") && OctoBoard(PLAYER_BOARD).board_has_won()
 )
@@ -693,7 +703,6 @@ achievement(
     id = 599697,
     title = "You Creep",
     points = 2,
-    type = "progression",
     description = "Defeat Angelique in Octopuzzle.",
     trigger = is_octopuzzle_enemy("Angelique") && OctoBoard(PLAYER_BOARD).board_has_won()
 )
@@ -710,7 +719,6 @@ achievement(
     id = 599698,
     title = "I Can't Believe I Lost",
     points = 2,
-    type = "progression",
     description = "Defeat Shadow Kari in Octopuzzle.",
     trigger = is_octopuzzle_enemy("Shadow Kari")
         && OctoBoard(PLAYER_BOARD).board_has_won()
@@ -724,16 +732,31 @@ achievement(
     title = "Nobody Grills Better Than Me",
     points = 10,
     type = "progression",
-    description = "Complete any Octopuzzle story and record your final score.",
-    trigger = is_playing_octopuzzle() 
-        && OctoBoard(ENEMY_BOARD).board_win_state() != 0x01
-        && leaderboard_available_to_enter()
+    description = "Complete any Octopuzzle story.",
+    trigger = is_playing_octopuzzle()
+        && (
+            // two states here that can trip this:
+            // 1. win as character over other end of story character, had to use a continue
+            // 2. win as character over other end of story character, no continue (the alternate character)
+            (is_octopuzzle_character(1, "Kari") && is_octopuzzle_enemy("Angelique") && once(OctoBoard(ENEMY_BOARD).board_has_won()) && OctoBoard(PLAYER_BOARD).board_has_won())
+            || (is_octopuzzle_character(1, "Kari") && is_octopuzzle_enemy("Shadow Kari") && OctoBoard(PLAYER_BOARD).board_has_won())
+            || (is_octopuzzle_character(1, "Gobu") && is_octopuzzle_enemy("Shadow Kari") && once(OctoBoard(ENEMY_BOARD).board_has_won()) && OctoBoard(PLAYER_BOARD).board_has_won())
+            || (is_octopuzzle_character(1, "Gobu") && is_octopuzzle_enemy("Octobot") && OctoBoard(PLAYER_BOARD).board_has_won())
+            || (is_octopuzzle_character(1, "Kanizaemon") && is_octopuzzle_enemy("Exaltus") && once(OctoBoard(ENEMY_BOARD).board_has_won()) && OctoBoard(PLAYER_BOARD).board_has_won())
+            || (is_octopuzzle_character(1, "Kanizaemon") && is_octopuzzle_enemy("Dramo") && OctoBoard(PLAYER_BOARD).board_has_won())
+            || (is_octopuzzle_character(1, "Funkee") && is_octopuzzle_enemy("Exaltus") && once(OctoBoard(ENEMY_BOARD).board_has_won()) && OctoBoard(PLAYER_BOARD).board_has_won())
+            || (is_octopuzzle_character(1, "Funkee") && is_octopuzzle_enemy("Angelique") && OctoBoard(PLAYER_BOARD).board_has_won())
+            || (is_octopuzzle_character(1, "Feifei") && is_octopuzzle_enemy("Shadow Kari") && once(OctoBoard(ENEMY_BOARD).board_has_won()) && OctoBoard(PLAYER_BOARD).board_has_won())
+            || (is_octopuzzle_character(1, "Feifei") && is_octopuzzle_enemy("Feifei") && OctoBoard(PLAYER_BOARD).board_has_won())
+            || (is_octopuzzle_character(1, "Kapprio") && is_octopuzzle_enemy("Dramo") && once(OctoBoard(ENEMY_BOARD).board_has_won()) && OctoBoard(PLAYER_BOARD).board_has_won())
+            || (is_octopuzzle_character(1, "Kapprio") && is_octopuzzle_enemy("Exaltus") && OctoBoard(PLAYER_BOARD).board_has_won())
+        )
 )
 
 achievement(
     id = 600373,
     title = "Octomaniac",
-    points = 5,
+    points = 10,
     description = "Record a score of 100,000,000 or higher in Octopuzzle.",
     trigger = is_playing_octopuzzle() 
         && leaderboard_available_to_enter()
@@ -963,7 +986,7 @@ achievement(
 
 achievement(
     id = 600478,
-    title = "The Demon King's Throne is Mine",
+    title = "The Demon King's Throne Is Mine",
     points = 10,
     description = "As Dramo, reach and defeat Exaltus in Octopuzzle without using a Continue.",
     trigger = is_octopuzzle_character(1, "Dramo")
@@ -1207,18 +1230,22 @@ achievement(
 
 achievement(
     id = 600567,
-    title = "I Just Like Looking At Them",
-    points = 10,
-    description = "In Endless, get 4 diamonds on screen at once.",
+    title = "I Just Like Looking at Them",
+    points = 25,
+    description = "In Original Endless, have 4 diamonds on screen at once at any point and complete the run.",
     trigger = is_playing_endless()
-        && prev(OctoBoard(PLAYER_BOARD).num_diamonds() == 3)
-        && trigger_when(OctoBoard(PLAYER_BOARD).num_diamonds() == 4)
+        && OctoBoard(PLAYER_BOARD).num_active_diamonds() >= 1
+        // Turns out even if the enemy board isn't active, they can still win
+        // AI wins by doing absolutely nothing
+        && OctoBoard(ENEMY_BOARD).board_win_state() == 0
+        && trigger_when(prev(OctoBoard(PLAYER_BOARD).num_active_diamonds() == 3))
+        && trigger_when(OctoBoard(PLAYER_BOARD).num_active_diamonds() == 4)
 )
 
 achievement(
     title = "Monochrome Grilling",
     points = 5,
-    description = "In Endless, leave only one color of octopi on the screen after a combo.",
+    description = "In Original Endless, leave only one color of octopi on the screen after a combo.",
     trigger = is_playing_endless()
         && OctoBoard(PLAYER_BOARD).combo_finished()
         && (
@@ -1327,7 +1354,7 @@ achievement(
 achievement(
     id = 600627,
     title = "Rainbow-Colored Sea of Smoke",
-    description = "In Endless, get a combo that uses 5 or more different colors at once.",
+    description = "In Original Endless, get a combo that uses 5 or more different colors at once.",
     points = 10,
     trigger = is_playing_endless()
         && (prev(OctoBoard(PLAYER_BOARD).number_unique_chains()) <= 4)
@@ -1349,20 +1376,26 @@ achievement(
     id = 600480,
     title = "Octopus Chierchiae",
     points = 10,
-    description = "Earn 6 licenses through Original Endless.",
+    description = "Earn 5 licenses through Original Endless.",
     trigger = is_playing_endless()
-        && prev(license_count()) == 5
-        && measured(license_count() == 6, when=always_true(), format="raw") 
+        && prev(license_count()) == 4
+        && measured(license_count() == 5, when=always_true(), format="raw") 
 )
 
 achievement(
     id = 600481,
     title = "Octopus Cyanea",
-    points = 10,
-    description = "Earn 9 licenses through Original Endless.",
+    points = 25,
+    description = "Earn any of the Expert, Squid, Master, Professor, Devil or Angel licenses through Original Endless.",
     trigger = is_playing_endless()
-        && prev(license_count()) == 8
-        && measured(license_count() == 9, when=always_true(), format="raw") 
+        && (
+            license_acquired("Octo Expert")
+            || license_acquired("Disguised Squid")
+            || license_acquired("Octo Master")
+            || license_acquired("Octo Professor")
+            || license_acquired("Octo Devil")
+            || license_acquired("Octo Angel")
+        )
 )
 
 achievement(
@@ -1390,7 +1423,7 @@ achievement(
 achievement(
     id = 600568,
     title = "Osaka Snack Enthusiast",
-    points = 10,
+    points = 25,
     description = "Earn 15 or more titles through Original Endless.",
     trigger = is_playing_endless()
         && title_count() <= 28
@@ -1400,7 +1433,7 @@ achievement(
 
 achievement(
     id = 600564,
-    title = "Takoyaki, Takaron!",
+    title = "Takoyaki, Takoron!",
     points = 25,
     description = "Earn 20 or more titles through Original Endless.",
     trigger = is_playing_endless()

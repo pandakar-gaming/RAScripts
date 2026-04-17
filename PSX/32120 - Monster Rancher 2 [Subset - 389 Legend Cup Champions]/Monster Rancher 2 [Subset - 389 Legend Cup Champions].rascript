@@ -1026,411 +1026,411 @@ function monster_trained(monster_name) {
     } else if (monster_name == "Tram") {
         return has_trained_breed("ColorPandora") && card_unlocked("ColorPandora", "Tram (Rare)")        
     } else if (monster_name == "Bethelgeus") { // Beaclon starts here
-        return has_trained_breed("Beaclon") && byte(0x990c4) == 0x01 && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")           
+        return has_trained_breed("Beaclon") && card_unlocked("Beaclon", "Dragon") && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")           
     } else if (monster_name == "Beaclon") {
         return has_trained_breed("Beaclon") && card_unlocked("Beaclon", "Beaclon")        
     } else if (monster_name == "Melcarba") {
-        return has_trained_breed("Beaclon") && byte(0x990c6) == 0x01        
+        return has_trained_breed("Beaclon") && card_unlocked("Beaclon", "Henger")        
     } else if (monster_name == "Rocklon") {
-        return has_trained_breed("Beaclon") && byte(0x990c7) == 0x01        
+        return has_trained_breed("Beaclon") && card_unlocked("Beaclon", "Golem")        
     } else if (monster_name == "Centurion") {
-        return has_trained_breed("Beaclon") && byte(0x990c8) == 0x01 && has_trained_breed("Durahan") && card_unlocked("Durahan", "Durahan")         
+        return has_trained_breed("Beaclon") && card_unlocked("Beaclon", "Durahan") && has_trained_breed("Durahan") && card_unlocked("Durahan", "Durahan")         
     } else if (monster_name == "Sloth Beetle") {
-        return has_trained_breed("Beaclon") && byte(0x990c9) == 0x01        
+        return has_trained_breed("Beaclon") && card_unlocked("Beaclon", "Tiger")        
     } else if (monster_name == "KautRoarKaut") {
-        return has_trained_breed("Beaclon") && byte(0x990ca) == 0x01 && has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Bajarl")        
+        return has_trained_breed("Beaclon") && card_unlocked("Beaclon", "Bajarl") && has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Bajarl")        
     } else if (monster_name == "Jaggernaut") {
-        return has_trained_breed("Beaclon") && byte(0x990cb) == 0x01 && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
+        return has_trained_breed("Beaclon") && card_unlocked("Beaclon", "Joker") && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
     } else if (monster_name == "Ducklon") {
-        return has_trained_breed("Beaclon") && byte(0x990cc) == 0x01 && has_trained_breed("Ducken") && card_unlocked("Ducken", "Ducken")        
+        return has_trained_breed("Beaclon") && card_unlocked("Beaclon", "Ducken") && has_trained_breed("Ducken") && card_unlocked("Ducken", "Ducken")        
     } else if (monster_name == "Eggplantern") {
-        return has_trained_breed("Beaclon") && byte(0x990cd) == 0x01        
+        return has_trained_breed("Beaclon") && card_unlocked("Beaclon", "Eggplantern (Rare)")        
     } else if (monster_name == "Garlant") { // Henger starts here
-        return has_trained_breed("Henger") && byte(0x990ce) == 0x01 && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")    
+        return has_trained_breed("Henger") && card_unlocked("Henger", "Dragon") && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")    
     } else if (monster_name == "Henger") {
-        return has_trained_breed("Henger") && byte(0x990cf) == 0x01        
+        return has_trained_breed("Henger") && card_unlocked("Henger", "Henger")        
     } else if (monster_name == "Gaia") {
-        return has_trained_breed("Henger") && byte(0x990d0) == 0x01        
+        return has_trained_breed("Henger") && card_unlocked("Henger", "Golem")        
     } else if (monster_name == "Omega") {
-        return has_trained_breed("Henger") && byte(0x990d1) == 0x01        
+        return has_trained_breed("Henger") && card_unlocked("Henger", "Zuum")        
     } else if (monster_name == "Heuy") {
-        return has_trained_breed("Henger") && byte(0x990d2) == 0x01
+        return has_trained_breed("Henger") && card_unlocked("Henger", "Metalner")
     } else if (monster_name == "End Bringer") {
-        return has_trained_breed("Henger") && byte(0x990d3) == 0x01 && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")
+        return has_trained_breed("Henger") && card_unlocked("Henger", "Joker") && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")
     } else if (monster_name == "Automaton") {
-        return has_trained_breed("Henger") && byte(0x990d4) == 0x01 && has_trained_breed("Mock") && card_unlocked("Mock", "Mock")        
+        return has_trained_breed("Henger") && card_unlocked("Henger", "Mock") && has_trained_breed("Mock") && card_unlocked("Mock", "Mock")        
     } else if (monster_name == "Black Henger") {
-        return has_trained_breed("Henger") && byte(0x990d5) == 0x01        
+        return has_trained_breed("Henger") && card_unlocked("Henger", "Monol")        
     } else if (monster_name == "Skeleton") {
-        return has_trained_breed("Henger") && byte(0x990d6) == 0x01        
+        return has_trained_breed("Henger") && card_unlocked("Henger", "Skeleton (Rare)")        
     } else if (monster_name == "Baby Doll") { // Wracky starts here
-        return has_trained_breed("Wracky") && byte(0x990d7) == 0x01        
+        return has_trained_breed("Wracky") && card_unlocked("Wracky", "Pixie")        
     } else if (monster_name == "Draco Doll") {
-        return has_trained_breed("Wracky") && byte(0x990d8) == 0x01 && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")         
+        return has_trained_breed("Wracky") && card_unlocked("Wracky", "Dragon") && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")         
     } else if (monster_name == "Henger Doll") {
-        return has_trained_breed("Wracky") && byte(0x990d9) == 0x01
+        return has_trained_breed("Wracky") && card_unlocked("Wracky", "Henger")
     } else if (monster_name == "Wracky") {
         return has_trained_breed("Wracky") && card_unlocked("Wracky", "Wracky")        
     } else if (monster_name == "Pebbly") {
-        return has_trained_breed("Wracky") && byte(0x990db) == 0x01        
+        return has_trained_breed("Wracky") && card_unlocked("Wracky", "Golem")        
     } else if (monster_name == "Petit Knight") {
-        return has_trained_breed("Wracky") && byte(0x990dc) == 0x01 && has_trained_breed("Durahan") && card_unlocked("Durahan", "Durahan") 
+        return has_trained_breed("Wracky") && card_unlocked("Wracky", "Durahan") && has_trained_breed("Durahan") && card_unlocked("Durahan", "Durahan") 
     } else if (monster_name == "Bakky") {
-        return has_trained_breed("Wracky") && byte(0x990dd) == 0x01 && has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Bajarl")        
+        return has_trained_breed("Wracky") && card_unlocked("Wracky", "Bajarl") && has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Bajarl")        
     } else if (monster_name == "Metal Glay") {
-        return has_trained_breed("Wracky") && byte(0x990de) == 0x01        
+        return has_trained_breed("Wracky") && card_unlocked("Wracky", "Metalner")        
     } else if (monster_name == "Tricker") {
-        return has_trained_breed("Wracky") && byte(0x990df) == 0x01 && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")       
+        return has_trained_breed("Wracky") && card_unlocked("Wracky", "Joker") && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")       
     } else if (monster_name == "Mocky") {
-        return has_trained_breed("Wracky") && byte(0x990e0) == 0x01 && has_trained_breed("Mock") && card_unlocked("Mock", "Mock")        
+        return has_trained_breed("Wracky") && card_unlocked("Wracky", "Mock") && has_trained_breed("Mock") && card_unlocked("Mock", "Mock")        
     } else if (monster_name == "Satan Clause") {
-        return has_trained_breed("Wracky") && byte(0x990e1) == 0x01        
-    } else if (monster_name == "Tyrant") { // Golem starts here
-        return has_trained_breed("Golem") && byte(0x990e2) == 0x01 && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")       
-    } else if (monster_name == "Pink Golem") {
-        return has_trained_breed("Golem") && byte(0x990e3) == 0x01        
+        return has_trained_breed("Wracky") && card_unlocked("Wracky", "Satan Clause (Rare)")        
+    } else if (monster_name == "Pink Golem") { // Golem starts here
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Pixie")       
+    } else if (monster_name == "Tyrant") {
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Dragon") && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")
     } else if (monster_name == "Strong Horn") {
-        return has_trained_breed("Golem") && byte(0x990e4) == 0x01 && has_trained_breed("Beaclon") && card_unlocked("Beaclon", "Beaclon")
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Beaclon") && has_trained_breed("Beaclon") && card_unlocked("Beaclon", "Beaclon")
     } else if (monster_name == "Gobi") {
-        return has_trained_breed("Golem") && byte(0x990e5) == 0x01        
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Henger")        
     } else if (monster_name == "Mariomax") {
-        return has_trained_breed("Golem") && byte(0x990e6) == 0x01 && has_trained_breed("Wracky") && card_unlocked("Wracky", "Wracky") 
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Wracky") && has_trained_breed("Wracky") && card_unlocked("Wracky", "Wracky") 
     } else if (monster_name == "Golem") {
-        return has_trained_breed("Golem") && byte(0x990e7) == 0x01        
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Golem")        
     } else if (monster_name == "Scaled Golem") {
-        return has_trained_breed("Golem") && byte(0x990e8) == 0x01        
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Zuum")        
     } else if (monster_name == "Battle Rocks") {
-        return has_trained_breed("Golem") && byte(0x990e9) == 0x01 && has_trained_breed("Durahan") && card_unlocked("Durahan", "Durahan")        
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Durahan") && has_trained_breed("Durahan") && card_unlocked("Durahan", "Durahan")        
     } else if (monster_name == "Dagon") {
-        return has_trained_breed("Golem") && byte(0x990ea) == 0x01        
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Arrow Head")        
     } else if (monster_name == "Big Blue") {
-        return has_trained_breed("Golem") && byte(0x990eb) == 0x01        
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Tiger")        
     } else if (monster_name == "Moaigon") {
-        return has_trained_breed("Golem") && byte(0x990ec) == 0x01        
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Hare")        
     } else if (monster_name == "Sleepyhead") {
-        return has_trained_breed("Golem") && byte(0x990ed) == 0x01        
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Baku")        
     } else if (monster_name == "Amenhotep") {
-        return has_trained_breed("Golem") && byte(0x990ee) == 0x01        
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Gali")        
     } else if (monster_name == "Pressure") {
-        return has_trained_breed("Golem") && byte(0x990ef) == 0x01 && has_trained_breed("Zilla") && card_unlocked("Zilla", "Zilla")        
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Zilla") && has_trained_breed("Zilla") && card_unlocked("Zilla", "Zilla")        
     } else if (monster_name == "Dao") {
-        return has_trained_breed("Golem") && byte(0x990f0) == 0x01 && has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Bajarl")        
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Bajarl") && has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Bajarl")        
     } else if (monster_name == "Astro") {
-        return has_trained_breed("Golem") && byte(0x990f1) == 0x01       
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Metalner")       
     } else if (monster_name == "Titan") {
-        return has_trained_breed("Golem") && byte(0x990f2) == 0x01        
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Suezo")        
     } else if (monster_name == "Angolmor") {
-        return has_trained_breed("Golem") && byte(0x990f3) == 0x01 && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Joker") && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
     } else if (monster_name == "Poseidon") {
-        return has_trained_breed("Golem") && byte(0x990f4) == 0x01        
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Jell")        
     } else if (monster_name == "Wood Golem") {
-        return has_trained_breed("Golem") && byte(0x990f5) == 0x01 && has_trained_breed("Mock") && card_unlocked("Mock", "Mock")        
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Mock") && has_trained_breed("Mock") && card_unlocked("Mock", "Mock")        
     } else if (monster_name == "Ecologuardia") {
-        return has_trained_breed("Golem") && byte(0x990f6) == 0x01        
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Plant")        
     } else if (monster_name == "Black Golem") {
-        return has_trained_breed("Golem") && byte(0x990f7) == 0x01        
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Monol")        
     } else if (monster_name == "Magna") {
-        return has_trained_breed("Golem") && byte(0x990f8) == 0x01        
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Worm")        
     } else if (monster_name == "Marble Guy") {
-        return has_trained_breed("Golem") && byte(0x990f9) == 0x01        
+        return has_trained_breed("Golem") && card_unlocked("Golem", "Naga")        
     } else if (monster_name == "ForwardGolem") {
-        return has_trained_breed("Golem") && byte(0x990fa) == 0x01        
+        return has_trained_breed("Golem") && card_unlocked("Golem", "ForwardGolem (Rare)")        
     } else if (monster_name == "FairySaurian") { // Zuum starts here
-        return has_trained_breed("Zuum") && byte(0x990fb) == 0x01        
+        return has_trained_breed("Zuum") && card_unlocked("Zuum", "Pixie")        
     } else if (monster_name == "Salamander") {
-        return has_trained_breed("Zuum") && byte(0x990fc) == 0x01 && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")       
+        return has_trained_breed("Zuum") && card_unlocked("Zuum", "Dragon") && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")       
     } else if (monster_name == "Rock Saurian") {
-        return has_trained_breed("Zuum") && byte(0x990fd) == 0x01        
+        return has_trained_breed("Zuum") && card_unlocked("Zuum", "Golem")        
     } else if (monster_name == "Zuum") {
-        return has_trained_breed("Zuum") && byte(0x990fe) == 0x01        
+        return has_trained_breed("Zuum") && card_unlocked("Zuum", "Zuum")        
     } else if (monster_name == "Crab Saurian") {
-        return has_trained_breed("Zuum") && byte(0x990ff) == 0x01        
+        return has_trained_breed("Zuum") && card_unlocked("Zuum", "Arrow Head")        
     } else if (monster_name == "HoundSaurian") {
-        return has_trained_breed("Zuum") && byte(0x99100) == 0x01        
+        return has_trained_breed("Zuum") && card_unlocked("Zuum", "Tiger")        
     } else if (monster_name == "Spot Saurian") {
-        return has_trained_breed("Zuum") && byte(0x99101) == 0x01        
+        return has_trained_breed("Zuum") && card_unlocked("Zuum", "Hare")        
     } else if (monster_name == "Hachiro") {
-        return has_trained_breed("Zuum") && byte(0x99102) == 0x01        
+        return has_trained_breed("Zuum") && card_unlocked("Zuum", "Baku")        
     } else if (monster_name == "NobleSaurian") {
-        return has_trained_breed("Zuum") && byte(0x99103) == 0x01        
+        return has_trained_breed("Zuum") && card_unlocked("Zuum", "Gali")        
     } else if (monster_name == "Tasman") {
-        return has_trained_breed("Zuum") && byte(0x99104) == 0x01        
+        return has_trained_breed("Zuum") && card_unlocked("Zuum", "Kato")        
     } else if (monster_name == "Sand Saurian") {
-        return has_trained_breed("Zuum") && byte(0x99105) == 0x01 && has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Bajarl")        
+        return has_trained_breed("Zuum") && card_unlocked("Zuum", "Bajarl") && has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Bajarl")        
     } else if (monster_name == "Mustardy") {
-        return has_trained_breed("Zuum") && byte(0x99106) == 0x01        
+        return has_trained_breed("Zuum") && card_unlocked("Zuum", "Suezo")        
     } else if (monster_name == "Basilisk") {
-        return has_trained_breed("Zuum") && byte(0x99107) == 0x01 && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
+        return has_trained_breed("Zuum") && card_unlocked("Zuum", "Joker") && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
     } else if (monster_name == "JellySaurian") {
-        return has_trained_breed("Zuum") && byte(0x99108) == 0x01        
+        return has_trained_breed("Zuum") && card_unlocked("Zuum", "Jell")        
     } else if (monster_name == "Wood Saurian") {
-        return has_trained_breed("Zuum") && byte(0x99109) == 0x01 && has_trained_breed("Mock") && card_unlocked("Mock", "Mock")        
+        return has_trained_breed("Zuum") && card_unlocked("Zuum", "Mock") && has_trained_breed("Mock") && card_unlocked("Mock", "Mock")        
     } else if (monster_name == "AlohaSaurian") {
-        return has_trained_breed("Zuum") && byte(0x9910a) == 0x01        
+        return has_trained_breed("Zuum") && card_unlocked("Zuum", "Plant")        
     } else if (monster_name == "BlackSaurian") {
-        return has_trained_breed("Zuum") && byte(0x9910b) == 0x01        
+        return has_trained_breed("Zuum") && card_unlocked("Zuum", "Monol")        
     } else if (monster_name == "ShellSaurian") {
-        return has_trained_breed("Zuum") && byte(0x9910c) == 0x01        
+        return has_trained_breed("Zuum") && card_unlocked("Zuum", "Worm")        
     } else if (monster_name == "Naga Saurian") {
-        return has_trained_breed("Zuum") && byte(0x9910d) == 0x01        
+        return has_trained_breed("Zuum") && card_unlocked("Zuum", "Naga")        
     } else if (monster_name == "ZebraSaurian") {
-        return has_trained_breed("Zuum") && byte(0x9910e) == 0x01        
+        return has_trained_breed("Zuum") && card_unlocked("Zuum", "ZebraSaurian (Rare)")        
     } else if (monster_name == "Leziena") { // Durahan starts here
-        return has_trained_breed("Durahan") && byte(0x9910f) == 0x01        
+        return has_trained_breed("Durahan") && card_unlocked("Durahan", "Pixie")        
     } else if (monster_name == "Vesuvius") {
-        return has_trained_breed("Durahan") && byte(0x99110) == 0x01 && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")       
+        return has_trained_breed("Durahan") && card_unlocked("Durahan", "Dragon") && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")       
     } else if (monster_name == "Hercules") {
-        return has_trained_breed("Durahan") && byte(0x99111) == 0x01 && has_trained_breed("Beaclon") && card_unlocked("Beaclon", "Beaclon")       
+        return has_trained_breed("Durahan") && card_unlocked("Durahan", "Beaclon") && has_trained_breed("Beaclon") && card_unlocked("Beaclon", "Beaclon")       
     } else if (monster_name == "Kelmadics") {
-        return has_trained_breed("Durahan") && byte(0x99112) == 0x01        
+        return has_trained_breed("Durahan") && card_unlocked("Durahan", "Golem")        
     } else if (monster_name == "Durahan") {
         return has_trained_breed("Durahan") && card_unlocked("Durahan", "Durahan")        
     } else if (monster_name == "Lorica") {
-        return has_trained_breed("Durahan") && byte(0x99114) == 0x01        
+        return has_trained_breed("Durahan") && card_unlocked("Durahan", "Arrow Head")        
     } else if (monster_name == "Hound Knight") {
-        return has_trained_breed("Durahan") && byte(0x99115) == 0x01        
+        return has_trained_breed("Durahan") && card_unlocked("Durahan", "Tiger")        
     } else if (monster_name == "Garuda") {
-        return has_trained_breed("Durahan") && byte(0x99116) == 0x01 && has_trained_breed("Phoenix") && card_unlocked("Phoenix", "Phoenix")        
+        return has_trained_breed("Durahan") && card_unlocked("Durahan", "Phoenix") && has_trained_breed("Phoenix") && card_unlocked("Phoenix", "Phoenix")        
     } else if (monster_name == "Metal Glory") {
-        return has_trained_breed("Durahan") && byte(0x99117) == 0x01        
+        return has_trained_breed("Durahan") && card_unlocked("Durahan", "Metalner")        
     } else if (monster_name == "Genocider") {
-        return has_trained_breed("Durahan") && byte(0x99118) == 0x01 && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
+        return has_trained_breed("Durahan") && card_unlocked("Durahan", "Joker") && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
     } else if (monster_name == "Wood Knight") {
-        return has_trained_breed("Durahan") && byte(0x99119) == 0x01 && has_trained_breed("Mock") && card_unlocked("Mock", "Mock")        
+        return has_trained_breed("Durahan") && card_unlocked("Durahan", "Mock") && has_trained_breed("Mock") && card_unlocked("Mock", "Mock")        
     } else if (monster_name == "Shogun") {
-        return has_trained_breed("Durahan") && byte(0x9911a) == 0x01        
+        return has_trained_breed("Durahan") && card_unlocked("Durahan", "Shogun (Rare)")        
     } else if (monster_name == "Ruby Knight") {
-        return has_trained_breed("Durahan") && byte(0x9911b) == 0x01        
+        return has_trained_breed("Durahan") && card_unlocked("Durahan", "Ruby Knight (Rare)")        
     } else if (monster_name == "Kokushi Muso") {
-        return has_trained_breed("Durahan") && byte(0x9911c) == 0x01        
+        return has_trained_breed("Durahan") && card_unlocked("Durahan", "Kokushi Muso (Rare)")        
     } else if (monster_name == "Renocraft") { // Arrow Head starts here
-        return has_trained_breed("Arrow Head") && byte(0x9911d) == 0x01        
+        return has_trained_breed("Arrow Head") && card_unlocked("Arrow Head", "Henger")        
     } else if (monster_name == "Priarocks") {
-        return has_trained_breed("Arrow Head") && byte(0x9911e) == 0x01        
+        return has_trained_breed("Arrow Head") && card_unlocked("Arrow Head", "Golem")        
     } else if (monster_name == "Plated Arrow") {
-        return has_trained_breed("Arrow Head") && byte(0x9911f) == 0x01 && has_trained_breed("Durahan") && card_unlocked("Durahan", "Durahan")        
+        return has_trained_breed("Arrow Head") && card_unlocked("Arrow Head", "Durahan") && has_trained_breed("Durahan") && card_unlocked("Durahan", "Durahan")        
     } else if (monster_name == "Arrow Head") {
-        return has_trained_breed("Arrow Head") && byte(0x99120) == 0x01        
+        return has_trained_breed("Arrow Head") && card_unlocked("Arrow Head", "Arrow Head")        
     } else if (monster_name == "MustardArrow") {
-        return has_trained_breed("Arrow Head") && byte(0x99121) == 0x01        
+        return has_trained_breed("Arrow Head") && card_unlocked("Arrow Head", "Suezo")        
     } else if (monster_name == "Selketo") {
-        return has_trained_breed("Arrow Head") && byte(0x99122) == 0x01 && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
+        return has_trained_breed("Arrow Head") && card_unlocked("Arrow Head", "Joker") && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
     } else if (monster_name == "Log Sawer") {
-        return has_trained_breed("Arrow Head") && byte(0x99123) == 0x01 && has_trained_breed("Mock") && card_unlocked("Mock", "Mock")        
+        return has_trained_breed("Arrow Head") && card_unlocked("Arrow Head", "Mock") && has_trained_breed("Mock") && card_unlocked("Mock", "Mock")        
     } else if (monster_name == "Sumopion") {
-        return has_trained_breed("Arrow Head") && byte(0x99124) == 0x01        
+        return has_trained_breed("Arrow Head") && card_unlocked("Arrow Head", "Sumopion (Rare)")        
     } else if (monster_name == "Daton") { // Tiger starts here
-        return has_trained_breed("Tiger") && byte(0x99125) == 0x01        
+        return has_trained_breed("Tiger") && card_unlocked("Tiger", "Pixie")        
     } else if (monster_name == "Rock Hound") {
-        return has_trained_breed("Tiger") && byte(0x99126) == 0x01        
+        return has_trained_breed("Tiger") && card_unlocked("Tiger", "Golem")        
     } else if (monster_name == "Datonare") {
-        return has_trained_breed("Tiger") && byte(0x99127) == 0x01        
+        return has_trained_breed("Tiger") && card_unlocked("Tiger", "Zuum")        
     } else if (monster_name == "Tiger") {
-        return has_trained_breed("Tiger") && byte(0x99128) == 0x01        
+        return has_trained_breed("Tiger") && card_unlocked("Tiger", "Tiger")        
     } else if (monster_name == "Hare Hound") {
-        return has_trained_breed("Tiger") && byte(0x99129) == 0x01        
+        return has_trained_breed("Tiger") && card_unlocked("Tiger", "Hare")        
     } else if (monster_name == "Balon") {
-        return has_trained_breed("Tiger") && byte(0x9912a) == 0x01        
+        return has_trained_breed("Tiger") && card_unlocked("Tiger", "Gali")        
     } else if (monster_name == "Mono Eyed") {
-        return has_trained_breed("Tiger") && byte(0x9912b) == 0x01        
+        return has_trained_breed("Tiger") && card_unlocked("Tiger", "Suezo")        
     } else if (monster_name == "Jelly Hound") {
-        return has_trained_breed("Tiger") && byte(0x9912c) == 0x01        
+        return has_trained_breed("Tiger") && card_unlocked("Tiger", "Jell")        
     } else if (monster_name == "Tropical Dog") {
-        return has_trained_breed("Tiger") && byte(0x9912d) == 0x01        
+        return has_trained_breed("Tiger") && card_unlocked("Tiger", "Plant")        
     } else if (monster_name == "Terror Dog") {
-        return has_trained_breed("Tiger") && byte(0x9912e) == 0x01        
+        return has_trained_breed("Tiger") && card_unlocked("Tiger", "Monol")        
     } else if (monster_name == "Jagd Hound") {
-        return has_trained_breed("Tiger") && byte(0x9912f) == 0x01        
+        return has_trained_breed("Tiger") && card_unlocked("Tiger", "Worm")        
     } else if (monster_name == "Cabalos") {
-        return has_trained_breed("Tiger") && byte(0x99130) == 0x01        
+        return has_trained_breed("Tiger") && card_unlocked("Tiger", "Jell")        
     } else if (monster_name == "White Hound") {
-        return has_trained_breed("Tiger") && byte(0x99131) == 0x01        
+        return has_trained_breed("Tiger") && card_unlocked("Tiger", "White Hound (Rare)")        
     } else if (monster_name == "Fairy Hopper") { // Hopper starts here
-        return has_trained_breed("Hopper") && byte(0x99132) == 0x01        
+        return has_trained_breed("Hopper") && card_unlocked("Hopper", "Pixie")        
     } else if (monster_name == "Draco Hopper") {
-        return has_trained_breed("Hopper") && byte(0x99133) == 0x01 && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")      
+        return has_trained_breed("Hopper") && card_unlocked("Hopper", "Dragon") && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")      
     } else if (monster_name == "Skipper") {
-        return has_trained_breed("Hopper") && byte(0x99134) == 0x01        
+        return has_trained_breed("Hopper") && card_unlocked("Hopper", "Tiger")        
     } else if (monster_name == "Hopper") {
-        return has_trained_breed("Hopper") && byte(0x99135) == 0x01        
+        return has_trained_breed("Hopper") && card_unlocked("Hopper", "Hopper")        
     } else if (monster_name == "Mustachios") {
-        return has_trained_breed("Hopper") && byte(0x99136) == 0x01        
+        return has_trained_breed("Hopper") && card_unlocked("Hopper", "Kato")        
     } else if (monster_name == "Emerald Eye") {
-        return has_trained_breed("Hopper") && byte(0x99137) == 0x01 && has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Bajarl")        
+        return has_trained_breed("Hopper") && card_unlocked("Hopper", "Bajarl") && has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Bajarl")        
     } else if (monster_name == "Springer") {
-        return has_trained_breed("Hopper") && byte(0x99138) == 0x01        
+        return has_trained_breed("Hopper") && card_unlocked("Hopper", "Metalner")        
     } else if (monster_name == "Rear Eyed") {
-        return has_trained_breed("Hopper") && byte(0x99139) == 0x01        
+        return has_trained_breed("Hopper") && card_unlocked("Hopper", "Suezo")        
     } else if (monster_name == "Snow Hopper") {
-        return has_trained_breed("Hopper") && byte(0x9913a) == 0x01 && has_trained_breed("Jill") && card_unlocked("Jill", "Jill")         
+        return has_trained_breed("Hopper") && card_unlocked("Hopper", "Jill") && has_trained_breed("Jill") && card_unlocked("Jill", "Jill")         
     } else if (monster_name == "Pink Hopper") {
-        return has_trained_breed("Hopper") && byte(0x9913b) == 0x01     
+        return has_trained_breed("Hopper") && card_unlocked("Hopper", "Mocchi")     
     } else if (monster_name == "Sneak Hopper") {
-        return has_trained_breed("Hopper") && byte(0x9913c) == 0x01 && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
+        return has_trained_breed("Hopper") && card_unlocked("Hopper", "Joker") && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
     } else if (monster_name == "Woody Hopper") {
-        return has_trained_breed("Hopper") && byte(0x9913d) == 0x01 && has_trained_breed("Mock") && card_unlocked("Mock", "Mock")        
+        return has_trained_breed("Hopper") && card_unlocked("Hopper", "Mock") && has_trained_breed("Mock") && card_unlocked("Mock", "Mock")        
     } else if (monster_name == "Frog Hopper") {
-        return has_trained_breed("Hopper") && byte(0x9913e) == 0x01        
+        return has_trained_breed("Hopper") && card_unlocked("Hopper", "Frog Hopper (Rare)")        
     } else if (monster_name == "Fairy Hare") { // Hare starts here
-        return has_trained_breed("Hare") && byte(0x9913f) == 0x01        
+        return has_trained_breed("Hare") && card_unlocked("Hare", "Pixie")        
     } else if (monster_name == "Rocky Fur") {
-        return has_trained_breed("Hare") && byte(0x99140) == 0x01        
+        return has_trained_breed("Hare") && card_unlocked("Hare", "Golem")        
     } else if (monster_name == "Scaled Hare") {
-        return has_trained_breed("Hare") && byte(0x99141) == 0x01        
+        return has_trained_breed("Hare") && card_unlocked("Hare", "Zuum")        
     } else if (monster_name == "Blue Hare") {
-        return has_trained_breed("Hare") && byte(0x99142) == 0x01        
+        return has_trained_breed("Hare") && card_unlocked("Hare", "Tiger")        
     } else if (monster_name == "Hare") {
-        return has_trained_breed("Hare") && byte(0x99143) == 0x01        
+        return has_trained_breed("Hare") && card_unlocked("Hare", "Hare")        
     } else if (monster_name == "Prince Hare") {
-        return has_trained_breed("Hare") && byte(0x99144) == 0x01        
+        return has_trained_breed("Hare") && card_unlocked("Hare", "Gali")        
     } else if (monster_name == "Four Eyed") {
-        return has_trained_breed("Hare") && byte(0x99145) == 0x01        
+        return has_trained_breed("Hare") && card_unlocked("Hare", "Suezo")        
     } else if (monster_name == "Jelly Hare") {
-        return has_trained_breed("Hare") && byte(0x99146) == 0x01        
+        return has_trained_breed("Hare") && card_unlocked("Hare", "Jell")        
     } else if (monster_name == "Leaf Hare") {
-        return has_trained_breed("Hare") && byte(0x99147) == 0x01        
+        return has_trained_breed("Hare") && card_unlocked("Hare", "Plant")        
     } else if (monster_name == "Evil Hare") {
-        return has_trained_breed("Hare") && byte(0x99148) == 0x01        
+        return has_trained_breed("Hare") && card_unlocked("Hare", "Monol")
     } else if (monster_name == "Wild Hare") {
-        return has_trained_breed("Hare") && byte(0x99149) == 0x01        
+        return has_trained_breed("Hare") && card_unlocked("Hare", "Worm")        
     } else if (monster_name == "Purple Hare") {
-        return has_trained_breed("Hare") && byte(0x9914a) == 0x01        
+        return has_trained_breed("Hare") && card_unlocked("Hare", "Naga")        
     } else if (monster_name == "KungFuHare") {
-        return has_trained_breed("Hare") && byte(0x9914b) == 0x01        
+        return has_trained_breed("Hare") && card_unlocked("Hare", "KungFuHare (Rare)")        
     } else if (monster_name == "Magmax") { // Baku starts here
-        return has_trained_breed("Baku") && byte(0x9914c) == 0x01 && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")       
+        return has_trained_breed("Baku") && card_unlocked("Baku", "Dragon") && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")       
     } else if (monster_name == "Higante") {
-        return has_trained_breed("Baku") && byte(0x9914d) == 0x01       
+        return has_trained_breed("Baku") && card_unlocked("Baku", "Golem")       
     } else if (monster_name == "War Baku") {
-        return has_trained_breed("Baku") && byte(0x9914e) == 0x01 && has_trained_breed("Durahan") && card_unlocked("Durahan", "Durahan")        
+        return has_trained_breed("Baku") && card_unlocked("Baku", "Durahan") && has_trained_breed("Durahan") && card_unlocked("Durahan", "Durahan")        
     } else if (monster_name == "Icebergy") {
-        return has_trained_breed("Baku") && byte(0x9914f) == 0x01        
+        return has_trained_breed("Baku") && card_unlocked("Baku", "Tiger")        
     } else if (monster_name == "Gontar") {
-        return has_trained_breed("Baku") && byte(0x99150) == 0x01        
+        return has_trained_breed("Baku") && card_unlocked("Baku", "Hare")        
     } else if (monster_name == "Baku") {
-        return has_trained_breed("Baku") && byte(0x99151) == 0x01        
+        return has_trained_breed("Baku") && card_unlocked("Baku", "Baku")        
     } else if (monster_name == "Nussie") {
-        return has_trained_breed("Baku") && byte(0x99152) == 0x01        
+        return has_trained_breed("Baku") && card_unlocked("Baku", "Kato")        
     } else if (monster_name == "Baku Clown") {
-        return has_trained_breed("Baku") && byte(0x99153) == 0x01 && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
+        return has_trained_breed("Baku") && card_unlocked("Baku", "Joker") && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
     } else if (monster_name == "Giga Pint") {
-        return has_trained_breed("Baku") && byte(0x99154) == 0x01        
+        return has_trained_breed("Baku") && card_unlocked("Baku", "Jell")        
     } else if (monster_name == "ShiShi") {
-        return has_trained_breed("Baku") && byte(0x99155) == 0x01        
+        return has_trained_breed("Baku") && card_unlocked("Baku", "ShiShi (Rare)")      
     } else if (monster_name == "Pink Mask") { // Gali starts here
-        return has_trained_breed("Gali") && byte(0x99156) == 0x01        
+        return has_trained_breed("Gali") && card_unlocked("Gali", "Pixie")
     } else if (monster_name == "Stone Mask") {
-        return has_trained_breed("Gali") && byte(0x99157) == 0x01        
+        return has_trained_breed("Gali") && card_unlocked("Gali", "Golem")        
     } else if (monster_name == "Scaled Mask") {
-        return has_trained_breed("Gali") && byte(0x99158) == 0x01        
+        return has_trained_breed("Gali") && card_unlocked("Gali", "Zuum")        
     } else if (monster_name == "Fanged Mask") {
-        return has_trained_breed("Gali") && byte(0x99159) == 0x01        
+        return has_trained_breed("Gali") && card_unlocked("Gali", "Tiger")        
     } else if (monster_name == "Furred Mask") {
-        return has_trained_breed("Gali") && byte(0x9915a) == 0x01        
+        return has_trained_breed("Gali") && card_unlocked("Gali", "Hare")        
     } else if (monster_name == "Gali") {
-        return has_trained_breed("Gali") && byte(0x9915b) == 0x01        
+        return has_trained_breed("Gali") && card_unlocked("Gali", "Gali")        
     } else if (monster_name == "Suezo Mask") {
-        return has_trained_breed("Gali") && byte(0x9915c) == 0x01        
+        return has_trained_breed("Gali") && card_unlocked("Gali", "Suezo")        
     } else if (monster_name == "Aqua Mask") {
-        return has_trained_breed("Gali") && byte(0x9915d) == 0x01        
+        return has_trained_breed("Gali") && card_unlocked("Gali", "Jell")        
     } else if (monster_name == "Colorful") {
-        return has_trained_breed("Gali") && byte(0x9915e) == 0x01        
+        return has_trained_breed("Gali") && card_unlocked("Gali", "Plant")        
     } else if (monster_name == "Galirous") {
-        return has_trained_breed("Gali") && byte(0x9915f) == 0x01        
+        return has_trained_breed("Gali") && card_unlocked("Gali", "Monol")        
     } else if (monster_name == "Brown Mask") {
-        return has_trained_breed("Gali") && byte(0x99160) == 0x01        
+        return has_trained_breed("Gali") && card_unlocked("Gali", "Worm")        
     } else if (monster_name == "Purple Mask") {
-        return has_trained_breed("Gali") && byte(0x99161) == 0x01        
+        return has_trained_breed("Gali") && card_unlocked("Gali", "Naga")        
     } else if (monster_name == "Happy Mask") {
-        return has_trained_breed("Gali") && byte(0x99162) == 0x01        
+        return has_trained_breed("Gali") && card_unlocked("Gali", "Happy Mask (Rare)")        
     } else if (monster_name == "Draco Kato") { // Kato starts here
-        return has_trained_breed("Kato") && byte(0x99163) == 0x01 && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")        
+        return has_trained_breed("Kato") && card_unlocked("Kato", "Dragon") && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")        
     } else if (monster_name == "Blue Kato") {
-        return has_trained_breed("Kato") && byte(0x99164) == 0x01        
+        return has_trained_breed("Kato") && card_unlocked("Kato", "Tiger")        
     } else if (monster_name == "Gordish") {
-        return has_trained_breed("Kato") && byte(0x99165) == 0x01        
+        return has_trained_breed("Kato") && card_unlocked("Kato", "Gali")        
     } else if (monster_name == "Kato") {
-        return has_trained_breed("Kato") && byte(0x99166) == 0x01        
+        return has_trained_breed("Kato") && card_unlocked("Kato", "Kato")        
     } else if (monster_name == "Citronie") {
-        return has_trained_breed("Kato") && byte(0x99167) == 0x01        
+        return has_trained_breed("Kato") && card_unlocked("Kato", "Suezo")        
     } else if (monster_name == "Pink Kato") {
-        return has_trained_breed("Kato") && byte(0x99168) == 0x01        
+        return has_trained_breed("Kato") && card_unlocked("Kato", "Mocchi")        
     } else if (monster_name == "Tainted Cat") {
-        return has_trained_breed("Kato") && byte(0x99169) == 0x01 && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
+        return has_trained_breed("Kato") && card_unlocked("Kato", "Joker") && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
     } else if (monster_name == "Ninja Kato") {
-        return has_trained_breed("Kato") && byte(0x9916a) == 0x01        
+        return has_trained_breed("Kato") && card_unlocked("Kato", "Ninja Kato (Rare)")        
     } else if (monster_name == "Pink Zilla") { // Zilla starts here
-        return has_trained_breed("Zilla") && byte(0x9916b) == 0x01        
+        return has_trained_breed("Zilla") && card_unlocked("Zilla", "Pixie")        
     } else if (monster_name == "Gooji") {
-        return has_trained_breed("Zilla") && byte(0x9916c) == 0x01        
+        return has_trained_breed("Zilla") && card_unlocked("Zilla", "Tiger")        
     } else if (monster_name == "Zilla") {
         return has_trained_breed("Zilla") && card_unlocked("Zilla", "Zilla")        
     } else if (monster_name == "Gigalon") {
-        return has_trained_breed("Zilla") && byte(0x9916e) == 0x01        
+        return has_trained_breed("Zilla") && card_unlocked("Zilla", "Jell")        
     } else if (monster_name == "Deluxe Liner") {
-        return has_trained_breed("Zilla") && byte(0x9916f) == 0x01        
+        return has_trained_breed("Zilla") && card_unlocked("Zilla", "Deluxe Liner (Rare)")        
     } else if (monster_name == "Bajarl") { // Bajarl starts here
         return has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Bajarl")        
     } else if (monster_name == "Jaba") {
-        return has_trained_breed("Bajarl") && byte(0x99171) == 0x01 && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
+        return has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Joker") && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
     } else if (monster_name == "Boxer Bajarl") {
-        return has_trained_breed("Bajarl") && byte(0x99172) == 0x01        
+        return has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Boxer Bajarl (Rare)")        
     } else if (monster_name == "Magic Bajarl") {
-        return has_trained_breed("Bajarl") && byte(0x99173) == 0x01        
+        return has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Magic Bajarl (Rare)")     
     } else if (monster_name == "Ultrarl") {
-        return has_trained_breed("Bajarl") && byte(0x99174) == 0x01        
+        return has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Ultrarl (Rare)")        
     } else if (monster_name == "Mum Mew") { // Mew starts here
-        return has_trained_breed("Mew") && byte(0x99175) == 0x01        
+        return has_trained_breed("Mew") && card_unlocked("Mew", "Pixie")        
     } else if (monster_name == "Bowwow") {
-        return has_trained_breed("Mew") && byte(0x99176) == 0x01        
+        return has_trained_breed("Mew") && card_unlocked("Mew", "Tiger")        
     } else if (monster_name == "Eared Mew") {
-        return has_trained_breed("Mew") && byte(0x99177) == 0x01        
+        return has_trained_breed("Mew") && card_unlocked("Mew", "Hare")        
     } else if (monster_name == "Mew") {
-        return has_trained_breed("Mew") && byte(0x99178) == 0x01        
+        return has_trained_breed("Mew") && card_unlocked("Mew", "Mew")        
     } else if (monster_name == "Aqua Mew") {
-        return has_trained_breed("Mew") && byte(0x99179) == 0x01        
+        return has_trained_breed("Mew") && card_unlocked("Mew", "Jell")        
     } else if (monster_name == "Swimmer") {
-        return has_trained_breed("Mew") && byte(0x9917a) == 0x01        
+        return has_trained_breed("Mew") && card_unlocked("Mew", "Swimmer (Rare)")        
     } else if (monster_name == "Phoenix") { // Phoenix starts here
         return has_trained_breed("Phoenix") && card_unlocked("Phoenix", "Phoenix")        
     } else if (monster_name == "Cinder Bird") {
-        return has_trained_breed("Phoenix") && byte(0x9917c) == 0x01        
+        return has_trained_breed("Phoenix") && card_unlocked("Phoenix", "Cinder Bird (Rare)")        
     } else if (monster_name == "Ghost") { // Ghost starts here
-        return has_trained_breed("Ghost") && byte(0x9917d) == 0x01        
+        return has_trained_breed("Ghost") && card_unlocked("Ghost", "Ghost")        
     } else if (monster_name == "Chef") {
-        return has_trained_breed("Ghost") && byte(0x9917e) == 0x01        
+        return has_trained_breed("Ghost") && card_unlocked("Ghost", "Chef (Rare)")        
     } else if (monster_name == "Love Seeker") { // Metalner
-        return has_trained_breed("Metalner") && byte(0x9917f) == 0x01        
+        return has_trained_breed("Metalner") && card_unlocked("Metalner", "Pixie")        
     } else if (monster_name == "Metalner") {
-        return has_trained_breed("Metalner") && byte(0x99180) == 0x01        
+        return has_trained_breed("Metalner") && card_unlocked("Metalner", "Metalner")        
     } else if (monster_name == "Metazorl") {
-        return has_trained_breed("Metalner") && byte(0x99181) == 0x01        
+        return has_trained_breed("Metalner") && card_unlocked("Metalner", "Suezo")        
     } else if (monster_name == "Chinois") {
-        return has_trained_breed("Metalner") && byte(0x99182) == 0x01        
+        return has_trained_breed("Metalner") && card_unlocked("Metalner", "Chinois (Rare)")        
     } else if (monster_name == "Pink Eye") { // Suezo starts here
-        return has_trained_breed("Suezo") && byte(0x99183) == 0x01        
+        return has_trained_breed("Suezo") && card_unlocked("Suezo", "Pixie")        
     } else if (monster_name == "Rocky Suezo") {
-        return has_trained_breed("Suezo") && byte(0x99184) == 0x01        
+        return has_trained_breed("Suezo") && card_unlocked("Suezo", "Golem")        
     } else if (monster_name == "Melon Suezo") {
-        return has_trained_breed("Suezo") && byte(0x99185) == 0x01        
+        return has_trained_breed("Suezo") && card_unlocked("Suezo", "Zuum")        
     } else if (monster_name == "Horn") {
-        return has_trained_breed("Suezo") && byte(0x99186) == 0x01        
+        return has_trained_breed("Suezo") && card_unlocked("Suezo", "Tiger")        
     } else if (monster_name == "Furred Suezo") {
-        return has_trained_breed("Suezo") && byte(0x99187) == 0x01        
+        return has_trained_breed("Suezo") && card_unlocked("Suezo", "Hare")        
     } else if (monster_name == "Orion") {
-        return has_trained_breed("Suezo") && byte(0x99188) == 0x01        
+        return has_trained_breed("Suezo") && card_unlocked("Suezo", "Gali")        
     } else if (monster_name == "Suezo") {
-        return has_trained_breed("Suezo") && byte(0x99189) == 0x01        
+        return has_trained_breed("Suezo") && card_unlocked("Suezo", "Suezo")        
     } else if (monster_name == "Clear Suezo") {
-        return has_trained_breed("Suezo") && byte(0x9918a) == 0x01        
+        return has_trained_breed("Suezo") && card_unlocked("Suezo", "Jell")        
     } else if (monster_name == "Green Suezo") {
-        return has_trained_breed("Suezo") && byte(0x9918b) == 0x01        
+        return has_trained_breed("Suezo") && card_unlocked("Suezo", "Plant")        
     } else if (monster_name == "Red Eye") {
-        return has_trained_breed("Suezo") && byte(0x9918c) == 0x01        
+        return has_trained_breed("Suezo") && card_unlocked("Suezo", "Monol")        
     } else if (monster_name == "Fly Eye") {
-        return has_trained_breed("Suezo") && byte(0x9918d) == 0x01        
+        return has_trained_breed("Suezo") && card_unlocked("Suezo", "Worm")        
     } else if (monster_name == "Purple Suezo") {
-        return has_trained_breed("Suezo") && byte(0x9918e) == 0x01        
+        return has_trained_breed("Suezo") && card_unlocked("Suezo", "Naga")        
     } else if (monster_name == "Gold Suezo") {
         // This case is unique because it's Silver Suezo + Bronze Suezo
         return has_trained_breed("Suezo") && card_unlocked("Suezo", "Gold Suezo (Rare)") && card_unlocked("Suezo", "Silver Suezo (Rare)") && card_unlocked("Suezo", "Bronze Suezo (Rare)")       
@@ -1444,259 +1444,259 @@ function monster_trained(monster_name) {
         // This is to fill in the gap for cards, but this case should NEVER be hit
         return has_trained_breed("Suezo") && card_unlocked("Suezo", "Sueki Suezo (Rare)")        
     } else if (monster_name == "Pong Pong") { // Jill starts here
-        return has_trained_breed("Jill") && byte(0x99194) == 0x01        
+        return has_trained_breed("Jill") && card_unlocked("Jill", "Pixie")        
     } else if (monster_name == "Pierry") {
-        return has_trained_breed("Jill") && byte(0x99195) == 0x01        
+        return has_trained_breed("Jill") && card_unlocked("Jill", "Tiger")        
     } else if (monster_name == "Wondar") {
-        return has_trained_breed("Jill") && byte(0x99196) == 0x01        
+        return has_trained_breed("Jill") && card_unlocked("Jill", "Hare")        
     } else if (monster_name == "Bengal") {
-        return has_trained_breed("Jill") && byte(0x99197) == 0x01        
+        return has_trained_breed("Jill") && card_unlocked("Jill", "Kato")        
     } else if (monster_name == "Zorjil") {
-        return has_trained_breed("Jill") && byte(0x99198) == 0x01        
+        return has_trained_breed("Jill") && card_unlocked("Jill", "Suezo")        
     } else if (monster_name == "Jill") {
         return has_trained_breed("Jill") && card_unlocked("Jill", "Jill")        
     } else if (monster_name == "Skull Capped") {
-        return has_trained_breed("Jill") && byte(0x9919a) == 0x01 && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")
+        return has_trained_breed("Jill") && card_unlocked("Jill", "Joker") && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")
     } else if (monster_name == "Pithecan") {
-        return has_trained_breed("Jill") && byte(0x9919b) == 0x01        
+        return has_trained_breed("Jill") && card_unlocked("Jill", "Pithecan (Rare)")        
     } else if (monster_name == "Manna") { // Mocchi starts here
-        return has_trained_breed("Mocchi") && byte(0x9919c) == 0x01        
+        return has_trained_breed("Mocchi") && card_unlocked("Mocchi", "Pixie")        
     } else if (monster_name == "Draco Mocchi") {
-        return has_trained_breed("Mocchi") && byte(0x9919d) == 0x01 && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")        
+        return has_trained_breed("Mocchi") && card_unlocked("Mocchi", "Dragon") && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")        
     } else if (monster_name == "KnightMocchi") {
-        return has_trained_breed("Mocchi") && byte(0x9919e) == 0x01 && has_trained_breed("Durahan") && card_unlocked("Durahan", "Durahan")        
+        return has_trained_breed("Mocchi") && card_unlocked("Mocchi", "Durahan") && has_trained_breed("Durahan") && card_unlocked("Durahan", "Durahan")        
     } else if (monster_name == "Fake Penguin") {
-        return has_trained_breed("Mocchi") && byte(0x9919f) == 0x01        
+        return has_trained_breed("Mocchi") && card_unlocked("Mocchi", "Tiger")        
     } else if (monster_name == "Nyankoro") {
-        return has_trained_breed("Mocchi") && byte(0x991a0) == 0x01        
+        return has_trained_breed("Mocchi") && card_unlocked("Mocchi", "Kato")        
     } else if (monster_name == "Mocchi") {
-        return has_trained_breed("Mocchi") && byte(0x991a1) == 0x01        
+        return has_trained_breed("Mocchi") && card_unlocked("Mocchi", "Mocchi")
     } else if (monster_name == "Hell Pierrot") {
-        return has_trained_breed("Mocchi") && byte(0x991a2) == 0x01 && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
+        return has_trained_breed("Mocchi") && card_unlocked("Mocchi", "Joker") && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
     } else if (monster_name == "Gelatine") {
-        return has_trained_breed("Mocchi") && byte(0x991a3) == 0x01        
+        return has_trained_breed("Mocchi") && card_unlocked("Mocchi", "Jell")
     } else if (monster_name == "GentleMocchi") {
-        return has_trained_breed("Mocchi") && byte(0x991a4) == 0x01        
+        return has_trained_breed("Mocchi") && card_unlocked("Mocchi", "GentleMocchi (Rare)")
     } else if (monster_name == "Caloriena") {
-        return has_trained_breed("Mocchi") && byte(0x991a5) == 0x01        
+        return has_trained_breed("Mocchi") && card_unlocked("Mocchi", "Caloriena (Rare)")
     } else if (monster_name == "Mocchini") {
-        return has_trained_breed("Mocchi") && byte(0x991a6) == 0x01        
+        return has_trained_breed("Mocchi") && card_unlocked("Mocchi", "Mocchini (Rare)")
     } else if (monster_name == "Hell Heart") { // Joker starts here
-        return has_trained_breed("Joker") && byte(0x991a7) == 0x01        
+        return has_trained_breed("Joker") && card_unlocked("Joker", "Pixie")
     } else if (monster_name == "Flare Death") {
-        return has_trained_breed("Joker") && byte(0x991a8) == 0x01 && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")        
+        return has_trained_breed("Joker") && card_unlocked("Joker", "Dragon") && has_trained_breed("Dragon") && card_unlocked("Dragon", "Dragon")        
     } else if (monster_name == "Tombstone") {
-        return has_trained_breed("Joker") && byte(0x991a9) == 0x01        
+        return has_trained_breed("Joker") && card_unlocked("Joker", "Golem")
     } else if (monster_name == "Blue Terror") {
-        return has_trained_breed("Joker") && byte(0x991aa) == 0x01        
+        return has_trained_breed("Joker") && card_unlocked("Joker", "Tiger")
     } else if (monster_name == "Odium") {
-        return has_trained_breed("Joker") && byte(0x991ab) == 0x01 && has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Bajarl")        
+        return has_trained_breed("Joker") && card_unlocked("Joker", "Bajarl") && has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Bajarl")        
     } else if (monster_name == "Joker") {
         return has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
     } else if (monster_name == "Bloodshed") {
-        return has_trained_breed("Joker") && byte(0x991ad) == 0x01        
+        return has_trained_breed("Joker") && card_unlocked("Joker", "Bloodshed (Rare)")
     } else if (monster_name == "Frozen Gaboo") { // Gaboo starts here
-        return has_trained_breed("Gaboo") && byte(0x991ae) == 0x01        
+        return has_trained_breed("Gaboo") && card_unlocked("Gaboo", "Tiger")
     } else if (monster_name == "Dokoo") {
-        return has_trained_breed("Gaboo") && byte(0x991af) == 0x01 && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
+        return has_trained_breed("Gaboo") && card_unlocked("Gaboo", "Joker") && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
     } else if (monster_name == "Gaboo") {
-        return has_trained_breed("Gaboo") && byte(0x991b0) == 0x01        
+        return has_trained_breed("Gaboo") && card_unlocked("Gaboo", "Gaboo")
     } else if (monster_name == "Jelly Gaboo") {
-        return has_trained_breed("Gaboo") && byte(0x991b1) == 0x01        
+        return has_trained_breed("Gaboo") && card_unlocked("Gaboo", "Jell")
     } else if (monster_name == "GabooSoldier") {
-        return has_trained_breed("Gaboo") && byte(0x991b2) == 0x01        
+        return has_trained_breed("Gaboo") && card_unlocked("Gaboo", "GabooSoldier (Rare)") 
     } else if (monster_name == "Pink Jam") { // Jell starts here
-        return has_trained_breed("Jell") && byte(0x991b3) == 0x01        
+        return has_trained_breed("Jell") && card_unlocked("Jell", "Pixie")        
     } else if (monster_name == "Wall Mimic") {
-        return has_trained_breed("Jell") && byte(0x991b4) == 0x01        
+        return has_trained_breed("Jell") && card_unlocked("Jell", "Golem")        
     } else if (monster_name == "Scaled Jell") {
-        return has_trained_breed("Jell") && byte(0x991b5) == 0x01        
+        return has_trained_breed("Jell") && card_unlocked("Jell", "Zuum")        
     } else if (monster_name == "Icy Jell") {
-        return has_trained_breed("Jell") && byte(0x991b6) == 0x01        
+        return has_trained_breed("Jell") && card_unlocked("Jell", "Tiger")        
     } else if (monster_name == "Muddy Jell") {
-        return has_trained_breed("Jell") && byte(0x991b7) == 0x01        
+        return has_trained_breed("Jell") && card_unlocked("Jell", "Hare")        
     } else if (monster_name == "Noble Jell") {
-        return has_trained_breed("Jell") && byte(0x991b8) == 0x01        
+        return has_trained_breed("Jell") && card_unlocked("Jell", "Gali")        
     } else if (monster_name == "Eye Jell") {
-        return has_trained_breed("Jell") && byte(0x991b9) == 0x01        
+        return has_trained_breed("Jell") && card_unlocked("Jell", "Suezo")        
     } else if (monster_name == "Jell") {
-        return has_trained_breed("Jell") && byte(0x991ba) == 0x01        
+        return has_trained_breed("Jell") && card_unlocked("Jell", "Jell")        
     } else if (monster_name == "Chloro Jell") {
-        return has_trained_breed("Jell") && byte(0x991bb) == 0x01        
+        return has_trained_breed("Jell") && card_unlocked("Jell", "Plant")        
     } else if (monster_name == "Clay") {
-        return has_trained_breed("Jell") && byte(0x991bc) == 0x01        
+        return has_trained_breed("Jell") && card_unlocked("Jell", "Monol")        
     } else if (monster_name == "Worm Jell") {
-        return has_trained_breed("Jell") && byte(0x991bd) == 0x01        
+        return has_trained_breed("Jell") && card_unlocked("Jell", "Worm")        
     } else if (monster_name == "Purple Jell") {
-        return has_trained_breed("Jell") && byte(0x991be) == 0x01        
+        return has_trained_breed("Jell") && card_unlocked("Jell", "Naga")        
     } else if (monster_name == "Metal Jell") {
-        return has_trained_breed("Jell") && byte(0x991bf) == 0x01        
+        return has_trained_breed("Jell") && card_unlocked("Jell", "Metal Jell (Rare)")        
     } else if (monster_name == "Siren") { // Undine starts here
-        return has_trained_breed("Undine") && byte(0x991c0) == 0x01 && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
+        return has_trained_breed("Undine") && card_unlocked("Undine", "Joker") && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
     } else if (monster_name == "Undine") {
-        return has_trained_breed("Undine") && byte(0x991c1) == 0x01        
+        return has_trained_breed("Undine") && card_unlocked("Undine", "Undine")        
     } else if (monster_name == "Mermaid") {
-        return has_trained_breed("Undine") && byte(0x991c2) == 0x01        
+        return has_trained_breed("Undine") && card_unlocked("Undine", "Mermaid (Rare)")        
     } else if (monster_name == "Ammon") { // Niton starts here
-        return has_trained_breed("Niton") && byte(0x991c3) == 0x01        
+        return has_trained_breed("Niton") && card_unlocked("Niton", "Golem")        
     } else if (monster_name == "Knight Niton") {
-        return has_trained_breed("Niton") && byte(0x991c4) == 0x01 && has_trained_breed("Durahan") && card_unlocked("Durahan", "Durahan")        
+        return has_trained_breed("Niton") && card_unlocked("Niton", "Durahan") && has_trained_breed("Durahan") && card_unlocked("Durahan", "Durahan")        
     } else if (monster_name == "Stripe Shell") {
-        return has_trained_breed("Niton") && byte(0x991c5) == 0x01        
+        return has_trained_breed("Niton") && card_unlocked("Niton"," Kato")        
     } else if (monster_name == "Alabia Niton") {
-        return has_trained_breed("Niton") && byte(0x991c6) == 0x01 && has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Bajarl")        
+        return has_trained_breed("Niton") && card_unlocked("Niton", "Bajarl") && has_trained_breed("Bajarl") && card_unlocked("Bajarl", "Bajarl")        
     } else if (monster_name == "Metal Shell") {
-        return has_trained_breed("Niton") && byte(0x991c7) == 0x01       
+        return has_trained_breed("Niton") && card_unlocked("Niton", "Metalner")       
     } else if (monster_name == "Clear Shell") {
-        return has_trained_breed("Niton") && byte(0x991c8) == 0x01        
+        return has_trained_breed("Niton") && card_unlocked("Niton", "Jell")        
     } else if (monster_name == "Niton") {
-        return has_trained_breed("Niton") && byte(0x991c9) == 0x01        
+        return has_trained_breed("Niton") && card_unlocked("Niton", "Niton")
     } else if (monster_name == "Baum Kuchen") {
-        return has_trained_breed("Niton") && byte(0x991ca) == 0x01 && has_trained_breed("Mock") && card_unlocked("Mock", "Mock")        
+        return has_trained_breed("Niton") && card_unlocked("Niton", "Mock") && has_trained_breed("Mock") && card_unlocked("Mock", "Mock")        
     } else if (monster_name == "Dribbler") {
-        return has_trained_breed("Niton") && byte(0x991cb) == 0x01        
+        return has_trained_breed("Niton") && card_unlocked("Niton", "Dribbler (Rare)")        
     } else if (monster_name == "Radial Niton") {
-        return has_trained_breed("Niton") && byte(0x991cc) == 0x01        
+        return has_trained_breed("Niton") && card_unlocked("Niton", "Radial Niton (Rare)")        
     } else if (monster_name == "Disc Niton") {
-        return has_trained_breed("Niton") && byte(0x991cd) == 0x01        
+        return has_trained_breed("Niton") && card_unlocked("Niton", "Disc Niton (Rare)")        
     } else if (monster_name == "Ebony") { // Mock starts here
-        return has_trained_breed("Mock") && byte(0x991ce) == 0x01 && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
+        return has_trained_breed("Mock") && card_unlocked("Mock", "Joker") && has_trained_breed("Joker") && card_unlocked("Joker", "Joker")        
     } else if (monster_name == "Mock") {
         return has_trained_breed("Mock") && card_unlocked("Mock", "Mock")        
     } else if (monster_name == "White Birch") {
-        return has_trained_breed("Mock") && byte(0x991d0) == 0x01        
+        return has_trained_breed("Mock") && card_unlocked("Mock", "White Birch (Rare)")
     } else if (monster_name == "Pole Mock") {
-        return has_trained_breed("Mock") && byte(0x991d1) == 0x01        
-    } else if (monster_name == "Blocken") {
-        return has_trained_breed("Ducken") && byte(0x991d2) == 0x01        
+        return has_trained_breed("Mock") && card_unlocked("Mock", "Pole Mock (Rare)")        
+    } else if (monster_name == "Blocken") { // Ducken starts here
+        return has_trained_breed("Ducken") && card_unlocked("Ducken", "Golem")        
     } else if (monster_name == "Ticken") {
-        return has_trained_breed("Ducken") && byte(0x991d3) == 0x01        
+        return has_trained_breed("Ducken") && card_unlocked("Ducken", "Suezo")        
     } else if (monster_name == "Ducken") {
         return has_trained_breed("Ducken") && card_unlocked("Ducken", "Ducken")        
     } else if (monster_name == "Watermelony") {
-        return has_trained_breed("Ducken") && byte(0x991d5) == 0x01        
+        return has_trained_breed("Ducken") && card_unlocked("Ducken", "Watermelony (Rare)")        
     } else if (monster_name == "Cawken") {
-        return has_trained_breed("Ducken") && byte(0x991d6) == 0x01        
+        return has_trained_breed("Ducken") && card_unlocked("Ducken", "Cawken (Rare)")        
     } else if (monster_name == "Queen Plant") { // Plant starts here
-        return has_trained_breed("Plant") && byte(0x991d7) == 0x01        
+        return has_trained_breed("Plant") && card_unlocked("Plant", "Pixie")        
     } else if (monster_name == "Rock Plant") {
-        return has_trained_breed("Plant") && byte(0x991d8) == 0x01        
+        return has_trained_breed("Plant") && card_unlocked("Plant", "Golem")        
     } else if (monster_name == "Scaled Plant") {
-        return has_trained_breed("Plant") && byte(0x991d9) == 0x01        
+        return has_trained_breed("Plant") && card_unlocked("Plant", "Zuum")        
     } else if (monster_name == "Blue Plant") {
-        return has_trained_breed("Plant") && byte(0x991da) == 0x01        
+        return has_trained_breed("Plant") && card_unlocked("Plant", "Tiger")        
     } else if (monster_name == "Hare Plant") {
-        return has_trained_breed("Plant") && byte(0x991db) == 0x01        
+        return has_trained_breed("Plant") && card_unlocked("Plant", "Hare")
     } else if (monster_name == "Gold Plant") {
-        return has_trained_breed("Plant") && byte(0x991dc) == 0x01        
+        return has_trained_breed("Plant") && card_unlocked("Plant", "Gali")        
     } else if (monster_name == "Usaba") {
-        return has_trained_breed("Plant") && byte(0x991dd) == 0x01        
+        return has_trained_breed("Plant") && card_unlocked("Plant", "Suezo")        
     } else if (monster_name == "Mirage Plant") {
-        return has_trained_breed("Plant") && byte(0x991de) == 0x01        
+        return has_trained_breed("Plant") && card_unlocked("Plant", "Jell")        
     } else if (monster_name == "Plant") {
-        return has_trained_breed("Plant") && byte(0x991df) == 0x01        
+        return has_trained_breed("Plant") && card_unlocked("Plant", "Plant")        
     } else if (monster_name == "Black Plant") {
-        return has_trained_breed("Plant") && byte(0x991e0) == 0x01        
+        return has_trained_breed("Plant") && card_unlocked("Plant", "Monol")
     } else if (monster_name == "Fly Plant") {
-        return has_trained_breed("Plant") && byte(0x991e1) == 0x01        
+        return has_trained_breed("Plant") && card_unlocked("Plant", "Worm")
     } else if (monster_name == "Weeds") {
-        return has_trained_breed("Plant") && byte(0x991e2) == 0x01        
+        return has_trained_breed("Plant") && card_unlocked("Plant", "Naga") 
     } else if (monster_name == "Raggae Plant") {
-        return has_trained_breed("Plant") && byte(0x991e3) == 0x01        
+        return has_trained_breed("Plant") && card_unlocked("Plant", "Raggae Plant (Rare)") 
     } else if (monster_name == "Romper Wall") { // Monol starts here
-        return has_trained_breed("Monol") && byte(0x991e4) == 0x01        
+        return has_trained_breed("Monol") && card_unlocked("Monol", "Pixie")        
     } else if (monster_name == "Obelisk") {
-        return has_trained_breed("Monol") && byte(0x991e5) == 0x01        
+        return has_trained_breed("Monol") && card_unlocked("Monol", "Golem")
     } else if (monster_name == "Jura Wall") {
-        return has_trained_breed("Monol") && byte(0x991e6) == 0x01        
+        return has_trained_breed("Monol") && card_unlocked("Monol", "Zuum")
     } else if (monster_name == "Blue Sponge") {
-        return has_trained_breed("Monol") && byte(0x991e7) == 0x01        
+        return has_trained_breed("Monol") && card_unlocked("Monol", "Tiger") 
     } else if (monster_name == "Furred Wall") {
-        return has_trained_breed("Monol") && byte(0x991e8) == 0x01        
+        return has_trained_breed("Monol") && card_unlocked("Monol", "Hare")
     } else if (monster_name == "Ivory Wall") {
-        return has_trained_breed("Monol") && byte(0x991e9) == 0x01        
+        return has_trained_breed("Monol") && card_unlocked("Monol", "Gali") 
     } else if (monster_name == "Sandy") {
-        return has_trained_breed("Monol") && byte(0x991ea) == 0x01        
+        return has_trained_breed("Monol") && card_unlocked("Monol", "Suezo") 
     } else if (monster_name == "Ice Candy") {
-        return has_trained_breed("Monol") && byte(0x991eb) == 0x01        
+        return has_trained_breed("Monol") && card_unlocked("Monol", "Jell")
     } else if (monster_name == "New Leaf") {
-        return has_trained_breed("Monol") && byte(0x991ec) == 0x01        
+        return has_trained_breed("Monol") && card_unlocked("Monol", "Plant") 
     } else if (monster_name == "Monol") {
-        return has_trained_breed("Monol") && byte(0x991ed) == 0x01        
+        return has_trained_breed("Monol") && card_unlocked("Monol", "Monol")
     } else if (monster_name == "Soboros") {
-        return has_trained_breed("Monol") && byte(0x991ee) == 0x01        
+        return has_trained_breed("Monol") && card_unlocked("Monol", "Worm")
     } else if (monster_name == "Asphaltum") {
-        return has_trained_breed("Monol") && byte(0x991ef) == 0x01        
+        return has_trained_breed("Monol") && card_unlocked("Monol", "Naga") 
     } else if (monster_name == "Galaxy") {
-        return has_trained_breed("Monol") && byte(0x991f0) == 0x01        
+        return has_trained_breed("Monol") && card_unlocked("Monol", "Galaxy (Rare)") 
     } else if (monster_name == "Dominos") {
-        return has_trained_breed("Monol") && byte(0x991f1) == 0x01        
+        return has_trained_breed("Monol") && card_unlocked("Monol", "Dominos (Rare)")
     } else if (monster_name == "Scribble") {
-        return has_trained_breed("Monol") && byte(0x991f2) == 0x01        
+        return has_trained_breed("Monol") && card_unlocked("Monol", "Scribble (Rare)")
     } else if (monster_name == "Rock Ape") { // Ape starts here
-        return has_trained_breed("Ape") && byte(0x991f3) == 0x01        
+        return has_trained_breed("Ape") && card_unlocked("Ape", "Golem")
     } else if (monster_name == "Gibberer") {
-        return has_trained_breed("Ape") && byte(0x991f4) == 0x01        
+        return has_trained_breed("Ape") && card_unlocked("Ape", "Hare")  
     } else if (monster_name == "Bossy") {
-        return has_trained_breed("Ape") && byte(0x991f5) == 0x01        
+        return has_trained_breed("Ape") && card_unlocked("Ape", "Gali")   
     } else if (monster_name == "Tropical Ape") {
-        return has_trained_breed("Ape") && byte(0x991f6) == 0x01        
+        return has_trained_breed("Ape") && card_unlocked("Ape", "Plant")   
     } else if (monster_name == "Ape") {
-        return has_trained_breed("Ape") && byte(0x991f7) == 0x01        
+        return has_trained_breed("Ape") && card_unlocked("Ape", "Ape")  
     } else if (monster_name == "Gold Dust") {
-        return has_trained_breed("Ape") && byte(0x991f8) == 0x01        
+        return has_trained_breed("Ape") && card_unlocked("Ape", "Gold Dust (Rare)")    
     } else if (monster_name == "Red Worm") { // Worm starts here
-        return has_trained_breed("Worm") && byte(0x991f9) == 0x01        
+        return has_trained_breed("Worm") && card_unlocked("Worm", "Pixie")
     } else if (monster_name == "Rock Worm") {
-        return has_trained_breed("Worm") && byte(0x991fa) == 0x01        
+        return has_trained_breed("Worm") && card_unlocked("Worm", "Golem") 
     } else if (monster_name == "Scaled Worm") {
-        return has_trained_breed("Worm") && byte(0x991fb) == 0x01        
+        return has_trained_breed("Worm") && card_unlocked("Worm", "Zuum") 
     } else if (monster_name == "Drill Tusk") {
-        return has_trained_breed("Worm") && byte(0x991fc) == 0x01        
+        return has_trained_breed("Worm") && card_unlocked("Worm", "Tiger")  
     } else if (monster_name == "Corone") {
-        return has_trained_breed("Worm") && byte(0x991fd) == 0x01        
+        return has_trained_breed("Worm") && card_unlocked("Worm", "Hare") 
     } else if (monster_name == "Mask Worm") {
-        return has_trained_breed("Worm") && byte(0x991fe) == 0x01        
+        return has_trained_breed("Worm") && card_unlocked("Worm", "Gali")  
     } else if (monster_name == "Eye Worm") {
-        return has_trained_breed("Worm") && byte(0x991ff) == 0x01        
+        return has_trained_breed("Worm") && card_unlocked("Worm", "Suezo")  
     } else if (monster_name == "Jelly Worm") {
-        return has_trained_breed("Worm") && byte(0x99200) == 0x01        
+        return has_trained_breed("Worm") && card_unlocked("Worm", "Jell") 
     } else if (monster_name == "Flower Worm") {
-        return has_trained_breed("Worm") && byte(0x99201) == 0x01        
+        return has_trained_breed("Worm") && card_unlocked("Worm", "Plant")  
     } else if (monster_name == "Black Worm") {
-        return has_trained_breed("Worm") && byte(0x99202) == 0x01        
+        return has_trained_breed("Worm") && card_unlocked("Worm", "Monol") 
     } else if (monster_name == "Worm") {
-        return has_trained_breed("Worm") && byte(0x99203) == 0x01        
+        return has_trained_breed("Worm") && card_unlocked("Worm", "Worm") 
     } else if (monster_name == "Purple Worm") {
-        return has_trained_breed("Worm") && byte(0x99204) == 0x01        
+        return has_trained_breed("Worm") && card_unlocked("Worm", "Naga")  
     } else if (monster_name == "Express Worm") {
-        return has_trained_breed("Worm") && byte(0x99205) == 0x01        
+        return has_trained_breed("Worm") && card_unlocked("Worm", "Express Worm (Rare)")  
     } else if (monster_name == "Ripper") { // Naga starts here
-        return has_trained_breed("Naga") && byte(0x99206) == 0x01        
+        return has_trained_breed("Naga") && card_unlocked("Naga", "Pixie")
     } else if (monster_name == "Trident") {
-        return has_trained_breed("Naga") && byte(0x99207) == 0x01        
+        return has_trained_breed("Naga") && card_unlocked("Naga", "Golem") 
     } else if (monster_name == "Stinger") {
-        return has_trained_breed("Naga") && byte(0x99208) == 0x01        
+        return has_trained_breed("Naga") && card_unlocked("Naga", "Zuum")
     } else if (monster_name == "Striker") {
-        return has_trained_breed("Naga") && byte(0x99209) == 0x01        
+        return has_trained_breed("Naga") && card_unlocked("Naga", "Hare")  
     } else if (monster_name == "Edgehog") {
-        return has_trained_breed("Naga") && byte(0x9920a) == 0x01        
+        return has_trained_breed("Naga") && card_unlocked("Naga", "Gali")  
     } else if (monster_name == "Bazula") {
-        return has_trained_breed("Naga") && byte(0x9920b) == 0x01        
+        return has_trained_breed("Naga") && card_unlocked("Naga", "Hare")  
     } else if (monster_name == "Cyclops") {
-        return has_trained_breed("Naga") && byte(0x9920c) == 0x01        
+        return has_trained_breed("Naga") && card_unlocked("Naga", "Suezo")  
     } else if (monster_name == "Aqua Cutter") {
-        return has_trained_breed("Naga") && byte(0x9920d) == 0x01        
+        return has_trained_breed("Naga") && card_unlocked("Naga", "Jell") 
     } else if (monster_name == "Jungler") {
-        return has_trained_breed("Naga") && byte(0x9920e) == 0x01        
+        return has_trained_breed("Naga") && card_unlocked("Naga", "Plant")  
     } else if (monster_name == "Crimson Eyed") {
-        return has_trained_breed("Naga") && byte(0x9920f) == 0x01        
+        return has_trained_breed("Naga") && card_unlocked("Naga", "Monol") 
     } else if (monster_name == "Earth Keeper") {
-        return has_trained_breed("Naga") && byte(0x99210) == 0x01        
+        return has_trained_breed("Naga") && card_unlocked("Naga", "Worm") 
     } else if (monster_name == "Naga") {
-        return has_trained_breed("Naga") && byte(0x99211) == 0x01        
+        return has_trained_breed("Naga") && card_unlocked("Naga", "Naga")  
     } else if (monster_name == "Time Noise") {
-        return has_trained_breed("Naga") && byte(0x99212) == 0x01        
+        return has_trained_breed("Naga") && card_unlocked("Naga", "Time Noise (Rare)")  
     }
 }
 

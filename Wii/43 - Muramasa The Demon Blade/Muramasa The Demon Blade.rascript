@@ -1382,25 +1382,15 @@ achievement(
     trigger = (is_ntsc() 
         && active_character("NTSC") == 0x01
         && active_zone("NTSC") == 0x36
-        && active_screen("NTSC") == 0x0b
-        // character HP is above 0
-        && dword_be(ptr_character_details("NTSC") + 0x1d8) > 0
-        // results screen timer is initialized
-        && results_screen_present("NTSC")
-        // && prev(dword_be(results_screen_ptr("NTSC") + 0x4c4)) == 0x00
-        // && dword_be(results_screen_ptr("NTSC") + 0x4c4) > 0x00)
+        && prev(active_screen("NTSC")) == 0x0b
+        && active_screen("NTSC") == 0x03
     )
     || 
         (is_pal() 
         && is_in_game("PAL")
         && active_zone("PAL") == 0x36
-        && active_screen("PAL") == 0x0b
-        // character HP is above 0
-        && dword_be(ptr_character_details("PAL") + 0x1d8) > 0
-        // results screen timer is initialized
-        && results_screen_present("PAL")
-        // && prev(dword_be(results_screen_ptr("PAL") + 0x4c4)) == 0x00
-        // && dword_be(results_screen_ptr("PAL") + 0x4c4) > 0x00)
+        && prev(active_screen("PAL")) == 0x0b
+        && active_screen("PAL") == 0x03
         )
 )
 

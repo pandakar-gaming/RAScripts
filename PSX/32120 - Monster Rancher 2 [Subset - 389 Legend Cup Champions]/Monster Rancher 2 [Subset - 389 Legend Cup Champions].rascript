@@ -1242,7 +1242,7 @@ function monster_trained(monster_name) {
     } else if (monster_name == "Jagd Hound") {
         return has_trained_breed("Tiger") && card_unlocked("Tiger", "Worm")        
     } else if (monster_name == "Cabalos") {
-        return has_trained_breed("Tiger") && card_unlocked("Tiger", "Jell")        
+        return has_trained_breed("Tiger") && card_unlocked("Tiger", "Naga")        
     } else if (monster_name == "White Hound") {
         return has_trained_breed("Tiger") && card_unlocked("Tiger", "White Hound (Rare)")        
     } else if (monster_name == "Fairy Hopper") { // Hopper starts here
@@ -1678,11 +1678,11 @@ function monster_trained(monster_name) {
     } else if (monster_name == "Stinger") {
         return has_trained_breed("Naga") && card_unlocked("Naga", "Zuum")
     } else if (monster_name == "Striker") {
-        return has_trained_breed("Naga") && card_unlocked("Naga", "Hare")  
+        return has_trained_breed("Naga") && card_unlocked("Naga", "Tiger")  
     } else if (monster_name == "Edgehog") {
-        return has_trained_breed("Naga") && card_unlocked("Naga", "Gali")  
-    } else if (monster_name == "Bazula") {
         return has_trained_breed("Naga") && card_unlocked("Naga", "Hare")  
+    } else if (monster_name == "Bazula") {
+        return has_trained_breed("Naga") && card_unlocked("Naga", "Gali")  
     } else if (monster_name == "Cyclops") {
         return has_trained_breed("Naga") && card_unlocked("Naga", "Suezo")  
     } else if (monster_name == "Aqua Cutter") {

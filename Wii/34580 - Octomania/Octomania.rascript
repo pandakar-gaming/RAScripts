@@ -747,7 +747,7 @@ achievement(
             || (is_octopuzzle_character(1, "Funkee") && is_octopuzzle_enemy("Exaltus") && once(OctoBoard(ENEMY_BOARD).board_has_won()) && OctoBoard(PLAYER_BOARD).board_has_won())
             || (is_octopuzzle_character(1, "Funkee") && is_octopuzzle_enemy("Angelique") && OctoBoard(PLAYER_BOARD).board_has_won())
             || (is_octopuzzle_character(1, "Feifei") && is_octopuzzle_enemy("Shadow Kari") && once(OctoBoard(ENEMY_BOARD).board_has_won()) && OctoBoard(PLAYER_BOARD).board_has_won())
-            || (is_octopuzzle_character(1, "Feifei") && is_octopuzzle_enemy("Feifei") && OctoBoard(PLAYER_BOARD).board_has_won())
+            || (is_octopuzzle_character(1, "Feifei") && is_octopuzzle_enemy("Takobo") && OctoBoard(PLAYER_BOARD).board_has_won())
             || (is_octopuzzle_character(1, "Kapprio") && is_octopuzzle_enemy("Dramo") && once(OctoBoard(ENEMY_BOARD).board_has_won()) && OctoBoard(PLAYER_BOARD).board_has_won())
             || (is_octopuzzle_character(1, "Kapprio") && is_octopuzzle_enemy("Exaltus") && OctoBoard(PLAYER_BOARD).board_has_won())
         )

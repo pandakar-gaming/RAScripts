@@ -20,6 +20,10 @@ function is_ntsc() => game_code() == 0x52534645 && maker_code() == 0x3755
 // This will return your address as AddAddress(ptr) & 0x1FFFFFFF.
 function mask_ptr(ptr) => dword_be(ptr) & 0x1FFFFFFF
 
+// Check that the address looks like a pointer.
+// Doesn't guarantee that the address is a pointer, just that it can be treated as one.
+function ptr_valid(ptr) => dword_be(ptr) > 0x80000000 && dword_be(ptr) <= 0x9fffffff
+
 // $3CC933: [8-bit] [NTSC] Difficulty
 // $442933: [8-bit] [PAL] Difficulty
 //          0x00 = Muso
@@ -90,6 +94,7 @@ function active_combat_pointer(region) {
     }
 }
 
+
 // $0x00474db0 for NTSC
 // $0x004eaef0 for PAL
 // [32-bit BE Pointer] [NTSC] Pointer to results screen
@@ -135,6 +140,97 @@ function results_screen_ptr(region) {
     return mask_ptr(mask_ptr(base_addr) + 0x14)
 }
 
+// Helper class for working with the results screen. 
+class ResultsScreen {
+
+    region = "NTSC"
+
+    function base_addr() {
+        base_addr = 0
+        if (this.region == "PAL") {
+            base_addr = 0x004eaef0
+        } else if (this.region == "NTSC") {
+            base_addr = 0x00474db0
+        }
+
+        return base_addr
+    }
+
+    // Get the root address of the part of the address screen we care about, region adjusted. 
+    function base_ptr() {
+        base_addr = 0
+        if (this.region == "PAL") {
+            base_addr = 0x004eaef0
+        } else if (this.region == "NTSC") {
+            base_addr = 0x00474db0
+        }
+
+        return mask_ptr(mask_ptr(this.base_addr()) + 0x14)
+    }
+
+    // Ensure that the full chain we would follow for any achievement logic is valid.
+    function ptr_chain_valid() => ptr_valid(this.base_addr()) && ptr_valid(mask_ptr(this.base_addr()) + 0x14) 
+
+    // Get the exact row we care about in the results screen.
+    function results_row(result) {
+        if (result == "Time") {
+            return ResultsScreenRow(this.base_ptr() + 0x32c)
+        } else if (result == "XP") {
+            return ResultsScreenRow(this.base_ptr() + 0x32c + 0x1a0 * 1)
+        } else if (result == "Money") {
+            return ResultsScreenRow(this.base_ptr() + 0x32c + 0x1a0 * 2)
+        }
+    } 
+
+    function rating_row(num) => ResultsScreenRow(base_ptr() + 0x32c + 0x1a0 * (2 + num))
+}
+
+// 424 bytes in size. Represents a singular "row" in the Results screen.
+// dammit Japan you were one dword_be off from the funniest size
+class ResultsScreenRow {
+
+    row_start = 0x00000000
+
+    // This controls how the row is displayed.
+    // 0x00 - Time (h:mm:ss)
+    // 0x01 - Numeric
+    // 0x02 - n Ryo, xyz Mon
+    // > 0x03 - Numeric
+    // This also seems to double as the index of the row in question. Not sure what they were cooking here.
+    function format_display() => dword_be(this.row_start)
+    // If this is a core row (i.e. a Results screen row) this would be the copy of the text in question
+    // Very specifically it's the number of bytes copied then the ASCII bytes that have been rendered onto screen
+    // e.g. for Time this would be "0x0454696d65", i.e. 4Time.
+    // Max of 12 bytes.
+    function core_row_display_text_copy() => dword_be(this.row_start + 0x04)
+    // If this is a Rating row, this will be a pointer to a copy of the ASCII text being rendered on screen.
+    // Otherwise it's 0x0'd out.
+    function rating_row_ptr_display_text_copy() => dword_be(this.row_start + 0x0c)
+    // Number of chars being actively rendered to screen for this row. 
+    function num_chars_rendering() => dword_be(this.row_start + 0x14)
+    function flipped_active() => prev(byte(this.row_start + 0x194)) == 0x00 && byte(this.row_start + 0x194) == 0x01
+    // Checks if the row is being actively displayed.
+    function is_active() => byte(this.row_start + 0x194) == 0x01
+    function display_value() => dword_be(this.row_start + 0x198)
+    function write_value() => dword_be(this.row_start + 0x19c)
+    // Denotes end of block for completeness. This happens to be some sort of value related to displaying the previous value
+    // in that when the block is active and settled this should be 0x00000000
+    function end_block() => dword_be(this.row_start + 0x1a4)
+}
+
+// New format for asking "Is the results screen up?"
+// Rewritten so that it's not crossing between line items and focuses strictly on the "time" line item.
+function results_screen_present_improved(region) {
+    results_screen = ResultsScreen(region)
+
+    return dword_be(ptr_character_details(region) + 0x1d8) > 0
+        && results_screen.ptr_chain_valid()
+        && results_screen.results_row("Time").format_display() == 0x00
+        && results_screen.results_row("Time").display_value() == results_screen.results_row("Time").write_value()
+        && results_screen.results_row("Time").end_block() == 0x00000000
+        && results_screen.results_row("Time").flipped_active()
+}
+
 // Helper function for every achievement where I need to ask "Is the results screen up? Did we win?"
 function results_screen_present(region) {
     return dword_be(ptr_character_details(region) + 0x1d8) > 0
@@ -147,41 +243,7 @@ function results_screen_present(region) {
         // results screen timer is now present where it wasn't before
         && prev(byte(results_screen_ptr(region) + 0x4c0)) == 0x00
         && byte(results_screen_ptr(region) + 0x4c0) == 0x01
-        // && prev(dword_be(results_screen_ptr(region) + 0x4c4)) == 0x00
-        // && dword_be(results_screen_ptr(region) + 0x4c4) > 0x00
 }
-
-// We know this works for a single boss. Too lazy to dig for multiple because we don't really need it!
-// $474DA8: [32-bit BE] Base pointer to Boss HP
-//          +0x550  = [32-bit BE] Intermediary pointer
-//          ++0x14  = [32-bit BE] Intermediary pointer
-//          +++0x64 = [Float BE] Boss big HP bar (as it takes damage and a red bar fills up)
-//          +++0x68 = [Float BE] Boss big HP bar (when not taking damage for a while, slowly decreases to value above)
-//          +++0x8c = [Float BE] Boss Small HP Bar (as it takes damage)
-//          ---1.0 = No more bars left. Can use this in conjunction with 0x64=0 to determine that this boss is dead.
-//          +++0x90 = [Float BE] Boss Small HP Bar (catches up to 0x8c)
-// This function returns the third layer as a convenience so you can just do your +0x64 / + 0x68 / +0x8c / +0x90 on top of it for floats. 
-function boss_health_ptr(region) {
-    if (region == "PAL") {
-        return mask_ptr(mask_ptr(mask_ptr(0x004eaee8) + 0x550) + 0x14)
-    } else if (region == "NTSC") {
-        return mask_ptr(mask_ptr(mask_ptr(0x474da8) + 0x550) + 0x14)
-    }
-}
-
-// Check that a single boss just died.
-function active_single_boss_died(region) {
-    health_ptr = boss_health_ptr(region)
-    return float_be(health_ptr + 0x8c) <= -1.0 && prev(float_be(health_ptr + 0x64)) > 0.0 && float_be(health_ptr + 0x64) <= 0.0
-}
-
-function active_single_boss_activated(region) {
-    health_ptr = boss_health_ptr(region)
-    return float_be(health_ptr + 0x8c) > -1.0 && prev(float_be(health_ptr + 0x64)) <= 0.0 && float_be(health_ptr + 0x64) > 0.0
-}
-
-// $DA7314: [32-bit Pointer] Pointer to Settings
-function pointer_to_settings() => dword(0xDA7314)
 
 // $E27038: [32-bit BE Pointer] [NTSC] Player character pointer
 // $0x00e9d238: [32-bit BE Pointer] [PAL] Player character pointer
@@ -1405,14 +1467,14 @@ achievement(
         && active_screen("NTSC") == 0x1e
         && current_difficulty("NTSC") == 0x01
         // character HP is above 0
-        && results_screen_present("NTSC"))
+        && results_screen_present_improved("NTSC"))
     ||
         (is_in_game("PAL")
         && in_zone("PAL", "Musashi")
         && active_screen("PAL") == 0x1e
         && current_difficulty("PAL") == 0x01
         // character HP is above 0
-        && results_screen_present("PAL"))
+        && results_screen_present_improved("PAL"))
 )
 
 achievement(
@@ -1425,14 +1487,14 @@ achievement(
         && active_screen("NTSC") == 0x3a
         && current_difficulty("NTSC") == 0x01
         // character HP is above 0
-        && results_screen_present("NTSC"))
+        && results_screen_present_improved("NTSC"))
     ||
         (is_in_game("PAL")
             && in_zone("PAL", "Yamashiro")
             && active_screen("PAL") == 0x3a
             && current_difficulty("PAL") == 0x01
             // character HP is above 0
-            && results_screen_present("PAL"))
+            && results_screen_present_improved("PAL"))
 )
 
 achievement(
@@ -1445,14 +1507,14 @@ achievement(
         && active_screen("NTSC") == 0x0f
         && current_difficulty("NTSC") == 0x01
         // character HP is above 0
-        && results_screen_present("NTSC"))
+        && results_screen_present_improved("NTSC"))
     ||
         (is_in_game("PAL")
             && in_zone("PAL", "Owari")
             && active_screen("PAL") == 0x0f
             && current_difficulty("PAL") == 0x01
             // character HP is above 0
-            && results_screen_present("PAL"))
+            && results_screen_present_improved("PAL"))
 )
 
 achievement(
@@ -1465,14 +1527,14 @@ achievement(
         && active_screen("NTSC") == 0x10
         && current_difficulty("NTSC") == 0x01
         // character HP is above 0
-        && results_screen_present("NTSC"))
+        && results_screen_present_improved("NTSC"))
     ||
         (is_in_game("PAL")
             && in_zone("PAL", "Totomi")
             && active_screen("PAL") == 0x10
             && current_difficulty("PAL") == 0x01
             // character HP is above 0
-            && results_screen_present("PAL"))
+            && results_screen_present_improved("PAL"))
 )
 
 achievement(
@@ -1484,15 +1546,14 @@ achievement(
         && in_zone("NTSC", "Mino")
         && active_screen("NTSC") == 0x1d
         && current_difficulty("NTSC") == 0x01
-        // character HP is above 0
-        && results_screen_present("NTSC"))
+        && results_screen_present_improved("NTSC"))
     ||
         (is_in_game("PAL")
         && in_zone("PAL", "Mino")
         && active_screen("PAL") == 0x1d
         && current_difficulty("PAL") == 0x01
         // character HP is above 0
-        && results_screen_present("PAL"))
+        && results_screen_present_improved("PAL"))
 )
 
 achievement(
@@ -1505,14 +1566,14 @@ achievement(
         && active_screen("NTSC") == 0x0d
         && current_difficulty("NTSC") == 0x01
         // character HP is above 0
-        && results_screen_present("NTSC"))
+        && results_screen_present_improved("NTSC"))
     ||
         (is_in_game("PAL")
         && in_zone("PAL", "Mikawa")
         && active_screen("PAL") == 0x0d
         && current_difficulty("PAL") == 0x01
         // character HP is above 0
-        && results_screen_present("PAL"))
+        && results_screen_present_improved("PAL"))
 )
 
 achievement(
@@ -1525,14 +1586,14 @@ achievement(
         && active_screen("NTSC") == 0x0e
         && current_difficulty("NTSC") == 0x01
         // character HP is above 0
-        && results_screen_present("NTSC"))
+        && results_screen_present_improved("NTSC"))
     ||
         (is_in_game("PAL")
         && in_zone("PAL", "Hida")
         && active_screen("PAL") == 0x0e
         && current_difficulty("PAL") == 0x01
         // character HP is above 0
-        && results_screen_present("PAL"))
+        && results_screen_present_improved("PAL"))
 )
 
 achievement(
@@ -1545,14 +1606,14 @@ achievement(
         && active_screen("NTSC") == 0x11
         && current_difficulty("NTSC") == 0x01
         // character HP is above 0
-        && results_screen_present("NTSC"))
+        && results_screen_present_improved("NTSC"))
     ||
         (is_in_game("PAL")
         && in_zone("PAL", "Sagami")
         && active_screen("PAL") == 0x11
         && current_difficulty("PAL") == 0x01
         // character HP is above 0
-        && results_screen_present("PAL"))
+        && results_screen_present_improved("PAL"))
 )
 
 achievement(
@@ -1564,14 +1625,14 @@ achievement(
         && in_zone("NTSC", "Iga")
         && active_screen("NTSC") == 0x13
         && current_difficulty("NTSC") == 0x01
-        && results_screen_present("NTSC"))
+        && results_screen_present_improved("NTSC"))
     ||
         (is_in_game("PAL")
         && in_zone("PAL", "Iga")
         && active_screen("PAL") == 0x13
         && current_difficulty("PAL") == 0x01
         // character HP is above 0
-        && results_screen_present("PAL"))
+        && results_screen_present_improved("PAL"))
 )
 
 achievement(
@@ -1584,14 +1645,14 @@ achievement(
         && active_screen("NTSC") == 0x12
         && current_difficulty("NTSC") == 0x01
         // character HP is above 0
-        && results_screen_present("NTSC"))
+        && results_screen_present_improved("NTSC"))
     ||
         (is_in_game("PAL")
         && in_zone("PAL", "Kai")
         && active_screen("PAL") == 0x12
         && current_difficulty("PAL") == 0x01
         // character HP is above 0
-        && results_screen_present("PAL"))
+        && results_screen_present_improved("PAL"))
 )
 
 achievement(
@@ -1604,14 +1665,14 @@ achievement(
         && active_screen("NTSC") == 0x19
         && current_difficulty("NTSC") == 0x01
         // character HP is above 0
-        && results_screen_present("NTSC"))
+        && results_screen_present_improved("NTSC"))
     ||
         (is_in_game("PAL")
         && in_zone("PAL", "Yamato")
         && active_screen("PAL") == 0x19
         && current_difficulty("PAL") == 0x01
         // character HP is above 0
-        && results_screen_present("PAL"))
+        && results_screen_present_improved("PAL"))
 )
 
 achievement(
@@ -1624,14 +1685,14 @@ achievement(
         && active_screen("NTSC") == 0x16
         && current_difficulty("NTSC") == 0x01
         // character HP is above 0
-        && results_screen_present("NTSC"))
+        && results_screen_present_improved("NTSC"))
     ||
         (is_in_game("PAL")
         && in_zone("PAL", "Ise")
         && active_screen("PAL") == 0x16
         && current_difficulty("PAL") == 0x01
         // character HP is above 0
-        && results_screen_present("PAL"))
+        && results_screen_present_improved("PAL"))
 )
 
 achievement(
@@ -1644,14 +1705,14 @@ achievement(
         && active_screen("NTSC") == 0x19
         && current_difficulty("NTSC") == 0x01
         // character HP is above 0
-        && results_screen_present("NTSC"))
+        && results_screen_present_improved("NTSC"))
     ||
         (is_in_game("PAL")
         && in_zone("PAL", "Suruga")
         && active_screen("PAL") == 0x19
         && current_difficulty("PAL") == 0x01
         // character HP is above 0
-        && results_screen_present("PAL"))
+        && results_screen_present_improved("PAL"))
 )
 
 achievement(
@@ -1664,14 +1725,14 @@ achievement(
         && active_screen("NTSC") == 0x10
         && current_difficulty("NTSC") == 0x01
         // character HP is above 0
-        && results_screen_present("NTSC"))
+        && results_screen_present_improved("NTSC"))
     ||
         (is_in_game("PAL")
         && in_zone("PAL", "Omi")
         && active_screen("PAL") == 0x10
         && current_difficulty("PAL") == 0x01
         // character HP is above 0
-        && results_screen_present("PAL"))
+        && results_screen_present_improved("PAL"))
 )
 
 // Two-phase lair, first screen is 0x15 and second is 0x16
@@ -1686,14 +1747,14 @@ achievement(
         && active_screen("NTSC") == 0x16
         && current_difficulty("NTSC") == 0x01
         // character HP is above 0
-        && results_screen_present("NTSC"))
+        && results_screen_present_improved("NTSC"))
     ||
         (is_in_game("PAL")
         && in_zone("PAL", "Shinano")
         && active_screen("PAL") == 0x16
         && current_difficulty("PAL") == 0x01
         // character HP is above 0
-        && results_screen_present("PAL"))
+        && results_screen_present_improved("PAL"))
 )
 
 achievement(
@@ -1705,13 +1766,13 @@ achievement(
         && in_zone("NTSC", "Izu")
         && active_screen("NTSC") == 0x14
         // character HP is above 0
-        && results_screen_present("NTSC"))
+        && results_screen_present_improved("NTSC"))
     ||
         (is_in_game("PAL")
         && in_zone("PAL", "Izu")
         && active_screen("PAL") == 0x14
         // character HP is above 0
-        && results_screen_present("PAL"))
+        && results_screen_present_improved("PAL"))
 )
 
 achievement(
@@ -2556,16 +2617,16 @@ achievement(
         && active_screen("NTSC") == 0x14
         && current_difficulty("NTSC") == 0x01
         && is_shigurui("NTSC")
-        && accessory_acquired("NTSC", "Narukami Bracelet") == 0x00
-        && results_screen_present("NTSC"))
+        && prev(accessory_acquired("NTSC", "Narukami Bracelet")) == 0x00
+        && accessory_acquired("NTSC", "Narukami Bracelet") == 0x01)
     ||
         (is_in_game("PAL")
         && in_zone("PAL", "Izu")
         && active_screen("PAL") == 0x14
         && current_difficulty("PAL") == 0x01
         && is_shigurui("PAL")
-        && accessory_acquired("PAL", "Narukami Bracelet") == 0x00
-        && results_screen_present("PAL"))
+        && prev(accessory_acquired("PAL", "Narukami Bracelet")) == 0x00
+        && accessory_acquired("PAL", "Narukami Bracelet") == 0x01)
 )
 
 // We do this because the toolkit can't answer the following question:

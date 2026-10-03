@@ -4466,7 +4466,7 @@ achievement(
 achievement(
     id = 530987,
     title = "Chaotic Beings",
-    description = "Record all 8 demons of the Vile race in your compendium.",
+    description = "Record all 7 demons of the Vile race in your compendium.",
     points = 5,
     trigger = !is_time_of_day(0, 0)
         && prev(num_demons_of_race_registered("Vile") == length(demons_by_race["Vile"]) - 1)

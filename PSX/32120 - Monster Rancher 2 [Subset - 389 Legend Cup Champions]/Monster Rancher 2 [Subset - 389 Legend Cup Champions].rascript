@@ -2762,7 +2762,9 @@ achievement(
     trigger = monster_trained("Beaclon") 
         && is_primary_breed("Beaclon") 
         && is_secondary_breed("Beaclon") 
-        && stat_growths_are("B", "B", "E", "D", "D", "B")
+        // IMPORTANT NOTE: YOU CANNOT USE STAT GROWTHS TO VALIDATE A BEACLON
+        // IT CAN INHERIT FROM THE WORM ON COCOON
+        // && stat_growths_are("B", "B", "E", "D", "D", "B")
         && beaclon_unlocked() 
         && prereqs_met() 
         && prev(legend_cup() == 0x00) && legend_cup() == 0x01
